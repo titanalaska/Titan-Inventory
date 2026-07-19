@@ -137,33 +137,21 @@
   @media (max-width: 400px) {
     .detail-grid, .modal-grid { grid-template-columns: 1fr; }
   }
-  /* PIN SCREEN */
-  #pinScreen {
-    position: fixed; inset: 0; background: var(--black); z-index: 999;
-    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px;
+  /* PROFILE GATE */
+  .profile-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 4px; }
+  .profile-pick {
+    display: flex; justify-content: space-between; align-items: center; width: 100%;
+    background: var(--iron); border: 1px solid #2a2a2a; color: var(--snow);
+    font-size: 14px; font-weight: 600; padding: 10px 12px; border-radius: var(--radius);
+    cursor: pointer; font-family: var(--font); text-align: left;
   }
-  #pinScreen.hidden { display: none; }
-  .pin-box {
-    background: var(--steel); border: 1px solid #3a4e60; border-top: 3px solid var(--rust);
-    border-radius: var(--radius); padding: 32px 28px; width: 100%; max-width: 320px; text-align: center;
-  }
-  .pin-logo { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; color: var(--rust); text-transform: uppercase; margin-bottom: 4px; }
-  .pin-logo span { color: var(--gold); }
-  .pin-sub { font-size: 11px; color: var(--mid); letter-spacing: 0.08em; margin-bottom: 24px; }
-  .pin-dots { display: flex; justify-content: center; gap: 12px; margin-bottom: 20px; }
-  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #3a4e60; background: transparent; transition: background 0.15s, border-color 0.15s; }
-  .pin-dot.filled { background: var(--rust); border-color: var(--rust); }
-  .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .pin-btn {
-    background: var(--iron); border: 1px solid #3a4e60; color: var(--snow);
-    font-size: 20px; font-weight: 600; padding: 16px; border-radius: var(--radius);
-    cursor: pointer; font-family: var(--font); transition: background 0.1s;
-  }
-  .pin-btn:active { background: var(--rust); color: #000; }
-  .pin-btn.zero { grid-column: 2; }
-  .pin-btn.clear { background: transparent; border-color: #2a3a4a; color: var(--mid); font-size: 14px; grid-column: 1; }
-  .pin-btn.clear:active { background: #2a3a4a; }
-  .pin-error { color: #e07070; font-size: 12px; min-height: 18px; margin-top: 4px; }
+  .profile-pick:hover { border-color: var(--gold); }
+  .profile-pos { font-size: 11px; color: var(--mid); font-weight: 400; }
+  .profile-pending-name { color: var(--gold); }
+  .profile-request { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; gap: 10px; }
+  .profile-request:last-child { border-bottom: none; }
+  .admin-btn { background: #1a1500; border: 1px solid var(--gold); color: var(--gold); font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); }
+  .admin-btn:hover { background: #2a2000; }
 
   .topsoil-widget { background: #1a1a00; border: 1px solid #4a4000; border-left: 4px solid var(--gold); margin: 10px 16px; border-radius: var(--radius); padding: 12px 14px; }
   .topsoil-title { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
@@ -247,38 +235,11 @@
 </head>
 <body>
 
-<!-- PIN SCREEN -->
-<div id="pinScreen">
-  <div class="pin-box">
-    <div class="pin-logo">TITAN <span>ALASKA</span></div>
-    <div class="pin-sub">INVENTORY SYSTEM</div>
-    <div class="pin-dots">
-      <div class="pin-dot" id="d0"></div>
-      <div class="pin-dot" id="d1"></div>
-      <div class="pin-dot" id="d2"></div>
-      <div class="pin-dot" id="d3"></div>
-    </div>
-    <div class="pin-grid">
-      <button class="pin-btn" onclick="pinPress('1')">1</button>
-      <button class="pin-btn" onclick="pinPress('2')">2</button>
-      <button class="pin-btn" onclick="pinPress('3')">3</button>
-      <button class="pin-btn" onclick="pinPress('4')">4</button>
-      <button class="pin-btn" onclick="pinPress('5')">5</button>
-      <button class="pin-btn" onclick="pinPress('6')">6</button>
-      <button class="pin-btn" onclick="pinPress('7')">7</button>
-      <button class="pin-btn" onclick="pinPress('8')">8</button>
-      <button class="pin-btn" onclick="pinPress('9')">9</button>
-      <button class="pin-btn clear" onclick="pinClear()">CLR</button>
-      <button class="pin-btn zero" onclick="pinPress('0')">0</button>
-    </div>
-    <div class="pin-error" id="pinError"></div>
-  </div>
-</div>
-
 <header>
   <div class="header-top">
     <div class="logo">TITAN <span>ALASKA</span> — <span id="logoLabel">INVENTORY</span></div>
     <div class="header-btns">
+      <button class="admin-btn" id="adminBtn" onclick="openAdminPanel()" style="display:none">🔑 Approvals</button>
       <button class="user-btn" id="userBtn" onclick="promptName()">👤 Sign In</button>
       <button class="lang-btn" id="langBtn" onclick="toggleLang()">ES</button>
       <button class="sync-btn" id="syncBtn" onclick="loadItems()">↻ SYNC</button>
@@ -336,12 +297,20 @@
 <!-- NAME PROMPT MODAL -->
 <div class="modal-overlay" id="nameModal">
   <div class="modal name-modal">
-    <h2 id="nameModalTitle">Who Are You?</h2>
-    <p style="font-size:13px;color:var(--mid);margin-bottom:8px" id="nameModalDesc">Enter your full name to log changes.</p>
-    <input type="text" class="name-input-large" id="nameInput" placeholder="First Last" autocomplete="name">
+    <div id="profileGateBody"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeNameModal()">Cancel</button>
-      <button class="btn-save" onclick="confirmName()">CONFIRM</button>
+      <button class="btn-cancel" onclick="closeNameModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN APPROVALS MODAL -->
+<div class="modal-overlay" id="adminModal">
+  <div class="modal name-modal">
+    <h2>🔑 Pending Approvals</h2>
+    <div id="adminPanelBody"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAdminPanel()">Close</button>
     </div>
   </div>
 </div>
@@ -680,24 +649,59 @@ function applyTranslations() {
   document.getElementById('labelEst').textContent = t('labelEst');
   document.getElementById('cancelBtn').textContent = t('cancel');
   document.getElementById('saveNewBtn').textContent = t('addItem');
-  document.getElementById('nameModalTitle').textContent = t('whoAreYou');
-  document.getElementById('nameModalDesc').textContent = t('enterName');
   if (!currentUser) document.getElementById('userBtn').textContent = '👤 ' + t('signIn');
+  renderProfileGate();
   populateSelects();
 }
 
-// ---- NAME / USER ----
+// ---- PROFILES ----
+// Replaces the old shared-PIN lock: instead of one secret everyone knows, each
+// worker has their own Name+Position profile that Matthew approves once. Approved
+// status is cached in myProfile/localStorage so gated actions (requireName) don't
+// need a network round-trip on every tap — only re-checked when the sign-in panel opens.
+let profiles = [];
+let myProfile = null;
+
+function loadSavedProfile() {
+  const saved = localStorage.getItem('titan_profile');
+  if (saved) {
+    try {
+      myProfile = JSON.parse(saved);
+      currentUser = myProfile.name;
+      document.getElementById('userBtn').textContent = '👤 ' + myProfile.name.split(' ')[0];
+    } catch(e) {}
+  }
+}
+
+function saveProfileLocally() {
+  if (myProfile) localStorage.setItem('titan_profile', JSON.stringify(myProfile));
+}
+
+async function fetchProfiles() {
+  if (!APPS_SCRIPT_URL) return;
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getProfiles`);
+    const data = await res.json();
+    profiles = data.profiles || [];
+    if (myProfile) {
+      const mine = profiles.find(p => String(p.id) === String(myProfile.id));
+      if (mine) { myProfile = mine; saveProfileLocally(); currentUser = myProfile.name; }
+    }
+  } catch(e) {}
+  renderProfileGate();
+  renderAdminPanel();
+}
+
 function requireName(callback) {
-  if (currentUser) { callback(); return; }
+  if (myProfile && myProfile.status === 'approved') { callback(); return; }
   pendingAction = callback;
   promptName();
 }
 
 function promptName() {
-  pendingAction = pendingAction || null;
-  document.getElementById('nameInput').value = currentUser || '';
+  renderProfileGate();
   document.getElementById('nameModal').classList.add('open');
-  setTimeout(() => document.getElementById('nameInput').focus(), 100);
+  fetchProfiles();
 }
 
 function closeNameModal() {
@@ -705,15 +709,138 @@ function closeNameModal() {
   pendingAction = null;
 }
 
-function confirmName() {
-  const name = document.getElementById('nameInput').value.trim();
-  if (!name) { showToast('Please enter your full name', 'error'); return; }
-  currentUser = name;
-  localStorage.setItem('titan_user', name);
-  document.getElementById('userBtn').textContent = '👤 ' + name.split(' ')[0];
+function renderProfileGate() {
+  const body = document.getElementById('profileGateBody');
+  if (!body) return;
+  const es = lang === 'es';
+
+  if (myProfile && myProfile.status === 'pending') {
+    body.innerHTML = `
+      <h2>⏳ ${es ? 'Esperando aprobacion' : 'Waiting for Approval'}</h2>
+      <p style="font-size:13px;color:var(--mid);margin-bottom:16px">
+        ${es ? 'Tu perfil' : 'Your profile'} <b class="profile-pending-name">${escapeHtml(myProfile.name)}</b> (${escapeHtml(myProfile.position)})
+        ${es ? 'esta esperando que un administrador lo apruebe.' : "is waiting for an admin to approve it. You'll get full access as soon as that happens."}
+      </p>
+      <button class="btn-save" style="width:100%;margin-bottom:8px" onclick="fetchProfiles()">${es ? 'Verificar de nuevo' : 'Check Again'}</button>
+      <button class="btn-cancel" style="width:100%" onclick="switchProfile()">${es ? 'No eres tu? Cambiar perfil' : 'Not you? Switch profile'}</button>
+    `;
+    return;
+  }
+
+  if (myProfile && myProfile.status === 'rejected') {
+    body.innerHTML = `
+      <h2>${es ? 'Perfil no aprobado' : 'Profile Not Approved'}</h2>
+      <p style="font-size:13px;color:var(--mid);margin-bottom:16px">${es ? 'Habla con tu administrador, o crea un nuevo perfil.' : "Talk to your admin, or create a new profile."}</p>
+      <button class="btn-save" style="width:100%" onclick="switchProfile()">${es ? 'Crear nuevo perfil' : 'Create New Profile'}</button>
+    `;
+    return;
+  }
+
+  const approved = profiles.filter(p => p.status === 'approved');
+  body.innerHTML = `
+    <h2>${t('whoAreYou')}</h2>
+    <p style="font-size:13px;color:var(--mid);margin-bottom:8px">${es ? 'Elige tu perfil, o crea uno nuevo.' : 'Pick your profile, or create a new one.'}</p>
+    <div class="profile-list">
+      ${approved.map(p => `<button class="profile-pick" onclick="selectProfile(${p.id})"><span>${escapeHtml(p.name)}</span><span class="profile-pos">${escapeHtml(p.position)}</span></button>`).join('') || `<div style="font-size:12px;color:#8a9aaa">${es ? 'Aun no hay perfiles aprobados.' : 'No approved profiles yet.'}</div>`}
+    </div>
+    <div style="margin-top:14px;border-top:1px solid #333;padding-top:14px">
+      <input type="text" class="name-input-large" id="newProfileName" placeholder="${es ? 'Tu nombre completo' : 'Your full name'}" style="margin-bottom:8px;font-size:14px;padding:10px">
+      <input type="text" class="name-input-large" id="newProfilePosition" placeholder="${es ? 'Puesto (ej. Capataz, Obrero)' : 'Position (e.g. Foreman, Laborer)'}" style="font-size:14px;padding:10px">
+      <button class="btn-save" style="margin-top:10px;width:100%" onclick="submitNewProfile()">${es ? 'Solicitar nuevo perfil' : 'Request New Profile'}</button>
+    </div>
+  `;
+}
+
+function selectProfile(id) {
+  const p = profiles.find(x => String(x.id) === String(id));
+  if (!p) return;
+  myProfile = p;
+  currentUser = p.name;
+  saveProfileLocally();
   document.getElementById('nameModal').classList.remove('open');
-  showToast('Signed in as ' + name, 'success');
+  document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
+  showToast('Signed in as ' + p.name, 'success');
+  renderAdminPanel();
   if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
+}
+
+async function submitNewProfile() {
+  const name = document.getElementById('newProfileName').value.trim();
+  const position = document.getElementById('newProfilePosition').value.trim();
+  if (!name || !position) { showToast(lang === 'es' ? 'Ingresa tu nombre y puesto' : 'Enter your name and position', 'error'); return; }
+  if (!APPS_SCRIPT_URL) { showToast('Profiles need the sheet configured', 'error'); return; }
+  try {
+    const params = new URLSearchParams({ action: 'requestProfile', name, position });
+    const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
+    const data = await res.json();
+    if (data.error || data.id == null) throw new Error(data.error || 'Unexpected response');
+    myProfile = { id: data.id, name: data.name, position: data.position, status: 'pending' };
+    currentUser = myProfile.name;
+    saveProfileLocally();
+    document.getElementById('userBtn').textContent = '👤 ' + name.split(' ')[0];
+    showToast(lang === 'es' ? 'Perfil enviado - esperando aprobacion' : 'Profile submitted — waiting for approval', '');
+    renderProfileGate();
+  } catch(e) {
+    showToast(lang === 'es' ? 'No se pudo enviar el perfil' : 'Could not submit profile — check connection', 'error');
+  }
+}
+
+function switchProfile() {
+  myProfile = null;
+  currentUser = '';
+  localStorage.removeItem('titan_profile');
+  document.getElementById('userBtn').textContent = '👤 ' + t('signIn');
+  document.getElementById('adminBtn').style.display = 'none';
+  fetchProfiles();
+}
+
+// ---- ADMIN APPROVALS ----
+function renderAdminPanel() {
+  const btn = document.getElementById('adminBtn');
+  if (!btn) return;
+  if (!myProfile || !myProfile.isAdmin || myProfile.status !== 'approved') { btn.style.display = 'none'; return; }
+  const pending = profiles.filter(p => p.status === 'pending');
+  btn.style.display = 'inline-block';
+  btn.textContent = pending.length > 0 ? `🔑 Approvals (${pending.length})` : '🔑 Approvals';
+}
+
+function openAdminPanel() {
+  const pending = profiles.filter(p => p.status === 'pending');
+  const body = document.getElementById('adminPanelBody');
+  body.innerHTML = pending.length ? pending.map(p => `
+    <div class="profile-request">
+      <div><b>${escapeHtml(p.name)}</b><br><span style="font-size:12px;color:var(--mid)">${escapeHtml(p.position)}</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-save" onclick="approveProfile(${p.id})">Approve</button>
+        <button class="btn-delete" onclick="rejectProfile(${p.id})">Reject</button>
+      </div>
+    </div>
+  `).join('') : '<div style="font-size:13px;color:var(--mid)">No pending requests.</div>';
+  document.getElementById('adminModal').classList.add('open');
+}
+
+function closeAdminPanel() { document.getElementById('adminModal').classList.remove('open'); }
+
+async function approveProfile(id) {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({action:'approveProfile', id})}`);
+    const data = await res.json();
+    if (data.error || !data.success) throw new Error(data.error || 'Unexpected response');
+    showToast('Approved', 'success');
+    await fetchProfiles();
+    openAdminPanel();
+  } catch(e) { showToast('Could not approve — check connection', 'error'); }
+}
+
+async function rejectProfile(id) {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({action:'rejectProfile', id})}`);
+    const data = await res.json();
+    if (data.error || !data.success) throw new Error(data.error || 'Unexpected response');
+    showToast('Rejected', '');
+    await fetchProfiles();
+    openAdminPanel();
+  } catch(e) { showToast('Could not reject — check connection', 'error'); }
 }
 
 // ---- CHANGE LOG ---- (recorded to the Google Sheet's Change Log tab; view via the "View Sheet" button)
@@ -944,65 +1071,6 @@ const EMBEDDED = [
   {id:167,category:'LANDSCAPE HARDWARE',name:'6 mil Poly Sheeting 20x100',qty:1,specs:'20x100ft',estimated:false,location:'Conex 5'},
 ];
 
-const CORRECT_PIN = '0251';
-
-// ---- PIN ----
-let pinEntry = '';
-
-function pinPress(digit) {
-  if (pinEntry.length >= 4) return;
-  pinEntry += digit;
-  updatePinDots();
-  if (pinEntry.length === 4) {
-    setTimeout(checkPin, 150);
-  }
-}
-
-function pinClear() {
-  pinEntry = '';
-  updatePinDots();
-  document.getElementById('pinError').textContent = '';
-}
-
-function pinBackspace() {
-  if (pinEntry.length === 0) return;
-  pinEntry = pinEntry.slice(0, -1);
-  updatePinDots();
-  document.getElementById('pinError').textContent = '';
-}
-
-// Allow entering the PIN with a physical keyboard/numpad, not just on-screen taps
-document.addEventListener('keydown', (e) => {
-  if (document.getElementById('pinScreen').classList.contains('hidden')) return;
-  if (e.key >= '0' && e.key <= '9') { pinPress(e.key); }
-  else if (e.key === 'Backspace') { pinBackspace(); }
-  else if (e.key === 'Escape') { pinClear(); }
-});
-
-function updatePinDots() {
-  for (let i = 0; i < 4; i++) {
-    document.getElementById('d' + i).classList.toggle('filled', i < pinEntry.length);
-  }
-}
-
-function checkPin() {
-  if (pinEntry === CORRECT_PIN) {
-    document.getElementById('pinScreen').classList.add('hidden');
-    sessionStorage.setItem('titan_auth', '1');
-  } else {
-    document.getElementById('pinError').textContent = 'Incorrect PIN';
-    pinEntry = '';
-    updatePinDots();
-    setTimeout(() => { document.getElementById('pinError').textContent = ''; }, 1500);
-  }
-}
-
-// Check if already authenticated this session - runs after DOM ready
-function checkSessionAuth() {
-  if (sessionStorage.getItem('titan_auth') === '1') {
-    document.getElementById('pinScreen').classList.add('hidden');
-  }
-}
 
 
 // ---- TOPSOIL ----
@@ -1248,15 +1316,7 @@ async function openDisposalLog() {
     </div>`).join('');
 }
 
-function loadSavedUser() {
-  const saved = localStorage.getItem('titan_user');
-  if (saved) {
-    currentUser = saved;
-    document.getElementById('userBtn').textContent = '👤 ' + saved.split(' ')[0];
-  }
-}
-
-window.onload = () => { checkSessionAuth(); loadSavedUser(); populateSelects(); loadItems(); };
+window.onload = () => { loadSavedProfile(); populateSelects(); loadItems(); fetchProfiles(); };
 
 async function loadItems() {
   const btn = document.getElementById('syncBtn');
