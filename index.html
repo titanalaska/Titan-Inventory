@@ -563,8 +563,21 @@ const T = {
   }
 };
 
-const LOCATIONS = ['Unknown','Gray Building','104','Yard 104','Maui Lot','North C Street','South C Street','Red Building','Conex 1','Conex 2','Conex 3','Conex 4','Conex 5','Conex 6','Conex 7','Civil A','Civil B','Red Tool 1','Red Tool 2','Red Tool 3','Yard','Material Bins'];
+const LOCATIONS = ['Unknown','Gray Building','104','Maui Lot','North C Street','South C Street','Red Building','Conex 1','Conex 2','Conex 3','Conex 4','Conex 5','Conex 6','Conex 7','Civil A','Civil B','Red Tool 1','Red Tool 2','Red Tool 3','Yard','Material Bins'];
 const CATEGORIES = ['LUMBER & POSTS','FENCE HARDWARE','DRAINAGE','LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS','MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT','NURSERY STOCK','PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT'];
+
+// Legacy names still sitting in the Google Sheet get silently remapped to their
+// current category/location on load, so old data never has to be hand-edited in the sheet.
+const CATEGORY_ALIASES = {
+  'FENCING': 'FENCE HARDWARE',
+  'HARDWARE & FASTENERS': 'FENCE HARDWARE',
+  'DECKING HARDWARE': 'FENCE HARDWARE',
+  'LANDSCAPE FABRIC & POLY': 'LANDSCAPE HARDWARE',
+  'CONCRETE & MASONRY': 'MASONRY & RETAINING WALL',
+};
+const LOCATION_ALIASES = {
+  'Yard 104': '104',
+};
 const UNITS = [
   {value:'ea', label:'Each'},
   {value:'tons', label:'Tons'},
@@ -1248,6 +1261,11 @@ async function loadItems() {
       try { data = JSON.parse(text); }
       catch(parseErr) { throw new Error('Bad response (not JSON): ' + text.slice(0, 80)); }
       if (data && data.items) {
+        // Remap any legacy category/location names still sitting in the sheet
+        data.items.forEach(i => {
+          if (CATEGORY_ALIASES[i.category]) i.category = CATEGORY_ALIASES[i.category];
+          if (LOCATION_ALIASES[i.location]) i.location = LOCATION_ALIASES[i.location];
+        });
         // Merge sheet data with any embedded seed items the sheet doesn't have yet
         // (e.g. nursery stock, or newer categories like Pit & Aggregate that haven't been synced to the sheet)
         const sheetIds = new Set(data.items.map(i => i.id));
