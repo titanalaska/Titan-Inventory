@@ -42,6 +42,11 @@
   .stats-bar { background: var(--iron); padding: 8px 16px; display: flex; gap: 16px; font-size: 11px; color: var(--mid); letter-spacing: 0.06em; border-bottom: 1px solid #222222; flex-wrap: wrap; }
   .stats-bar span { color: var(--snow); font-weight: 600; }
 
+  .cat-jump { display: flex; gap: 6px; overflow-x: auto; padding: 8px 16px; background: var(--steel); scrollbar-width: none; }
+  .cat-jump::-webkit-scrollbar { display: none; }
+  .cat-chip { flex-shrink: 0; background: var(--iron); border: 1px solid #2a2a2a; color: var(--fog); font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 6px 12px; border-radius: 14px; cursor: pointer; white-space: nowrap; font-family: var(--font); }
+  .cat-chip:hover, .cat-chip:active { border-color: var(--gold); color: var(--gold); }
+
   .add-bar { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .add-btn { background: var(--rust); color: var(--snow); border: none; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; padding: 9px 20px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); transition: background 0.15s; text-transform: uppercase; }
   .add-btn:hover { background: var(--rust-light); }
@@ -69,6 +74,8 @@
   .qty-plus { background: #1a2e1a; color: #70d070; }
   .qty-plus:hover { background: #5a4a00; }
   .qty-num { font-size: 17px; font-weight: 700; color: var(--snow); min-width: 36px; text-align: center; }
+  .qty-num.qty-zero { color: #e07070; }
+  .qty-num.qty-low { color: var(--gold); }
 
   .item-detail { display: none; padding: 0 12px 12px 40px; border-top: 1px solid #2a3a4a; }
   .item-detail.open { display: block; }
@@ -83,12 +90,6 @@
   .btn-delete { background: transparent; color: #e07070; border: 1px solid #5a2a2a; font-size: 12px; padding: 7px 14px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); letter-spacing: 0.06em; text-transform: uppercase; }
   .btn-delete:hover { background: #3a1a1a; }
   .est-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fog); cursor: pointer; margin-top: 2px; }
-
-  /* CHANGE LOG */
-  .log-entry { font-size: 11px; color: var(--mid); padding: 4px 0; border-bottom: 1px solid #2a3a4a; line-height: 1.5; }
-  .log-entry .log-who { color: #D4A017; font-weight: 600; }
-  .log-entry .log-item { color: var(--snow); }
-  .log-entry .log-time { color: #3a3000; font-size: 10px; }
 
   /* MODALS */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
@@ -113,12 +114,25 @@
   .toast.success { background: #5a4a00; }
   .toast.error { background: #5a1a1a; }
 
-  .cat-divider { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); padding: 16px 4px 6px; border-bottom: 1px solid #2a3a4a; margin-bottom: 2px; font-weight: 700; }
+  .cat-divider { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); padding: 16px 4px 6px; border-bottom: 1px solid #2a3a4a; margin-bottom: 2px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; scroll-margin-top: 160px; }
+  .cat-divider:hover { color: var(--gold); }
+  .cat-chevron { display: inline-block; width: 10px; font-size: 9px; color: var(--gold); flex-shrink: 0; }
+  .cat-count { margin-left: auto; color: var(--mid); font-weight: 400; letter-spacing: 0.05em; }
   .loading-state { text-align: center; padding: 60px 20px; color: var(--mid); font-size: 13px; }
   .spinner { width: 32px; height: 32px; border: 3px solid #2a3a4a; border-top-color: var(--rust); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .config-banner { background: #2a1a10; border: 1px solid #5a3a20; border-radius: var(--radius); padding: 12px 16px; margin: 12px 16px; font-size: 12px; color: var(--gold); display: none; }
   .config-banner.show { display: block; }
+
+  .fab {
+    position: fixed; right: 18px; bottom: 22px; width: 56px; height: 56px; border-radius: 50%;
+    background: var(--rust); color: var(--snow); font-size: 30px; font-weight: 700; border: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.55); cursor: pointer; z-index: 150;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+    transition: transform 0.12s, background 0.15s; font-family: var(--font);
+  }
+  .fab:hover { background: var(--rust-light); }
+  .fab:active { transform: scale(0.92); }
 
   @media (max-width: 400px) {
     .detail-grid, .modal-grid { grid-template-columns: 1fr; }
@@ -278,13 +292,13 @@
     <select class="filter-sel" id="filterCat" onchange="renderItems()"></select>
     <select class="filter-sel" id="filterLoc" onchange="renderItems()"></select>
   </div>
+  <div class="stats-bar" style="margin:10px -16px 0">
+    <div id="statItemsLabel">Items: <span id="statItems">—</span></div>
+    <div id="statShowingLabel">Showing: <span id="statShowing">—</span></div>
+    <div id="statEstLabel">Est. flags: <span id="statEst">—</span></div>
+  </div>
+  <div class="cat-jump" id="catJump" style="margin:0 -16px"></div>
 </header>
-
-<div class="stats-bar">
-  <div id="statItemsLabel">Items: <span id="statItems">—</span></div>
-  <div id="statShowingLabel">Showing: <span id="statShowing">—</span></div>
-  <div id="statEstLabel">Est. flags: <span id="statEst">—</span></div>
-</div>
 
 
 <div class="topsoil-widget">
@@ -310,7 +324,7 @@
 
 <div class="add-bar">
   <button class="add-btn" id="addBtn" onclick="requireName(openAddModal)">+ Add Item</button>
-  <button class="log-btn" id="logBtn" onclick="openLog()">📋 Change Log</button>
+  <button class="log-btn" style="border-color:#217346;color:#3ba55d" onclick="openSheetView()">📊 View Sheet / Changes</button>
   <button class="job-btn" onclick="openJobChecker()">🔍 Check Job</button>
   <button class="job-btn" style="border-color:#5a2000;color:#e07030" onclick="openDisposalLog()">🗑 Disposal Log</button>
 </div>
@@ -339,9 +353,13 @@
     <div class="modal-grid">
       <div class="modal-field full">
         <label>📷 Scan Item (Optional)</label>
-        <label class="photo-btn" for="photoUpload">📷 TAKE PHOTO OR UPLOAD IMAGE</label>
+        <div style="display:flex;gap:8px">
+          <label class="photo-btn" style="flex:1;margin-bottom:0" for="photoUpload">📷 TAKE PHOTO</label>
+          <label class="photo-btn" style="flex:1;margin-bottom:0" for="galleryUpload">🖼 FROM GALLERY</label>
+        </div>
         <input type="file" id="photoUpload" accept="image/*" capture="environment" style="display:none" onchange="analyzePhoto(this)">
-        <img id="photoPreview" class="photo-preview">
+        <input type="file" id="galleryUpload" accept="image/*" style="display:none" onchange="analyzePhoto(this)">
+        <img id="photoPreview" class="photo-preview" style="margin-top:10px">
         <div class="ai-analyzing" id="aiAnalyzing">🤖 Identifying item...</div>
       </div>
       <div class="modal-field full">
@@ -361,6 +379,10 @@
         <input type="number" id="newQty" placeholder="0" min="0">
       </div>
       <div class="modal-field">
+        <label>Unit</label>
+        <select id="newUnit"></select>
+      </div>
+      <div class="modal-field full">
         <label id="labelSpecs">Specs / Notes</label>
         <input type="text" id="newSpecs">
       </div>
@@ -401,18 +423,6 @@
     <div class="modal-actions">
       <button class="btn-cancel" id="cancelBtn" onclick="closeAddModal()">Cancel</button>
       <button class="btn-save" id="saveNewBtn" onclick="addItem()">ADD ITEM</button>
-    </div>
-  </div>
-</div>
-
-<!-- CHANGE LOG MODAL -->
-<div class="modal-overlay" id="logModal">
-  <div class="modal" style="max-width:560px">
-    <h2 id="logTitle">📋 Change Log</h2>
-    <div id="logList" style="margin-top:8px"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeLog()">Close</button>
-      <button class="btn-delete" onclick="clearLog()">Clear Log</button>
     </div>
   </div>
 </div>
@@ -473,12 +483,28 @@
   </div>
 </div>
 
+<button class="fab" onclick="requireName(openAddModal)" title="Add Item">+</button>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyudFaJ0dsSYMo_uO8KF5WTvJrB-l3eppbTHenmbcPRO19qhcVg8_YJR5boDIsCU1QC/exec';
 const SHEET_ID = '1xxb6CJZnHSjEUYjPdHYtGHkjRZY02PHXkQXKAn--jUE';
-const API_KEY = '';
+
+// Routes AI calls through the Apps Script's doPost 'ai' proxy, which holds the
+// Anthropic key server-side (Script Properties) instead of exposing it in the browser.
+// text/plain avoids a CORS preflight that Apps Script web apps don't handle for POST.
+async function callClaude(payload) {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'ai', payload })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || 'AI request failed'));
+  if (!data.content || !data.content[0]) throw new Error('Unexpected AI response');
+  return data.content[0].text;
+}
 
 const T = {
   en: {
@@ -489,17 +515,16 @@ const T = {
     cancel:'Cancel', save:'SAVE', addItem:'ADD ITEM', delete:'DELETE', estMark:'Mark as estimated quantity',
     noItems:'No items match your search.', namereq:'Item name required',
     savedLocal:'Saved locally', savedSheet:'Saved to Google Sheets ✓', sheetUnreach:'Sheet unreachable — saved locally',
-    deleted:'Item deleted', synced:'Synced from Google Sheets', syncFail:'Sheet unreachable — using local data',
+    deleted:'Item deleted', deletedLocal:'Item deleted locally — sheet unreachable', synced:'Synced from Google Sheets', syncFail:'Sheet unreachable — using local data',
     configMsg:'⚠ Sheet not configured. Connect Google Sheets to save edits.',
     confirmDelete:'Delete item #ID? This cannot be undone.', est:'Est.', langBtn:'ES',
-    signIn:'Sign In', logTitle:'📋 Change Log', noLog:'No changes logged yet.',
+    signIn:'Sign In',
     whoAreYou:'Who Are You?', enterName:'Enter your full name to log changes.',
     categories:{
-      'LUMBER & POSTS':'LUMBER & POSTS','FENCING':'FENCING',
-      'DRAINAGE':'DRAINAGE','HARDWARE & FASTENERS':'HARDWARE & FASTENERS',
-      'LANDSCAPE FABRIC & POLY':'LANDSCAPE FABRIC & POLY','HYDROSEEDING MATERIALS':'HYDROSEEDING MATERIALS',
-      'DECKING HARDWARE':'DECKING HARDWARE',
-      'CONCRETE & MASONRY':'CONCRETE & MASONRY','ELECTRICAL/CONDUIT':'ELECTRICAL/CONDUIT','NURSERY STOCK':'NURSERY STOCK','PIT & AGGREGATE MATERIALS':'PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT':'MISC/EQUIPMENT',
+      'LUMBER & POSTS':'LUMBER & POSTS','FENCE HARDWARE':'FENCE HARDWARE',
+      'DRAINAGE':'DRAINAGE',
+      'LANDSCAPE HARDWARE':'LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS':'HYDROSEEDING MATERIALS',
+      'MASONRY & RETAINING WALL':'MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT':'ELECTRICAL/CONDUIT','NURSERY STOCK':'NURSERY STOCK','PIT & AGGREGATE MATERIALS':'PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT':'MISC/EQUIPMENT',
     }
   },
   es: {
@@ -510,39 +535,59 @@ const T = {
     cancel:'Cancelar', save:'GUARDAR', addItem:'AGREGAR', delete:'ELIMINAR', estMark:'Marcar como cantidad estimada',
     noItems:'No hay artículos que coincidan.', namereq:'Se requiere nombre del artículo',
     savedLocal:'Guardado localmente', savedSheet:'Guardado en Google Sheets ✓', sheetUnreach:'Hoja no disponible — guardado localmente',
-    deleted:'Artículo eliminado', synced:'Sincronizado desde Google Sheets', syncFail:'Hoja no disponible — usando datos locales',
+    deleted:'Artículo eliminado', deletedLocal:'Artículo eliminado localmente — hoja no disponible', synced:'Sincronizado desde Google Sheets', syncFail:'Hoja no disponible — usando datos locales',
     configMsg:'⚠ Hoja no configurada. Conéctese a Google Sheets para guardar cambios.',
     confirmDelete:'¿Eliminar artículo #ID? Esta acción no se puede deshacer.', est:'Est.', langBtn:'EN',
-    signIn:'Registrarse', logTitle:'📋 Registro de Cambios', noLog:'No hay cambios registrados.',
+    signIn:'Registrarse',
     whoAreYou:'¿Quién eres?', enterName:'Ingresa tu nombre completo para registrar cambios.',
     categories:{
-      'LUMBER & POSTS':'MADERA Y POSTES','FENCING':'CERCAS Y HERRAJES',
+      'LUMBER & POSTS':'MADERA Y POSTES','FENCE HARDWARE':'HERRAJES DE CERCAS',
       'DRAINAGE':'DRENAJE',
-      'HARDWARE & FASTENERS':'HERRAJES Y FIJADORES','LANDSCAPE FABRIC & POLY':'TELA PAISAJISTA Y PLÁSTICO',
+      'LANDSCAPE HARDWARE':'HERRAJES DE PAISAJISMO',
       'HYDROSEEDING MATERIALS':'MATERIALES DE HIDROSIEMBRA',
-      'DECKING HARDWARE':'HERRAJES PARA DECK','CONCRETE & MASONRY':'CONCRETO Y MAMPOSTERÍA',
+      'MASONRY & RETAINING WALL':'MAMPOSTERÍA Y MUROS DE CONTENCIÓN',
       'ELECTRICAL/CONDUIT':'ELÉCTRICO/CONDUCTO','NURSERY STOCK':'PLANTAS Y VIVERO','PIT & AGGREGATE MATERIALS':'MATERIALES DE CANTERA Y AGREGADOS','MISC/EQUIPMENT':'VARIOS/EQUIPO',
     }
   }
 };
 
-const LOCATIONS = ['Unknown','Gray Building','104','Maui Lot','North C Street','South C Street','Red Building','Conex 1','Conex 2','Conex 3','Conex 4','Conex 5','Conex 6','Conex 7','Civil A','Civil B','Red Tool 1','Red Tool 2','Red Tool 3','Yard'];
-const CATEGORIES = ['LUMBER & POSTS','FENCING','DRAINAGE','HARDWARE & FASTENERS','LANDSCAPE FABRIC & POLY','HYDROSEEDING MATERIALS','DECKING HARDWARE','CONCRETE & MASONRY','ELECTRICAL/CONDUIT','NURSERY STOCK','PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT'];
+const LOCATIONS = ['Unknown','Gray Building','104','Yard 104','Maui Lot','North C Street','South C Street','Red Building','Conex 1','Conex 2','Conex 3','Conex 4','Conex 5','Conex 6','Conex 7','Civil A','Civil B','Red Tool 1','Red Tool 2','Red Tool 3','Yard','Material Bins'];
+const CATEGORIES = ['LUMBER & POSTS','FENCE HARDWARE','DRAINAGE','LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS','MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT','NURSERY STOCK','PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT'];
+const UNITS = [
+  {value:'ea', label:'Each'},
+  {value:'tons', label:'Tons'},
+  {value:'yards', label:'Yards (cu yd)'},
+  {value:'ft', label:'Feet'},
+  {value:'sq ft', label:'Sq Ft'},
+  {value:'bags', label:'Bags'},
+  {value:'gal', label:'Gallons'},
+  {value:'box', label:'Box'},
+  {value:'roll', label:'Roll'},
+];
 
 let lang = 'en';
 let items = [];
 let expandedId = null;
+let collapsedCats = new Set();
 let currentUser = '';
 let pendingAction = null;
-let changeLog = [];
 let translationCache = {};
 
 function t(key) { return T[lang][key] || T.en[key] || key; }
 function catLabel(cat) { return T[lang].categories[cat] || cat; }
 function itemName(item) {
   if (lang === 'es' && translationCache[item.name]) return translationCache[item.name];
-  return item.name;
+  return item.name || '';
 }
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function qtyClass(item) {
+  if (item.qty === 0) return 'qty-zero';
+  if (item.qty <= 5) return 'qty-low';
+  return '';
+}
+function catSlug(cat) { return 'catdiv-' + cat.replace(/[^a-zA-Z0-9]+/g, '-'); }
 
 async function toggleLang() {
   lang = lang === 'en' ? 'es' : 'en';
@@ -553,25 +598,24 @@ async function toggleLang() {
   if (lang === 'es') {
     const untranslated = items.filter(i => !translationCache[i.name]).map(i => i.name);
     if (untranslated.length > 0) {
-      showToast('Traduciendo articulos...', '');
-      try {
-        const prompt = 'Translate these construction/landscaping supply item names from English to Spanish. Return ONLY a valid JSON object where keys are the original English names and values are Spanish translations. Keep part numbers, brand names, sizes like 2x4 or 3/8 and model numbers exactly as-is. Items:\n' + untranslated.map(n => '"' + n + '"').join('\n');
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
+      if (!APPS_SCRIPT_URL) {
+        showToast('Traduccion no disponible — sheet no configurada', 'error');
+      } else {
+        showToast('Traduciendo articulos...', '');
+        try {
+          const prompt = 'Translate these construction/landscaping supply item names from English to Spanish. Return ONLY a valid JSON object where keys are the original English names and values are Spanish translations. Keep part numbers, brand names, sizes like 2x4 or 3/8 and model numbers exactly as-is. Items:\n' + untranslated.map(n => '"' + n + '"').join('\n');
+          const text = await callClaude({
+            model: 'claude-haiku-4-5-20251001',
             max_tokens: 2000,
             messages: [{ role: 'user', content: prompt }]
-          })
-        });
-        const data = await res.json();
-        const text = data.content[0].text.replace(/```json|```/g, '').trim();
-        const translations = JSON.parse(text);
-        Object.assign(translationCache, translations);
-        showToast('Traduccion completa!', 'success');
-      } catch(e) {
-        showToast('Traduccion no disponible', 'error');
+          });
+          const cleaned = text.replace(/```json|```/g, '').trim();
+          const translations = JSON.parse(cleaned);
+          Object.assign(translationCache, translations);
+          showToast('Traduccion completa!', 'success');
+        } catch(e) {
+          showToast('Traduccion no disponible', 'error');
+        }
       }
     }
   }
@@ -625,63 +669,34 @@ function confirmName() {
   const name = document.getElementById('nameInput').value.trim();
   if (!name) { showToast('Please enter your full name', 'error'); return; }
   currentUser = name;
+  localStorage.setItem('titan_user', name);
   document.getElementById('userBtn').textContent = '👤 ' + name.split(' ')[0];
   document.getElementById('nameModal').classList.remove('open');
   showToast('Signed in as ' + name, 'success');
   if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
 }
 
-// ---- CHANGE LOG ----
+// ---- CHANGE LOG ---- (recorded to the Google Sheet's Change Log tab; view via the "View Sheet" button)
 async function logChange(type, itemNameStr, detail) {
+  if (!APPS_SCRIPT_URL || !currentUser) return;
   const now = new Date();
-  const timeStr = now.toLocaleDateString('en-US', {month:'short',day:'numeric'}) + ' ' + now.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit'});
-  const entry = { who: currentUser, type, itemName: itemNameStr, detail, time: timeStr };
-  changeLog.unshift(entry);
-  if (changeLog.length > 200) changeLog = changeLog.slice(0, 200);
-
-  // Push to Google Sheet Change Log tab
-  if (APPS_SCRIPT_URL && currentUser) {
-    try {
-      const params = new URLSearchParams({
-        action: 'log',
-        who: currentUser,
-        type,
-        itemName: itemNameStr,
-        detail,
-        time: now.toISOString()
-      });
-      await fetch(APPS_SCRIPT_URL + '?' + params);
-    } catch(e) { /* silent fail */ }
-  }
+  try {
+    const params = new URLSearchParams({
+      action: 'log',
+      who: currentUser,
+      type,
+      itemName: itemNameStr,
+      detail,
+      time: now.toISOString()
+    });
+    await fetch(APPS_SCRIPT_URL + '?' + params);
+  } catch(e) { /* silent fail */ }
 }
 
-async function openLog() {
-  const list = document.getElementById('logList');
-  document.getElementById('logTitle').textContent = t('logTitle');
-  list.innerHTML = '<div style="color:var(--mid);font-size:12px;padding:8px 0">Loading...</div>';
-  document.getElementById('logModal').classList.add('open');
-
-  // Try to load from sheet
-  let sheetLog = [];
-  if (APPS_SCRIPT_URL) {
-    try {
-      const res = await fetch(APPS_SCRIPT_URL + '?action=getLog');
-      const data = await res.json();
-      if (data && data.entries) sheetLog = data.entries;
-    } catch(e) { /* fall back to local */ }
-  }
-
-  const combined = sheetLog.length > 0 ? sheetLog : changeLog;
-
-  if (combined.length === 0) {
-    list.innerHTML = '<p style="color:var(--mid);font-size:13px;padding:16px 0">' + t('noLog') + '</p>';
-  } else {
-    list.innerHTML = combined.map(e => '<div class="log-entry"><span class="log-who">' + e.who + '</span><span style="color:var(--mid)"> — ' + e.type + ' — </span><span class="log-item">' + e.itemName + '</span><span style="color:var(--mid)">: ' + e.detail + '</span><br><span class="log-time">' + e.time + '</span></div>').join('');
-  }
+function openSheetView() {
+  if (!SHEET_ID) { showToast('No sheet configured', 'error'); return; }
+  window.open(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`, '_blank', 'noopener');
 }
-
-function closeLog() { document.getElementById('logModal').classList.remove('open'); }
-function clearLog() { if (confirm('Clear all change log entries?')) { changeLog = []; closeLog(); } }
 
 // ---- SELECTS ----
 function populateSelects() {
@@ -699,6 +714,8 @@ function populateSelects() {
   CATEGORIES.forEach(c => { newCat.innerHTML += `<option value="${c}">${catLabel(c)}</option>`; });
   newLoc.innerHTML = `<option value="">Select…</option>`;
   LOCATIONS.forEach(l => { newLoc.innerHTML += `<option value="${l}">${l}</option>`; });
+  const newUnit = document.getElementById('newUnit');
+  if (newUnit) { newUnit.innerHTML = UNITS.map(u => `<option value="${u.value}">${u.label}</option>`).join(''); }
 }
 
 // ---- EMBEDDED DATA ----
@@ -713,162 +730,178 @@ const EMBEDDED = [
   {id:8,category:'LUMBER & POSTS',name:'2x6 treated (Severe Weather #2)',qty:6,specs:'1.5x5.5x8ft, CA-C above ground',estimated:false,location:'104'},
   {id:9,category:'LUMBER & POSTS',name:'Tree mounting stakes',qty:30,specs:'6ft tall',estimated:false,location:'104'},
   {id:10,category:'LUMBER & POSTS',name:'Cedar Square Top Post Caps (4x4)',qty:22,specs:'Home Depot, cedar',estimated:false,location:'104'},
-  {id:11,category:'FENCING',name:'T-posts (steel)',qty:140,specs:'8ft, green with clips',estimated:true,location:'104'},
+  {id:11,category:'FENCE HARDWARE',name:'T-posts (steel)',qty:140,specs:'8ft, green with clips',estimated:true,location:'104'},
   {id:12,category:'DRAINAGE',name:'4" corrugated drain pipe (full bundles)',qty:2,specs:'100ft each = 200ft total, no sock',estimated:false,location:'104'},
   {id:13,category:'DRAINAGE',name:'4" corrugated drain pipe (partial)',qty:1,specs:'~75ft total, no sock',estimated:true,location:'104'},
   {id:14,category:'DRAINAGE',name:'12" galvanized steel culvert couplers',qty:18,specs:'Corrugated steel',estimated:false,location:'104'},
-  {id:16,category:'FENCING',name:'Black decorative finial post caps',qty:28,specs:'2-3/8" diameter, slip-on',estimated:false,location:'Gray Building'},
-  {id:17,category:'FENCING',name:'3" black ring-style post caps (prong clips)',qty:77,specs:'3" diameter',estimated:false,location:'Gray Building'},
-  {id:18,category:'FENCING',name:'2" black ring-style post caps (prong clips)',qty:12,specs:'2" diameter',estimated:false,location:'Gray Building'},
-  {id:19,category:'FENCING',name:'2" black slip-on post cap with eyelet tab',qty:31,specs:'2" diameter',estimated:false,location:'Gray Building'},
-  {id:20,category:'FENCING',name:'2" black slip-on post cap with arch/loop handle',qty:27,specs:'2" diameter',estimated:false,location:'Gray Building'},
-  {id:21,category:'FENCING',name:'1-5/8" black dome/mushroom slip-on post caps',qty:53,specs:'1-5/8" diameter',estimated:false,location:'Gray Building'},
-  {id:22,category:'FENCING',name:'Black square rail end caps (prong clips)',qty:40,specs:'~2" square',estimated:false,location:'Gray Building'},
-  {id:23,category:'FENCING',name:'2" galvanized ring-style post caps (prong clips)',qty:208,specs:'2" diameter',estimated:false,location:'Gray Building'},
-  {id:24,category:'FENCING',name:'2-3/8" galvanized decorative finial post caps',qty:63,specs:'2-3/8" diameter',estimated:false,location:'Gray Building'},
-  {id:25,category:'FENCING',name:'Galvanized slip-on post cap with eyelet tab',qty:24,specs:'2-3/8" diameter',estimated:false,location:'Gray Building'},
-  {id:26,category:'FENCING',name:'Galvanized arch/loop handle post caps',qty:77,specs:'2-3/8" to 2-1/2"',estimated:false,location:'Gray Building'},
-  {id:27,category:'FENCING',name:'Galvanized arch/loop handle post caps (box)',qty:115,specs:'2-3/8" diameter',estimated:false,location:'Gray Building'},
-  {id:28,category:'FENCING',name:'Galvanized dome/mushroom post caps',qty:15,specs:'~4" diameter',estimated:false,location:'Gray Building'},
-  {id:29,category:'FENCING',name:'Galvanized square arch/loop handle post caps',qty:22,specs:'6" post',estimated:false,location:'Gray Building'},
-  {id:30,category:'FENCING',name:'Misc/unsorted galvanized post caps (bucket)',qty:55,specs:'Various styles, to be sorted',estimated:true,location:'Gray Building'},
-  {id:31,category:'FENCING',name:'Ameristar Royalty Finial Black (3/4" square post)',qty:35,specs:'Part #AB525',estimated:false,location:'Gray Building'},
-  {id:32,category:'FENCING',name:'Gate Hardware Set Double Drive - Black',qty:2,specs:'Merchants Metals, 2-3/8"x1-3/8"',estimated:false,location:'Gray Building'},
-  {id:33,category:'FENCING',name:'Traditional gate mounting & latch kits',qty:7,specs:'Hand-assembled, National Hardware',estimated:false,location:'Gray Building'},
-  {id:34,category:'FENCING',name:'Chain gate hinges - black',qty:6,specs:'',estimated:false,location:'Gray Building'},
-  {id:35,category:'FENCING',name:'Chain gate hinges - galvanized',qty:2,specs:'',estimated:false,location:'Gray Building'},
-  {id:36,category:'FENCING',name:'Fork/bracket style gate hinges black',qty:45,specs:'',estimated:false,location:'Gray Building'},
-  {id:37,category:'FENCING',name:'National Hardware SS Gate Latch Cable',qty:1,specs:'WeatherGuard, lifetime warranty',estimated:false,location:'Gray Building'},
-  {id:38,category:'FENCING',name:'National Hardware Self-Locking Gate Latch Black',qty:5,specs:'Part #N184-861/BPB21',estimated:false,location:'Gray Building'},
-  {id:39,category:'FENCING',name:'Merchants Metals 2-3/8" Black Tension Bands',qty:12,specs:'Item #272009',estimated:false,location:'Gray Building'},
-  {id:40,category:'FENCING',name:'Galvanized tension bands C-shape/hook style',qty:52,specs:'Large diameter',estimated:false,location:'Gray Building'},
-  {id:41,category:'FENCING',name:'Galvanized tension bands large single wrap',qty:25,specs:'Slotted tabs',estimated:false,location:'Gray Building'},
-  {id:42,category:'FENCING',name:'Galvanized tension bands full ring style',qty:45,specs:'Prong clips',estimated:true,location:'Gray Building'},
-  {id:43,category:'FENCING',name:'Galvanized barbed wire arms/brackets',qty:45,specs:'Mounts to post top',estimated:false,location:'Gray Building'},
-  {id:44,category:'HARDWARE & FASTENERS',name:'Galvanized flat plate brackets (~4" wide)',qty:3,specs:'2 bolt holes',estimated:false,location:'Gray Building'},
-  {id:45,category:'HARDWARE & FASTENERS',name:'Galvanized fence rail brackets/brace bands',qty:60,specs:'',estimated:true,location:'Gray Building'},
-  {id:46,category:'HARDWARE & FASTENERS',name:'Galvanized carriage bolts 2.5"',qty:65,specs:'Estimated',estimated:true,location:'Gray Building'},
-  {id:47,category:'HARDWARE & FASTENERS',name:'Galvanized carriage bolts 3/8" x 3" (boxed)',qty:50,specs:'#CBG3750300',estimated:false,location:'Gray Building'},
-  {id:48,category:'HARDWARE & FASTENERS',name:'Galvanized carriage bolts 3/8" (loose)',qty:175,specs:'With bag of nuts/washers',estimated:true,location:'Gray Building'},
-  {id:49,category:'HARDWARE & FASTENERS',name:'Galvanized pipe rail couplers/sleeves',qty:37,specs:'1-3/4" diameter',estimated:false,location:'Gray Building'},
-  {id:50,category:'FENCING',name:'Black wire fence tie hooks',qty:104,specs:'',estimated:false,location:'Gray Building'},
-  {id:51,category:'FENCING',name:'Galvanized wire fence tie hooks',qty:4000,specs:'Multiple bags, estimated',estimated:true,location:'Gray Building'},
-  {id:52,category:'FENCING',name:'L&C Enterprises Easy Twist Ties 9ga galvanized',qty:500,specs:'2-3/8" mesh, 1 box near full',estimated:true,location:'Gray Building'},
-  {id:53,category:'FENCING',name:'Galvanized hog rings/fence staples',qty:2125,specs:'17 bags ~125 ea, estimated',estimated:true,location:'Gray Building'},
-  {id:54,category:'FENCING',name:'Black coated wire coil (~8ga)',qty:1,specs:'~150ft',estimated:true,location:'Gray Building'},
-  {id:55,category:'FENCING',name:'1" Hex PVC Black Hex Netting',qty:0,specs:'72"x50ft rolls, 20ga, Item #C20077250B',estimated:false,location:'Unknown'},
+  {id:16,category:'FENCE HARDWARE',name:'Black decorative finial post caps',qty:28,specs:'2-3/8" diameter, slip-on',estimated:false,location:'Gray Building'},
+  {id:17,category:'FENCE HARDWARE',name:'3" black ring-style post caps (prong clips)',qty:77,specs:'3" diameter',estimated:false,location:'Gray Building'},
+  {id:18,category:'FENCE HARDWARE',name:'2" black ring-style post caps (prong clips)',qty:12,specs:'2" diameter',estimated:false,location:'Gray Building'},
+  {id:19,category:'FENCE HARDWARE',name:'2" black slip-on post cap with eyelet tab',qty:31,specs:'2" diameter',estimated:false,location:'Gray Building'},
+  {id:20,category:'FENCE HARDWARE',name:'2" black slip-on post cap with arch/loop handle',qty:27,specs:'2" diameter',estimated:false,location:'Gray Building'},
+  {id:21,category:'FENCE HARDWARE',name:'1-5/8" black dome/mushroom slip-on post caps',qty:53,specs:'1-5/8" diameter',estimated:false,location:'Gray Building'},
+  {id:22,category:'FENCE HARDWARE',name:'Black square rail end caps (prong clips)',qty:40,specs:'~2" square',estimated:false,location:'Gray Building'},
+  {id:23,category:'FENCE HARDWARE',name:'2" galvanized ring-style post caps (prong clips)',qty:208,specs:'2" diameter',estimated:false,location:'Gray Building'},
+  {id:24,category:'FENCE HARDWARE',name:'2-3/8" galvanized decorative finial post caps',qty:63,specs:'2-3/8" diameter',estimated:false,location:'Gray Building'},
+  {id:25,category:'FENCE HARDWARE',name:'Galvanized slip-on post cap with eyelet tab',qty:24,specs:'2-3/8" diameter',estimated:false,location:'Gray Building'},
+  {id:26,category:'FENCE HARDWARE',name:'Galvanized arch/loop handle post caps',qty:77,specs:'2-3/8" to 2-1/2"',estimated:false,location:'Gray Building'},
+  {id:27,category:'FENCE HARDWARE',name:'Galvanized arch/loop handle post caps (box)',qty:115,specs:'2-3/8" diameter',estimated:false,location:'Gray Building'},
+  {id:28,category:'FENCE HARDWARE',name:'Galvanized dome/mushroom post caps',qty:15,specs:'~4" diameter',estimated:false,location:'Gray Building'},
+  {id:29,category:'FENCE HARDWARE',name:'Galvanized square arch/loop handle post caps',qty:22,specs:'6" post',estimated:false,location:'Gray Building'},
+  {id:30,category:'FENCE HARDWARE',name:'Misc/unsorted galvanized post caps (bucket)',qty:55,specs:'Various styles, to be sorted',estimated:true,location:'Gray Building'},
+  {id:31,category:'FENCE HARDWARE',name:'Ameristar Royalty Finial Black (3/4" square post)',qty:35,specs:'Part #AB525',estimated:false,location:'Gray Building'},
+  {id:32,category:'FENCE HARDWARE',name:'Gate Hardware Set Double Drive - Black',qty:2,specs:'Merchants Metals, 2-3/8"x1-3/8"',estimated:false,location:'Gray Building'},
+  {id:33,category:'FENCE HARDWARE',name:'Traditional gate mounting & latch kits',qty:7,specs:'Hand-assembled, National Hardware',estimated:false,location:'Gray Building'},
+  {id:34,category:'FENCE HARDWARE',name:'Chain gate hinges - black',qty:6,specs:'',estimated:false,location:'Gray Building'},
+  {id:35,category:'FENCE HARDWARE',name:'Chain gate hinges - galvanized',qty:2,specs:'',estimated:false,location:'Gray Building'},
+  {id:36,category:'FENCE HARDWARE',name:'Fork/bracket style gate hinges black',qty:45,specs:'',estimated:false,location:'Gray Building'},
+  {id:37,category:'FENCE HARDWARE',name:'National Hardware SS Gate Latch Cable',qty:1,specs:'WeatherGuard, lifetime warranty',estimated:false,location:'Gray Building'},
+  {id:38,category:'FENCE HARDWARE',name:'National Hardware Self-Locking Gate Latch Black',qty:5,specs:'Part #N184-861/BPB21',estimated:false,location:'Gray Building'},
+  {id:39,category:'FENCE HARDWARE',name:'Merchants Metals 2-3/8" Black Tension Bands',qty:12,specs:'Item #272009',estimated:false,location:'Gray Building'},
+  {id:40,category:'FENCE HARDWARE',name:'Galvanized tension bands C-shape/hook style',qty:52,specs:'Large diameter',estimated:false,location:'Gray Building'},
+  {id:41,category:'FENCE HARDWARE',name:'Galvanized tension bands large single wrap',qty:25,specs:'Slotted tabs',estimated:false,location:'Gray Building'},
+  {id:42,category:'FENCE HARDWARE',name:'Galvanized tension bands full ring style',qty:45,specs:'Prong clips',estimated:true,location:'Gray Building'},
+  {id:43,category:'FENCE HARDWARE',name:'Galvanized barbed wire arms/brackets',qty:45,specs:'Mounts to post top',estimated:false,location:'Gray Building'},
+  {id:44,category:'FENCE HARDWARE',name:'Galvanized flat plate brackets (~4" wide)',qty:3,specs:'2 bolt holes',estimated:false,location:'Gray Building'},
+  {id:45,category:'FENCE HARDWARE',name:'Galvanized fence rail brackets/brace bands',qty:60,specs:'',estimated:true,location:'Gray Building'},
+  {id:46,category:'FENCE HARDWARE',name:'Galvanized carriage bolts 2.5"',qty:65,specs:'Estimated',estimated:true,location:'Gray Building'},
+  {id:47,category:'FENCE HARDWARE',name:'Galvanized carriage bolts 3/8" x 3" (boxed)',qty:50,specs:'#CBG3750300',estimated:false,location:'Gray Building'},
+  {id:48,category:'FENCE HARDWARE',name:'Galvanized carriage bolts 3/8" (loose)',qty:175,specs:'With bag of nuts/washers',estimated:true,location:'Gray Building'},
+  {id:49,category:'FENCE HARDWARE',name:'Galvanized pipe rail couplers/sleeves',qty:37,specs:'1-3/4" diameter',estimated:false,location:'Gray Building'},
+  {id:50,category:'FENCE HARDWARE',name:'Black wire fence tie hooks',qty:104,specs:'',estimated:false,location:'Gray Building'},
+  {id:51,category:'FENCE HARDWARE',name:'Galvanized wire fence tie hooks',qty:4000,specs:'Multiple bags, estimated',estimated:true,location:'Gray Building'},
+  {id:52,category:'FENCE HARDWARE',name:'L&C Enterprises Easy Twist Ties 9ga galvanized',qty:500,specs:'2-3/8" mesh, 1 box near full',estimated:true,location:'Gray Building'},
+  {id:53,category:'FENCE HARDWARE',name:'Galvanized hog rings/fence staples',qty:2125,specs:'17 bags ~125 ea, estimated',estimated:true,location:'Gray Building'},
+  {id:54,category:'FENCE HARDWARE',name:'Black coated wire coil (~8ga)',qty:1,specs:'~150ft',estimated:true,location:'Gray Building'},
+  {id:55,category:'FENCE HARDWARE',name:'1" Hex PVC Black Hex Netting',qty:0,specs:'72"x50ft rolls, 20ga, Item #C20077250B',estimated:false,location:'Unknown'},
   {id:56,category:'LUMBER & POSTS',name:'2x12x12ft KD Fir Premium (Hampton Lumber)',qty:5,specs:'1-1/2"x11-1/4"x12ft, Hampton Lumber Mills',estimated:false,location:'Conex 5'},
   {id:57,category:'LUMBER & POSTS',name:'2x12x16ft KD Fir Premium (Hampton Lumber)',qty:1,specs:'1-1/2"x11-1/4"x16ft, Hampton Lumber Mills',estimated:false,location:'Conex 5'},
   {id:58,category:'LUMBER & POSTS',name:'2x12x10ft treated',qty:2,specs:'Green end, pressure treated',estimated:false,location:'Conex 5'},
-  {id:59,category:'LANDSCAPE FABRIC & POLY',name:'Superior Professional Landscape Fabric',qty:11,specs:'4x200ft rolls (800 sq ft ea), 30-yr guarantee, some partials',estimated:true,location:'Conex 5'},
-  {id:60,category:'LANDSCAPE FABRIC & POLY',name:'Poly Spunbonded Landscape Fabric',qty:3,specs:'x300ft rolls',estimated:false,location:'Conex 5'},
-  {id:61,category:'LANDSCAPE FABRIC & POLY',name:'Viaflex Dura Skrim R5CC Colorless (clear poly)',qty:1,specs:'20x100ft, 6mil, Part #R050CC-D-20-00-100',estimated:false,location:'Conex 5'},
-  {id:62,category:'LANDSCAPE FABRIC & POLY',name:'Black poly sheeting 6mil',qty:1,specs:'20x100ft, 2000 sq ft',estimated:false,location:'Conex 5'},
-  {id:63,category:'DECKING HARDWARE',name:'Trex Hideaway Universal Fastener Kit',qty:1,specs:'900 fasteners w/ preset screws + drive bit, covers 500 sq ft',estimated:false,location:'Conex 5'},
-  {id:64,category:'DECKING HARDWARE',name:'C-Deck Composite Deck Screws Winchester Grey',qty:1,specs:'10x2-3/4", 1750ct bucket',estimated:false,location:'Conex 5'},
-  {id:65,category:'CONCRETE & MASONRY',name:'Quikrete Expansion Joint Strips',qty:1,specs:'Box of ~14 strips, 4"x5ft each',estimated:false,location:'Conex 5'},
-  {id:66,category:'HARDWARE & FASTENERS',name:'Cascades 12" Spikes',qty:3,specs:'Part #0010794, 2 full + 1 partial',estimated:true,location:'Conex 5'},
-  {id:67,category:'FENCING',name:'Garden Craft Hardware Cloth 1/4" mesh',qty:3,specs:'24"x10ft rolls, galvanized',estimated:false,location:'Conex 5'},
+  {id:59,category:'LANDSCAPE HARDWARE',name:'Superior Professional Landscape Fabric',qty:11,specs:'4x200ft rolls (800 sq ft ea), 30-yr guarantee, some partials',estimated:true,location:'Conex 5'},
+  {id:60,category:'LANDSCAPE HARDWARE',name:'Poly Spunbonded Landscape Fabric',qty:3,specs:'x300ft rolls',estimated:false,location:'Conex 5'},
+  {id:61,category:'LANDSCAPE HARDWARE',name:'Viaflex Dura Skrim R5CC Colorless (clear poly)',qty:1,specs:'20x100ft, 6mil, Part #R050CC-D-20-00-100',estimated:false,location:'Conex 5'},
+  {id:62,category:'LANDSCAPE HARDWARE',name:'Black poly sheeting 6mil',qty:1,specs:'20x100ft, 2000 sq ft',estimated:false,location:'Conex 5'},
+  {id:63,category:'FENCE HARDWARE',name:'Trex Hideaway Universal Fastener Kit',qty:1,specs:'900 fasteners w/ preset screws + drive bit, covers 500 sq ft',estimated:false,location:'Conex 5'},
+  {id:64,category:'FENCE HARDWARE',name:'C-Deck Composite Deck Screws Winchester Grey',qty:1,specs:'10x2-3/4", 1750ct bucket',estimated:false,location:'Conex 5'},
+  {id:65,category:'MASONRY & RETAINING WALL',name:'Quikrete Expansion Joint Strips',qty:1,specs:'Box of ~14 strips, 4"x5ft each',estimated:false,location:'Conex 5'},
+  {id:66,category:'FENCE HARDWARE',name:'Cascades 12" Spikes',qty:3,specs:'Part #0010794, 2 full + 1 partial',estimated:true,location:'Conex 5'},
+  {id:67,category:'FENCE HARDWARE',name:'Garden Craft Hardware Cloth 1/4" mesh',qty:3,specs:'24"x10ft rolls, galvanized',estimated:false,location:'Conex 5'},
   {id:68,category:'DRAINAGE',name:'Universal Downspout Extender - Black',qty:11,specs:'Fits standard 4" drain tile',estimated:false,location:'Conex 5'},
   {id:69,category:'DRAINAGE',name:'Universal Downspout Extender - White',qty:5,specs:'Fits standard 4" drain tile',estimated:false,location:'Conex 5'},
   {id:70,category:'DRAINAGE',name:'Universal Downspout Extender - Green',qty:1,specs:'Fits standard 4" drain tile',estimated:false,location:'Conex 5'},
   {id:71,category:'ELECTRICAL/CONDUIT',name:'1" Rigid PVC Conduit',qty:5,specs:'10ft sticks, 90-C wire rated',estimated:false,location:'Conex 5'},
-  {id:72,category:'CONCRETE & MASONRY',name:'Quikrete Vinyl Concrete Patcher',qty:2,specs:'20lb bucket, No. 1133-20',estimated:false,location:'Conex 4'},
+  {id:72,category:'MASONRY & RETAINING WALL',name:'Quikrete Vinyl Concrete Patcher',qty:2,specs:'20lb bucket, No. 1133-20',estimated:false,location:'Conex 4'},
   {id:73,category:'MISC/EQUIPMENT',name:'Metal Platform Bed Frame',qty:25,specs:'SKU BF-3611V3-TWIN, black, twin',estimated:false,location:'Conex 4'},
   {id:74,category:'MISC/EQUIPMENT',name:'Memory Foam Twin Mattress 5"',qty:25,specs:'SKU MAT-ME-BA-5T',estimated:false,location:'Conex 4'},
-  {id:75,category:'FENCING',name:'Moose-proofing fencing wire',qty:2,specs:'~4ft tall x 50ft per roll',estimated:false,location:'Conex 3'},
-  {id:76,category:'DECKING HARDWARE',name:'CAMO EdgeClip Decking Fasteners',qty:1,specs:'900 ct., covers 500 sq ft, 3/16" spacing, grooved decking',estimated:false,location:'Gray Building'},
-  {id:77,category:'FENCING',name:'Galvanized Barbed Wire Spool',qty:1,specs:'Large spool, galvanized',estimated:false,location:'Gray Building'},
-  {id:78,category:'FENCING',name:'Ameristar Mont-Plus Double Ring Black',qty:172,specs:'Part #AB112, 40/box, ASSA ABLOY/Ameristar',estimated:false,location:'Gray Building'},
-  {id:79,category:'HARDWARE & FASTENERS',name:'Ameristar Black 3/4" Plastic Plug',qty:1,specs:'Part #PB7519-30, 1 box/570 plugs, 19/bag x 30 bags, Ameristar/ASSA ABLOY',estimated:false,location:'Gray Building'},
-  {id:80,category:'FENCING',name:'Ameristar Bolt-On Hinge Kit Double Gate Black',qty:1,specs:'Part #AGBD, 2-3/4" upright/2-1/2" post, 14.3 lbs',estimated:false,location:'Gray Building'},
-  {id:81,category:'FENCING',name:'Sumo Gate Hardware by Lockey USA',qty:1,specs:'Model B110, Box 2 of 2, Lockey USA',estimated:false,location:'Gray Building'},
-  {id:82,category:'FENCING',name:'Ameristar Mont-Plus Universal Bracket Black',qty:60,specs:'Part #BB112SR, fits 2-1/2" post, 40 bags/box, Montage Plus, ASSA ABLOY',estimated:false,location:'Gray Building'},
-  {id:83,category:'FENCING',name:'Master Halco Adjustable 180 Degree Gate Hinge Commercial/Industrial',qty:1,specs:'Part #011020, up to 420 lbs, sold per pair, Master Halco',estimated:false,location:'Gray Building'},
-  {id:84,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:9,specs:'1.5" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:85,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:3,specs:'2" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:86,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:3,specs:'3" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:87,category:'NURSERY STOCK',name:'Paper Birch',qty:2,specs:'1.5" cal, B&B, park grade',estimated:false,location:'Yard 104'},
-  {id:88,category:'NURSERY STOCK',name:'River Birch',qty:40,specs:'1-2" cal, B&B, park grade',estimated:false,location:'Yard 104'},
-  {id:89,category:'NURSERY STOCK',name:'Helena Maple',qty:1,specs:'1.5" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:90,category:'NURSERY STOCK',name:'Siberian Crabapple',qty:3,specs:'2" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:91,category:'NURSERY STOCK',name:'Siberian Crabapple',qty:2,specs:'2.5" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:92,category:'NURSERY STOCK',name:'Cutleaf Weeping Birch',qty:4,specs:'1.5-2.5" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:93,category:'NURSERY STOCK',name:'Cardinal Mountain Ash',qty:7,specs:'1.5" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:94,category:'NURSERY STOCK',name:'Crimson King Maple',qty:6,specs:'1.5-2" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:95,category:'NURSERY STOCK',name:'Red Oak',qty:2,specs:'1.5" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:96,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:2,specs:'6 ft ht, B&B, sellable',estimated:false,location:'Yard 104'},
-  {id:97,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:3,specs:'6 ft ht, B&B, rough/not sellable',estimated:false,location:'Yard 104'},
-  {id:98,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:2,specs:'5 ft ht, B&B',estimated:false,location:'Yard 104'},
-  {id:99,category:'NURSERY STOCK',name:'White Spruce',qty:1,specs:'4 ft ht, B&B',estimated:false,location:'Yard 104'},
-  {id:100,category:'NURSERY STOCK',name:'Silver Queen Maple',qty:4,specs:'2.5-3.5" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:101,category:'NURSERY STOCK',name:'Malus Red Splendor Crabapple',qty:4,specs:'3" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:102,category:'NURSERY STOCK',name:'Malus Red Splendor Crabapple',qty:3,specs:'1" cal, potted',estimated:false,location:'Yard 104'},
-  {id:103,category:'NURSERY STOCK',name:'Canada Red Cherry',qty:2,specs:'1.5-2" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:104,category:'NURSERY STOCK',name:'Radiant Crabapple',qty:5,specs:'2-3" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:105,category:'NURSERY STOCK',name:'Deborah Maple',qty:3,specs:'1.5" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:106,category:'NURSERY STOCK',name:'Deborah Maple',qty:3,specs:'2" cal, B&B',estimated:false,location:'Yard 104'},
-  {id:107,category:'NURSERY STOCK',name:'Norway Maple',qty:2,specs:'clump, ~10 ft ht, B&B',estimated:false,location:'Yard 104'},
-  {id:108,category:'NURSERY STOCK',name:'Amur Maple',qty:3,specs:'clump, B&B',estimated:false,location:'Yard 104'},
-  {id:109,category:'NURSERY STOCK',name:'Abbotswood Potentilla',qty:39,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:110,category:'NURSERY STOCK',name:'Alpine Currant',qty:48,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:111,category:'NURSERY STOCK',name:'Bailey Compact Cranberrybush',qty:8,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:112,category:'NURSERY STOCK',name:'Bergenia',qty:1,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:113,category:'NURSERY STOCK',name:'Birds Nest Spruce',qty:3,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:114,category:'NURSERY STOCK',name:'Blueberry Northcountry',qty:3,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:115,category:'NURSERY STOCK',name:'Cotoneaster Hedge',qty:92,specs:'5 gal, Bailey 2026',estimated:false,location:'Yard 104'},
-  {id:116,category:'NURSERY STOCK',name:'False Ash-leaf Spirea',qty:44,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:117,category:'NURSERY STOCK',name:'Forsythia',qty:28,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:118,category:'NURSERY STOCK',name:'Gold Drop Potentilla',qty:6,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:119,category:'NURSERY STOCK',name:'Gold Mound Spirea',qty:102,specs:'5 gal, Bailey 2026',estimated:false,location:'Yard 104'},
-  {id:120,category:'NURSERY STOCK',name:'Goldfinger Potentilla',qty:2,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:121,category:'NURSERY STOCK',name:'Goldflame Spirea',qty:26,specs:'5 gal, Bailey 2026',estimated:false,location:'Yard 104'},
-  {id:122,category:'NURSERY STOCK',name:'Green Velvet Boxwood',qty:35,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:123,category:'NURSERY STOCK',name:'Katherine Dykes Potentilla',qty:6,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:124,category:'NURSERY STOCK',name:'Lemon Meringue Potentilla',qty:50,specs:'5 gal, Bailey 2026',estimated:false,location:'Yard 104'},
-  {id:125,category:'NURSERY STOCK',name:'McKays White Potentilla',qty:35,specs:'5 gal, Bailey 2026',estimated:false,location:'Yard 104'},
-  {id:126,category:'NURSERY STOCK',name:'Rosa rugosa (mauve + alba)',qty:100,specs:'5 gal, Bailey 2026, combined total',estimated:false,location:'Yard 104'},
-  {id:127,category:'NURSERY STOCK',name:'Native Saskatoon',qty:1,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:128,category:'NURSERY STOCK',name:'Purple Leaf Plum / Sand Cherry',qty:3,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:129,category:'NURSERY STOCK',name:'Red Twig Dogwood',qty:246,specs:'5 gal, Bailey 2026',estimated:false,location:'Yard 104'},
-  {id:130,category:'NURSERY STOCK',name:'Siberian Peashrub',qty:4,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:131,category:'NURSERY STOCK',name:'Superstar Spirea',qty:9,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:132,category:'NURSERY STOCK',name:'Tor Birchleaf Spirea',qty:10,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:133,category:'NURSERY STOCK',name:'Common Purple Lilac',qty:3,specs:'5 gal, Bailey 2026',estimated:false,location:'Yard 104'},
-  {id:134,category:'NURSERY STOCK',name:'Amur Maple',qty:51,specs:'5 gal, Bailey 2026',estimated:false,location:'Yard 104'},
-  {id:135,category:'NURSERY STOCK',name:'Donald Wyman Lilac',qty:24,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:136,category:'NURSERY STOCK',name:'James MacFarlane Lilac',qty:17,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:137,category:'NURSERY STOCK',name:'Miss Canada Lilac',qty:11,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:138,category:'NURSERY STOCK',name:'Miss Kim Lilac',qty:19,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:139,category:'NURSERY STOCK',name:'Villosa Late Lilac',qty:8,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:140,category:'NURSERY STOCK',name:'Fox Pavement Rose',qty:8,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:141,category:'NURSERY STOCK',name:'Hansa Rose',qty:27,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:142,category:'NURSERY STOCK',name:'Purple Pavement Rose',qty:17,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:143,category:'NURSERY STOCK',name:'Snow Pavement Rose',qty:2,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:144,category:'NURSERY STOCK',name:'Theresa Bugnet Rose',qty:4,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:145,category:'NURSERY STOCK',name:'Andorra Compact Juniper',qty:8,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:146,category:'NURSERY STOCK',name:'Blue Chip Juniper',qty:14,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:147,category:'NURSERY STOCK',name:'Blue Rug / Wilton Juniper',qty:22,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:148,category:'NURSERY STOCK',name:'Prince of Wales Juniper',qty:14,specs:'5 gal, container',estimated:false,location:'Yard 104'},
-  {id:149,category:'NURSERY STOCK',name:'Arctic Iris',qty:36,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:150,category:'NURSERY STOCK',name:'Avalanche Reed Grass',qty:35,specs:'1 gal, container, weed risk',estimated:false,location:'Yard 104'},
-  {id:151,category:'NURSERY STOCK',name:'Karl Foerster Feather Reed Grass',qty:91,specs:'1 gal, container, weed risk',estimated:false,location:'Yard 104'},
-  {id:152,category:'NURSERY STOCK',name:'Old Fashioned Pink Bleeding Heart',qty:7,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:153,category:'NURSERY STOCK',name:'Ostrich Fern',qty:5,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:154,category:'NURSERY STOCK',name:'Overdam Reed Grass',qty:70,specs:'1 gal, container, weed risk',estimated:false,location:'Yard 104'},
-  {id:155,category:'NURSERY STOCK',name:'Smooth Aster',qty:1,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:156,category:'NURSERY STOCK',name:'Snowdrop Anemone',qty:6,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:157,category:'NURSERY STOCK',name:'Stella de Oro Daylily',qty:11,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:158,category:'NURSERY STOCK',name:'Wildflower (variety unknown)',qty:2,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:159,category:'NURSERY STOCK',name:'Winky Mix Columbine',qty:1,specs:'1 gal, container',estimated:false,location:'Yard 104'},
-  {id:160,category:'PIT & AGGREGATE MATERIALS',name:'D-1 Base Material',qty:17,specs:'Estimated',estimated:true,location:'Material Bins'},
-  {id:161,category:'PIT & AGGREGATE MATERIALS',name:'3/4 Crushed Rock',qty:28,specs:'Estimated',estimated:true,location:'Material Bins'},
-  {id:162,category:'PIT & AGGREGATE MATERIALS',name:'Class II Boulders',qty:25,specs:'Estimated',estimated:true,location:'Material Bins'},
-  {id:163,category:'PIT & AGGREGATE MATERIALS',name:'Class I Boulders',qty:3,specs:'Estimated',estimated:true,location:'Material Bins'},
-  {id:164,category:'CONCRETE & MASONRY',name:'Concrete Reinforcement Fence Roll',qty:1,specs:'20ft',estimated:false,location:'104'},
-  {id:165,category:'MISC/EQUIPMENT',name:'Black Aluminum Edging',qty:5,specs:'20ft sections',estimated:false,location:'104'},
-  {id:166,category:'HARDWARE & FASTENERS',name:'Versalock 10"',qty:4,specs:'50 per box',estimated:false,location:'Conex 5'},
-  {id:167,category:'LANDSCAPE FABRIC & POLY',name:'6 mil Poly Sheeting 20x100',qty:1,specs:'20x100ft',estimated:false,location:'Conex 5'},
+  {id:75,category:'FENCE HARDWARE',name:'Moose-proofing fencing wire',qty:2,specs:'~4ft tall x 50ft per roll',estimated:false,location:'Conex 3'},
+  {id:76,category:'FENCE HARDWARE',name:'CAMO EdgeClip Decking Fasteners',qty:1,specs:'900 ct., covers 500 sq ft, 3/16" spacing, grooved decking',estimated:false,location:'Gray Building'},
+  {id:77,category:'FENCE HARDWARE',name:'Galvanized Barbed Wire Spool',qty:1,specs:'Large spool, galvanized',estimated:false,location:'Gray Building'},
+  {id:78,category:'FENCE HARDWARE',name:'Ameristar Mont-Plus Double Ring Black',qty:172,specs:'Part #AB112, 40/box, ASSA ABLOY/Ameristar',estimated:false,location:'Gray Building'},
+  {id:79,category:'FENCE HARDWARE',name:'Ameristar Black 3/4" Plastic Plug',qty:1,specs:'Part #PB7519-30, 1 box/570 plugs, 19/bag x 30 bags, Ameristar/ASSA ABLOY',estimated:false,location:'Gray Building'},
+  {id:80,category:'FENCE HARDWARE',name:'Ameristar Bolt-On Hinge Kit Double Gate Black',qty:1,specs:'Part #AGBD, 2-3/4" upright/2-1/2" post, 14.3 lbs',estimated:false,location:'Gray Building'},
+  {id:81,category:'FENCE HARDWARE',name:'Sumo Gate Hardware by Lockey USA',qty:1,specs:'Model B110, Box 2 of 2, Lockey USA',estimated:false,location:'Gray Building'},
+  {id:82,category:'FENCE HARDWARE',name:'Ameristar Mont-Plus Universal Bracket Black',qty:60,specs:'Part #BB112SR, fits 2-1/2" post, 40 bags/box, Montage Plus, ASSA ABLOY',estimated:false,location:'Gray Building'},
+  {id:83,category:'FENCE HARDWARE',name:'Master Halco Adjustable 180 Degree Gate Hinge Commercial/Industrial',qty:1,specs:'Part #011020, up to 420 lbs, sold per pair, Master Halco',estimated:false,location:'Gray Building'},
+  {id:84,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:9,specs:'1.5" cal, B&B',estimated:false,location:'104'},
+  {id:85,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:3,specs:'2" cal, B&B',estimated:false,location:'104'},
+  {id:86,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:3,specs:'3" cal, B&B',estimated:false,location:'104'},
+  {id:87,category:'NURSERY STOCK',name:'Paper Birch',qty:2,specs:'1.5" cal, B&B, park grade',estimated:false,location:'104'},
+  {id:88,category:'NURSERY STOCK',name:'River Birch',qty:40,specs:'1-2" cal, B&B, park grade',estimated:false,location:'104'},
+  {id:89,category:'NURSERY STOCK',name:'Helena Maple',qty:1,specs:'1.5" cal, B&B',estimated:false,location:'104'},
+  {id:90,category:'NURSERY STOCK',name:'Siberian Crabapple',qty:3,specs:'2" cal, B&B',estimated:false,location:'104'},
+  {id:91,category:'NURSERY STOCK',name:'Siberian Crabapple',qty:2,specs:'2.5" cal, B&B',estimated:false,location:'104'},
+  {id:92,category:'NURSERY STOCK',name:'Cutleaf Weeping Birch',qty:4,specs:'1.5-2.5" cal, B&B',estimated:false,location:'104'},
+  {id:93,category:'NURSERY STOCK',name:'Cardinal Mountain Ash',qty:7,specs:'1.5" cal, B&B',estimated:false,location:'104'},
+  {id:94,category:'NURSERY STOCK',name:'Crimson King Maple',qty:6,specs:'1.5-2" cal, B&B',estimated:false,location:'104'},
+  {id:95,category:'NURSERY STOCK',name:'Red Oak',qty:2,specs:'1.5" cal, B&B',estimated:false,location:'104'},
+  {id:96,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:2,specs:'6 ft ht, B&B, sellable',estimated:false,location:'104'},
+  {id:97,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:3,specs:'6 ft ht, B&B, rough/not sellable',estimated:false,location:'104'},
+  {id:98,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:2,specs:'5 ft ht, B&B',estimated:false,location:'104'},
+  {id:99,category:'NURSERY STOCK',name:'White Spruce',qty:1,specs:'4 ft ht, B&B',estimated:false,location:'104'},
+  {id:100,category:'NURSERY STOCK',name:'Silver Queen Maple',qty:4,specs:'2.5-3.5" cal, B&B',estimated:false,location:'104'},
+  {id:101,category:'NURSERY STOCK',name:'Malus Red Splendor Crabapple',qty:4,specs:'3" cal, B&B',estimated:false,location:'104'},
+  {id:102,category:'NURSERY STOCK',name:'Malus Red Splendor Crabapple',qty:3,specs:'1" cal, potted',estimated:false,location:'104'},
+  {id:103,category:'NURSERY STOCK',name:'Canada Red Cherry',qty:2,specs:'1.5-2" cal, B&B',estimated:false,location:'104'},
+  {id:104,category:'NURSERY STOCK',name:'Radiant Crabapple',qty:5,specs:'2-3" cal, B&B',estimated:false,location:'104'},
+  {id:105,category:'NURSERY STOCK',name:'Deborah Maple',qty:3,specs:'1.5" cal, B&B',estimated:false,location:'104'},
+  {id:106,category:'NURSERY STOCK',name:'Deborah Maple',qty:3,specs:'2" cal, B&B',estimated:false,location:'104'},
+  {id:107,category:'NURSERY STOCK',name:'Norway Maple',qty:2,specs:'clump, ~10 ft ht, B&B',estimated:false,location:'104'},
+  {id:108,category:'NURSERY STOCK',name:'Amur Maple',qty:3,specs:'clump, B&B',estimated:false,location:'104'},
+  {id:109,category:'NURSERY STOCK',name:'Abbotswood Potentilla',qty:39,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:110,category:'NURSERY STOCK',name:'Alpine Currant',qty:48,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:111,category:'NURSERY STOCK',name:'Bailey Compact Cranberrybush',qty:8,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:112,category:'NURSERY STOCK',name:'Bergenia',qty:1,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:113,category:'NURSERY STOCK',name:'Birds Nest Spruce',qty:3,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:114,category:'NURSERY STOCK',name:'Blueberry Northcountry',qty:3,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:115,category:'NURSERY STOCK',name:'Cotoneaster Hedge',qty:92,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:116,category:'NURSERY STOCK',name:'False Ash-leaf Spirea',qty:44,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:117,category:'NURSERY STOCK',name:'Forsythia',qty:28,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:118,category:'NURSERY STOCK',name:'Gold Drop Potentilla',qty:6,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:119,category:'NURSERY STOCK',name:'Gold Mound Spirea',qty:102,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:120,category:'NURSERY STOCK',name:'Goldfinger Potentilla',qty:2,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:121,category:'NURSERY STOCK',name:'Goldflame Spirea',qty:26,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:122,category:'NURSERY STOCK',name:'Green Velvet Boxwood',qty:35,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:123,category:'NURSERY STOCK',name:'Katherine Dykes Potentilla',qty:6,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:124,category:'NURSERY STOCK',name:'Lemon Meringue Potentilla',qty:50,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:125,category:'NURSERY STOCK',name:'McKays White Potentilla',qty:35,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:126,category:'NURSERY STOCK',name:'Rosa rugosa (mauve + alba)',qty:100,specs:'5 gal, Bailey 2026, combined total',estimated:false,location:'104'},
+  {id:127,category:'NURSERY STOCK',name:'Native Saskatoon',qty:1,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:128,category:'NURSERY STOCK',name:'Purple Leaf Plum / Sand Cherry',qty:3,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:129,category:'NURSERY STOCK',name:'Red Twig Dogwood',qty:246,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:130,category:'NURSERY STOCK',name:'Siberian Peashrub',qty:4,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:131,category:'NURSERY STOCK',name:'Superstar Spirea',qty:9,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:132,category:'NURSERY STOCK',name:'Tor Birchleaf Spirea',qty:10,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:133,category:'NURSERY STOCK',name:'Common Purple Lilac',qty:3,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:134,category:'NURSERY STOCK',name:'Amur Maple',qty:51,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:135,category:'NURSERY STOCK',name:'Donald Wyman Lilac',qty:24,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:136,category:'NURSERY STOCK',name:'James MacFarlane Lilac',qty:17,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:137,category:'NURSERY STOCK',name:'Miss Canada Lilac',qty:11,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:138,category:'NURSERY STOCK',name:'Miss Kim Lilac',qty:19,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:139,category:'NURSERY STOCK',name:'Villosa Late Lilac',qty:8,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:140,category:'NURSERY STOCK',name:'Fox Pavement Rose',qty:8,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:141,category:'NURSERY STOCK',name:'Hansa Rose',qty:27,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:142,category:'NURSERY STOCK',name:'Purple Pavement Rose',qty:17,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:143,category:'NURSERY STOCK',name:'Snow Pavement Rose',qty:2,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:144,category:'NURSERY STOCK',name:'Theresa Bugnet Rose',qty:4,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:145,category:'NURSERY STOCK',name:'Andorra Compact Juniper',qty:8,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:146,category:'NURSERY STOCK',name:'Blue Chip Juniper',qty:14,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:147,category:'NURSERY STOCK',name:'Blue Rug / Wilton Juniper',qty:22,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:148,category:'NURSERY STOCK',name:'Prince of Wales Juniper',qty:14,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:149,category:'NURSERY STOCK',name:'Arctic Iris',qty:36,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:150,category:'NURSERY STOCK',name:'Avalanche Reed Grass',qty:35,specs:'1 gal, container, weed risk',estimated:false,location:'104'},
+  {id:151,category:'NURSERY STOCK',name:'Karl Foerster Feather Reed Grass',qty:91,specs:'1 gal, container, weed risk',estimated:false,location:'104'},
+  {id:152,category:'NURSERY STOCK',name:'Old Fashioned Pink Bleeding Heart',qty:7,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:153,category:'NURSERY STOCK',name:'Ostrich Fern',qty:5,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:154,category:'NURSERY STOCK',name:'Overdam Reed Grass',qty:70,specs:'1 gal, container, weed risk',estimated:false,location:'104'},
+  {id:155,category:'NURSERY STOCK',name:'Smooth Aster',qty:1,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:156,category:'NURSERY STOCK',name:'Snowdrop Anemone',qty:6,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:157,category:'NURSERY STOCK',name:'Stella de Oro Daylily',qty:11,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:158,category:'NURSERY STOCK',name:'Wildflower (variety unknown)',qty:2,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:159,category:'NURSERY STOCK',name:'Winky Mix Columbine',qty:1,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:160,category:'PIT & AGGREGATE MATERIALS',name:'D-1 Base Material',qty:17,unit:'yards',specs:'Estimated',estimated:true,location:'Material Bins'},
+  {id:161,category:'PIT & AGGREGATE MATERIALS',name:'3/4 Crushed Rock',qty:28,unit:'yards',specs:'Estimated',estimated:true,location:'Material Bins'},
+  {id:162,category:'PIT & AGGREGATE MATERIALS',name:'Class II Boulders',qty:25,unit:'tons',specs:'Estimated',estimated:true,location:'Material Bins'},
+  {id:163,category:'PIT & AGGREGATE MATERIALS',name:'Class I Boulders',qty:3,unit:'tons',specs:'Estimated',estimated:true,location:'Material Bins'},
+  {id:168,category:'PIT & AGGREGATE MATERIALS',name:'Class III Boulders',qty:0,unit:'tons',specs:'Estimated — needs qty confirmed',estimated:true,location:'Material Bins'},
+  {id:169,category:'PIT & AGGREGATE MATERIALS',name:'Topsoil (Screened)',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:170,category:'PIT & AGGREGATE MATERIALS',name:'Topsoil (Pit Run / Unscreened)',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:171,category:'PIT & AGGREGATE MATERIALS',name:'Fill Sand',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:172,category:'PIT & AGGREGATE MATERIALS',name:'Concrete Sand',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:173,category:'PIT & AGGREGATE MATERIALS',name:'Pit Run Gravel',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:174,category:'PIT & AGGREGATE MATERIALS',name:'D-2 Base Material',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:175,category:'PIT & AGGREGATE MATERIALS',name:'Structural Fill',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:176,category:'PIT & AGGREGATE MATERIALS',name:'1.5" Crushed Rock',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:177,category:'PIT & AGGREGATE MATERIALS',name:'3" Minus Rock',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:178,category:'PIT & AGGREGATE MATERIALS',name:'3/4" Drain Rock',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:179,category:'PIT & AGGREGATE MATERIALS',name:'1.5" Drain Rock',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:164,category:'MASONRY & RETAINING WALL',name:'Concrete Reinforcement Fence Roll',qty:1,specs:'20ft',estimated:false,location:'104'},
+  {id:165,category:'LANDSCAPE HARDWARE',name:'Black Aluminum Edging',qty:5,specs:'20ft sections',estimated:false,location:'104'},
+  {id:180,category:'LANDSCAPE HARDWARE',name:'Landscape Fabric Staples / Pins',qty:0,unit:'ea',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:181,category:'LANDSCAPE HARDWARE',name:'Landscape Fabric Nails',qty:0,unit:'ea',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:182,category:'MASONRY & RETAINING WALL',name:'Retaining Wall Mesh / Geogrid',qty:0,unit:'ft',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:183,category:'MASONRY & RETAINING WALL',name:'Retaining Wall Block',qty:0,unit:'ea',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
+  {id:166,category:'FENCE HARDWARE',name:'Versalock 10"',qty:4,specs:'50 per box',estimated:false,location:'Conex 5'},
+  {id:167,category:'LANDSCAPE HARDWARE',name:'6 mil Poly Sheeting 20x100',qty:1,specs:'20x100ft',estimated:false,location:'Conex 5'},
 ];
 
 const CORRECT_PIN = '0251';
@@ -890,6 +923,21 @@ function pinClear() {
   updatePinDots();
   document.getElementById('pinError').textContent = '';
 }
+
+function pinBackspace() {
+  if (pinEntry.length === 0) return;
+  pinEntry = pinEntry.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+// Allow entering the PIN with a physical keyboard/numpad, not just on-screen taps
+document.addEventListener('keydown', (e) => {
+  if (document.getElementById('pinScreen').classList.contains('hidden')) return;
+  if (e.key >= '0' && e.key <= '9') { pinPress(e.key); }
+  else if (e.key === 'Backspace') { pinBackspace(); }
+  else if (e.key === 'Escape') { pinClear(); }
+});
 
 function updatePinDots() {
   for (let i = 0; i < 4; i++) {
@@ -935,6 +983,12 @@ async function analyzePhoto(input) {
   const analyzing = document.getElementById('aiAnalyzing');
   preview.src = URL.createObjectURL(file);
   preview.style.display = 'block';
+
+  if (!APPS_SCRIPT_URL) {
+    showToast('AI photo ID needs the sheet configured — fill in manually', 'error');
+    return;
+  }
+
   analyzing.style.display = 'block';
 
   // Convert to base64
@@ -945,24 +999,19 @@ async function analyzePhoto(input) {
   });
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } },
-            { type: 'text', text: 'This is a construction/landscaping supply item. Identify it and return ONLY a JSON object with these fields: {"name": "item name", "category": "one of: LUMBER & POSTS, FENCING, DRAINAGE, HARDWARE & FASTENERS, LANDSCAPE FABRIC & POLY, HYDROSEEDING MATERIALS, DECKING HARDWARE, CONCRETE & MASONRY, ELECTRICAL/CONDUIT, MISC/EQUIPMENT", "specs": "size, part number, brand, key specs"}. No other text.' }
-          ]
-        }]
-      })
+    const text = await callClaude({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } },
+          { type: 'text', text: 'This is a construction/landscaping supply item. Identify it and return ONLY a JSON object with these fields: {"name": "item name", "category": "one of: LUMBER & POSTS, FENCE HARDWARE, DRAINAGE, LANDSCAPE HARDWARE, HYDROSEEDING MATERIALS, MASONRY & RETAINING WALL, ELECTRICAL/CONDUIT, PIT & AGGREGATE MATERIALS, MISC/EQUIPMENT", "specs": "size, part number, brand, key specs"}. No other text.' }
+        ]
+      }]
     });
-    const data = await response.json();
-    const text = data.content[0].text.replace(/```json|```/g, '').trim();
-    const item = JSON.parse(text);
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    const item = JSON.parse(cleaned);
     
     // Fill in the form
     if (item.name) document.getElementById('newName').value = item.name;
@@ -987,23 +1036,21 @@ function closeJobChecker() { document.getElementById('jobModal').classList.remov
 async function runJobCheck() {
   const input = document.getElementById('jobInput').value.trim();
   if (!input) { showToast('Paste a materials list first', 'error'); return; }
-  
+  if (!APPS_SCRIPT_URL) { showToast('AI job check needs the sheet configured', 'error'); return; }
+
   const resultDiv = document.getElementById('jobResult');
   resultDiv.innerHTML = '<div style="color:var(--gold);font-size:12px;padding:8px">🤖 Checking inventory...</div>';
 
   try {
-    const inventoryList = items.map(i => `ID${i.id}: ${i.name} (${i.category}) - qty: ${i.qty} - loc: ${i.location}`).join('\n');
-    
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `You are a construction inventory checker for Titan Alaska. 
-          
+    const inventoryList = items.map(i => `ID${i.id}: ${i.name} (${i.category}) - qty: ${i.qty} ${i.unit && i.unit!=='ea' ? i.unit : ''} - loc: ${i.location}`).join('\n');
+
+    const text = await callClaude({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: `You are a construction inventory checker for Titan Alaska.
+
 Job requires these materials:
 ${input}
 
@@ -1015,22 +1062,20 @@ For each required item, check if we have enough in inventory. Return ONLY a JSON
  {"item": "concrete bags", "needed": 26, "have": 0, "status": "MISSING", "location": "", "note": "Not in inventory"}]
 
 Status must be: OK (have enough), LOW (have some but not enough), MISSING (none in inventory), or UNKNOWN (cant match to inventory). No other text.`
-        }]
-      })
+      }]
     });
-    const data = await response.json();
-    const text = data.content[0].text.replace(/```json|```/g, '').trim();
-    const results = JSON.parse(text);
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    const results = JSON.parse(cleaned);
 
     let html = '<div style="margin-top:12px">';
     results.forEach(r => {
       const statusClass = r.status === 'OK' ? 'status-ok' : r.status === 'LOW' ? 'status-low' : r.status === 'MISSING' ? 'status-missing' : 'status-unknown';
       html += `<div class="job-row">
-        <span class="job-status ${statusClass}">${r.status}</span>
-        <span style="flex:1;color:#ffffff;font-weight:600">${r.item}</span>
-        <span style="color:#cccccc;font-size:13px">Need: ${r.needed} / Have: ${r.have}</span>
+        <span class="job-status ${statusClass}">${escapeHtml(r.status)}</span>
+        <span style="flex:1;color:#ffffff;font-weight:600">${escapeHtml(r.item)}</span>
+        <span style="color:#cccccc;font-size:13px">Need: ${escapeHtml(r.needed)} / Have: ${escapeHtml(r.have)}</span>
       </div>`;
-      if (r.note) html += `<div style="font-size:12px;color:#aaaaaa;padding:2px 0 6px 8px">${r.note}${r.location ? ' — ' + r.location : ''}</div>`;
+      if (r.note) html += `<div style="font-size:12px;color:#aaaaaa;padding:2px 0 6px 8px">${escapeHtml(r.note)}${r.location ? ' — ' + escapeHtml(r.location) : ''}</div>`;
     });
     html += '</div>';
     resultDiv.innerHTML = html;
@@ -1072,10 +1117,11 @@ async function confirmDisposal() {
   const item = items.find(i => i.id === disposalItemId);
   if (!item) return;
   
-  const qty = parseInt(document.getElementById('disposalQty').value) || 1;
+  const qty = parseInt(document.getElementById('disposalQty').value, 10);
   const cause = document.getElementById('disposalCause').value;
   const note = document.getElementById('disposalNote').value.trim();
-  
+
+  if (!Number.isInteger(qty) || qty < 1) { showToast('Enter a valid quantity to dispose', 'error'); return; }
   if (!cause) { showToast('Please select a cause', 'error'); return; }
   if (qty > item.qty) { showToast('Cannot dispose more than current qty', 'error'); return; }
 
@@ -1152,17 +1198,25 @@ async function openDisposalLog() {
 
   listEl.innerHTML = combined.map(e => `
     <div class="disposal-entry">
-      <span class="d-who">${e.who}</span>
+      <span class="d-who">${escapeHtml(e.who)}</span>
       <span style="color:var(--mid)"> disposed </span>
-      <span style="color:#e07030;font-weight:700">${e.qty}x</span>
-      <span class="d-item"> ${e.itemName}</span><br>
-      <span class="d-cause">${e.cause}</span>
-      ${e.note ? '<span style="color:var(--mid);font-size:12px"> — ' + e.note + '</span>' : ''}
-      <br><span class="d-time">${e.time} | Before: ${e.beforeQty} → After: ${e.afterQty}</span>
+      <span style="color:#e07030;font-weight:700">${escapeHtml(e.qty)}x</span>
+      <span class="d-item"> ${escapeHtml(e.itemName)}</span><br>
+      <span class="d-cause">${escapeHtml(e.cause)}</span>
+      ${e.note ? '<span style="color:var(--mid);font-size:12px"> — ' + escapeHtml(e.note) + '</span>' : ''}
+      <br><span class="d-time">${escapeHtml(e.time)} | Before: ${escapeHtml(e.beforeQty)} → After: ${escapeHtml(e.afterQty)}</span>
     </div>`).join('');
 }
 
-window.onload = () => { checkSessionAuth(); populateSelects(); loadItems(); };
+function loadSavedUser() {
+  const saved = localStorage.getItem('titan_user');
+  if (saved) {
+    currentUser = saved;
+    document.getElementById('userBtn').textContent = '👤 ' + saved.split(' ')[0];
+  }
+}
+
+window.onload = () => { checkSessionAuth(); loadSavedUser(); populateSelects(); loadItems(); };
 
 async function loadItems() {
   const btn = document.getElementById('syncBtn');
@@ -1173,21 +1227,28 @@ async function loadItems() {
   if (APPS_SCRIPT_URL) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+      const timeout = setTimeout(() => controller.abort(), 20000);
       const url = `${APPS_SCRIPT_URL}?action=getAll`;
       const res = await fetch(url, {signal: controller.signal, redirect: 'follow'});
       clearTimeout(timeout);
       const text = await res.text();
-      const data = JSON.parse(text);
+      let data;
+      try { data = JSON.parse(text); }
+      catch(parseErr) { throw new Error('Bad response (not JSON): ' + text.slice(0, 80)); }
       if (data && data.items) {
-        // Merge sheet data with embedded nursery stock (sheet doesn't have plants yet)
-        const nurseryItems = EMBEDDED.filter(i => i.category === 'NURSERY STOCK');
+        // Merge sheet data with any embedded seed items the sheet doesn't have yet
+        // (e.g. nursery stock, or newer categories like Pit & Aggregate that haven't been synced to the sheet)
         const sheetIds = new Set(data.items.map(i => i.id));
-        const nurseryOnly = nurseryItems.filter(i => !sheetIds.has(i.id));
-        items = [...data.items, ...nurseryOnly];
+        const embeddedOnly = EMBEDDED.filter(i => !sheetIds.has(i.id));
+        items = [...data.items, ...embeddedOnly];
         showToast(t('synced'), 'success'); renderItems();
+      } else {
+        throw new Error(data && data.error ? data.error : 'No items in response');
       }
-    } catch(e) { showToast(t('syncFail'), 'error'); }
+    } catch(e) {
+      const msg = e.name === 'AbortError' ? 'Sync timed out after 20s' : (e.message || 'Sheet unreachable');
+      showToast(msg + ' — using local data', 'error');
+    }
   }
   btn.classList.remove('syncing'); btn.textContent = t('sync');
 }
@@ -1197,19 +1258,30 @@ function renderItems() {
   const filterCat = document.getElementById('filterCat').value;
   const filterLoc = document.getElementById('filterLoc').value;
   let filtered = items.filter(item => {
-    const ms = !search || item.name.toLowerCase().includes(search) || (item.specs||'').toLowerCase().includes(search) || (item.category||'').toLowerCase().includes(search) || String(item.id).includes(search);
-    return ms && (!filterCat || item.category.trim() === filterCat.trim()) && (!filterLoc || item.location.trim() === filterLoc.trim());
+    const name = String(item.name || ''), category = String(item.category || ''), location = String(item.location || '');
+    const ms = !search || name.toLowerCase().includes(search) || (item.specs||'').toLowerCase().includes(search) || category.toLowerCase().includes(search) || String(item.id).includes(search);
+    return ms && (!filterCat || category.trim() === filterCat.trim()) && (!filterLoc || location.trim() === filterLoc.trim());
   });
   document.getElementById('statItems').textContent = items.length;
   document.getElementById('statShowing').textContent = filtered.length;
   document.getElementById('statEst').textContent = items.filter(i => i.estimated).length;
   const grouped = {};
-  filtered.forEach(item => { if (!grouped[item.category]) grouped[item.category] = []; grouped[item.category].push(item); });
+  filtered.forEach(item => { const cat = item.category || 'UNSORTED'; if (!grouped[cat]) grouped[cat] = []; grouped[cat].push(item); });
+  const catJump = document.getElementById('catJump');
+  if (catJump) {
+    catJump.innerHTML = Object.keys(grouped).sort().map(cat =>
+      `<button class="cat-chip" onclick="jumpToCategory('${cat}')">${catLabel(cat)}</button>`
+    ).join('');
+  }
   const list = document.getElementById('itemsList');
   if (filtered.length === 0) { list.innerHTML = `<div class="loading-state" style="color:#8a9aaa">${t('noItems')}</div>`; return; }
   let html = '';
   Object.keys(grouped).sort().forEach(cat => {
-    html += `<div class="cat-divider">${catLabel(cat)}</div>`;
+    const isCollapsed = collapsedCats.has(cat);
+    html += `<div class="cat-divider" id="${catSlug(cat)}" onclick="toggleCategory('${cat}')">
+      <span class="cat-chevron">${isCollapsed ? '▸' : '▾'}</span>${catLabel(cat)}<span class="cat-count">${grouped[cat].length}</span>
+    </div>`;
+    if (isCollapsed) return;
     grouped[cat].forEach(item => {
       const isExpanded = expandedId === item.id;
       const locClass = item.location === 'Unknown' ? 'tag-loc unknown' : 'tag-loc';
@@ -1218,37 +1290,43 @@ function renderItems() {
           <div class="item-header" onclick="toggleExpand(${item.id})">
             <div class="item-id">#${item.id}</div>
             <div class="item-main">
-              <div class="item-name">${itemName(item)}</div>
+              <div class="item-name">${escapeHtml(itemName(item))}</div>
               <div class="item-meta">
-                <span class="tag ${locClass}">${item.location}</span>
+                <span class="tag ${locClass}">${escapeHtml(item.location || 'Unknown')}</span>
                 ${item.estimated ? `<span class="tag tag-est">${t('est')}</span>` : ''}
               </div>
             </div>
             <div class="item-qty" onclick="event.stopPropagation()">
               <button class="qty-btn qty-minus" onclick="requireName(()=>changeQty(${item.id},-1))">−</button>
-              <span class="qty-num">${item.qty}</span>
+              <span class="qty-num ${qtyClass(item)}">${item.qty}${item.unit && item.unit!=='ea' ? ' '+escapeHtml(item.unit) : ''}</span>
               <button class="qty-btn qty-plus" onclick="requireName(()=>changeQty(${item.id},1))">+</button>
               <button class="dispose-btn" onclick="requireName(()=>openDisposalModal(${item.id}))" title="Log disposal">🗑</button>
             </div>
           </div>
           <div class="item-detail ${isExpanded ? 'open' : ''}" id="detail-${item.id}">
-            ${item.specs ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${item.specs}</div>` : ''}
+            ${item.specs ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${escapeHtml(item.specs)}</div>` : ''}
             <div class="detail-grid">
               <div class="detail-field">
                 <label>${t('labelLoc')}</label>
                 <select id="loc-${item.id}" onchange="markDirty(${item.id})">
-                  ${LOCATIONS.map(l => `<option value="${l}" ${item.location===l?'selected':''}>${l}</option>`).join('')}
+                  ${LOCATIONS.map(l => `<option value="${l}" ${String(item.location||'').trim()===l?'selected':''}>${l}</option>`).join('')}
                 </select>
               </div>
               <div class="detail-field">
                 <label>${t('labelCat')}</label>
                 <select id="cat-${item.id}" onchange="markDirty(${item.id})">
-                  ${CATEGORIES.map(c => `<option value="${c}" ${item.category===c?'selected':''}>${catLabel(c)}</option>`).join('')}
+                  ${CATEGORIES.map(c => `<option value="${c}" ${String(item.category||'').trim()===c?'selected':''}>${catLabel(c)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="detail-field">
+                <label>Unit</label>
+                <select id="unit-${item.id}" onchange="markDirty(${item.id})">
+                  ${UNITS.map(u => `<option value="${u.value}" ${(item.unit||'ea')===u.value?'selected':''}>${u.label}</option>`).join('')}
                 </select>
               </div>
               <div class="detail-field full">
                 <label>${t('labelSpecs')}</label>
-                <input type="text" id="specs-${item.id}" value="${(item.specs||'').replace(/"/g,'&quot;')}" onchange="markDirty(${item.id})">
+                <input type="text" id="specs-${item.id}" value="${escapeHtml(item.specs||'')}" onchange="markDirty(${item.id})">
               </div>
               <div class="detail-field full">
                 <label class="est-toggle">
@@ -1269,6 +1347,18 @@ function renderItems() {
 }
 
 function toggleExpand(id) { expandedId = expandedId === id ? null : id; renderItems(); }
+function toggleCategory(cat) {
+  if (collapsedCats.has(cat)) collapsedCats.delete(cat); else collapsedCats.add(cat);
+  renderItems();
+}
+function jumpToCategory(cat) {
+  collapsedCats.delete(cat);
+  renderItems();
+  setTimeout(() => {
+    const el = document.getElementById(catSlug(cat));
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
 function markDirty(id) { const btn = document.getElementById(`save-${id}`); if (btn) { btn.style.background = 'var(--gold)'; btn.style.color = '#000'; } }
 
 async function changeQty(id, delta) {
@@ -1277,7 +1367,10 @@ async function changeQty(id, delta) {
   const oldQty = item.qty;
   item.qty = Math.max(0, item.qty + delta);
   const qtyEl = document.querySelector(`#card-${id} .qty-num`);
-  if (qtyEl) qtyEl.textContent = item.qty;
+  if (qtyEl) {
+    qtyEl.textContent = item.qty + (item.unit && item.unit!=='ea' ? ' '+item.unit : '');
+    qtyEl.className = `qty-num ${qtyClass(item)}`;
+  }
   logChange(delta > 0 ? '＋' : '－', item.name, `${oldQty} → ${item.qty}`);
   await pushUpdate(item);
 }
@@ -1288,11 +1381,13 @@ async function saveItem(id) {
   const changes = [];
   const newLoc = document.getElementById(`loc-${id}`).value;
   const newCat = document.getElementById(`cat-${id}`).value;
+  const newUnit = document.getElementById(`unit-${id}`).value;
   const newSpecs = document.getElementById(`specs-${id}`).value;
   const newEst = document.getElementById(`est-${id}`).checked;
   if (newLoc !== item.location) changes.push(`Location: ${item.location} → ${newLoc}`);
   if (newCat !== item.category) changes.push(`Category changed`);
-  item.location = newLoc; item.category = newCat; item.specs = newSpecs; item.estimated = newEst;
+  if (newUnit !== (item.unit||'ea')) changes.push(`Unit: ${item.unit||'ea'} → ${newUnit}`);
+  item.location = newLoc; item.category = newCat; item.unit = newUnit; item.specs = newSpecs; item.estimated = newEst;
   if (changes.length > 0) logChange('EDIT', item.name, changes.join(', '));
   else logChange('EDIT', item.name, 'Updated');
   await pushUpdate(item);
@@ -1315,20 +1410,27 @@ async function deleteItem(id) {
 async function pushUpdate(item) {
   if (!APPS_SCRIPT_URL) { showToast(t('savedLocal'), ''); return; }
   try {
-    const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, specs:item.specs||'', estimated:item.estimated, changedBy: currentUser });
+    const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:item.unit||'ea', specs:item.specs||'', estimated:item.estimated, changedBy: currentUser });
     await fetch(`${APPS_SCRIPT_URL}?${params}`);
     showToast(t('savedSheet'), 'success');
   } catch(e) { showToast(t('sheetUnreach'), 'error'); }
 }
 
 function openAddModal() { document.getElementById('addModal').classList.add('open'); document.getElementById('newName').focus(); }
-function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+function closeAddModal() { document.getElementById('addModal').classList.remove('open'); resetAddModalPhoto(); }
+function resetAddModalPhoto() {
+  document.getElementById('photoUpload').value = '';
+  document.getElementById('galleryUpload').value = '';
+  const preview = document.getElementById('photoPreview');
+  preview.src = ''; preview.style.display = 'none';
+  document.getElementById('aiAnalyzing').style.display = 'none';
+}
 
 async function addItem() {
   const name = document.getElementById('newName').value.trim();
   if (!name) { showToast(t('namereq'), 'error'); return; }
   const maxId = items.length ? Math.max(...items.map(i => i.id)) : 0;
-  const newItem = { id: maxId+1, name, category: document.getElementById('newCat').value || CATEGORIES[0], location: document.getElementById('newLoc').value || 'Unknown', qty: parseInt(document.getElementById('newQty').value)||0, specs: (() => {
+  const newItem = { id: maxId+1, name, category: document.getElementById('newCat').value || CATEGORIES[0], location: document.getElementById('newLoc').value || 'Unknown', qty: Math.max(0, parseInt(document.getElementById('newQty').value)||0), unit: document.getElementById('newUnit').value || 'ea', specs: (() => {
     let s = document.getElementById('newSpecs').value.trim();
     const container = document.getElementById('newContainer') ? document.getElementById('newContainer').value : '';
     const condition = document.getElementById('newCondition') ? document.getElementById('newCondition').value : '';
@@ -1344,6 +1446,9 @@ async function addItem() {
   } else { showToast(t('savedLocal'), ''); }
   closeAddModal();
   document.getElementById('newName').value = ''; document.getElementById('newQty').value = ''; document.getElementById('newSpecs').value = ''; document.getElementById('newEst').checked = false;
+  document.getElementById('newUnit').value = 'ea';
+  if (document.getElementById('newContainer')) document.getElementById('newContainer').value = '';
+  if (document.getElementById('newCondition')) document.getElementById('newCondition').value = '';
   renderItems();
 }
 
