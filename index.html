@@ -1288,8 +1288,8 @@ function renderItems() {
   const filterCat = document.getElementById('filterCat').value;
   const filterLoc = document.getElementById('filterLoc').value;
   let filtered = items.filter(item => {
-    const name = String(item.name || ''), category = String(item.category || ''), location = String(item.location || '');
-    const ms = !search || name.toLowerCase().includes(search) || (item.specs||'').toLowerCase().includes(search) || category.toLowerCase().includes(search) || String(item.id).includes(search);
+    const name = String(item.name || ''), category = String(item.category || ''), location = String(item.location || ''), specs = String(item.specs || '');
+    const ms = !search || name.toLowerCase().includes(search) || specs.toLowerCase().includes(search) || category.toLowerCase().includes(search) || String(item.id).includes(search);
     return ms && (!filterCat || category.trim() === filterCat.trim()) && (!filterLoc || location.trim() === filterLoc.trim());
   });
   document.getElementById('statItems').textContent = items.length;
