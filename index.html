@@ -596,7 +596,10 @@ let expandedId = null;
 let collapsedCats = new Set();
 let currentUser = '';
 let pendingAction = null;
-let translationCache = {};
+let translationCache = JSON.parse(localStorage.getItem('titanTranslationCache') || '{}');
+function saveTranslationCache() {
+  try { localStorage.setItem('titanTranslationCache', JSON.stringify(translationCache)); } catch(e) {}
+}
 
 function t(key) { return T[lang][key] || T.en[key] || key; }
 function catLabel(cat) { return T[lang].categories[cat] || cat; }
@@ -627,20 +630,32 @@ async function toggleLang() {
         showToast('Traduccion no disponible — sheet no configurada', 'error');
       } else {
         showToast('Traduciendo articulos...', '');
-        try {
-          const prompt = 'Translate these construction/landscaping supply item names from English to Spanish. Return ONLY a valid JSON object where keys are the original English names and values are Spanish translations. Keep part numbers, brand names, sizes like 2x4 or 3/8 and model numbers exactly as-is. Items:\n' + untranslated.map(n => '"' + n + '"').join('\n');
-          const text = await callClaude({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 2000,
-            messages: [{ role: 'user', content: prompt }]
-          });
-          const cleaned = text.replace(/```json|```/g, '').trim();
-          const translations = JSON.parse(cleaned);
-          Object.assign(translationCache, translations);
-          showToast('Traduccion completa!', 'success');
-        } catch(e) {
-          showToast('Traduccion no disponible', 'error');
+        // Chunked so a large inventory can't blow past the AI response's max_tokens
+        // and silently break the whole batch (as it did at 185 items in one shot).
+        const CHUNK_SIZE = 40;
+        let translatedCount = 0, failedCount = 0;
+        for (let i = 0; i < untranslated.length; i += CHUNK_SIZE) {
+          const chunk = untranslated.slice(i, i + CHUNK_SIZE);
+          try {
+            const prompt = 'Translate these construction/landscaping supply item names from English to Spanish. Return ONLY a valid JSON object where keys are the original English names and values are Spanish translations. Keep part numbers, brand names, sizes like 2x4 or 3/8 and model numbers exactly as-is. Items:\n' + chunk.map(n => '"' + n + '"').join('\n');
+            const text = await callClaude({
+              model: 'claude-haiku-4-5-20251001',
+              max_tokens: 4000,
+              messages: [{ role: 'user', content: prompt }]
+            });
+            const cleaned = text.replace(/```json|```/g, '').trim();
+            const translations = JSON.parse(cleaned);
+            Object.assign(translationCache, translations);
+            translatedCount += Object.keys(translations).length;
+            saveTranslationCache();
+            renderItems();
+          } catch(e) {
+            failedCount += chunk.length;
+          }
         }
+        if (failedCount === 0) showToast('Traduccion completa!', 'success');
+        else if (translatedCount > 0) showToast(`Traduccion parcial: ${translatedCount} listos, ${failedCount} fallaron`, 'error');
+        else showToast('Traduccion no disponible', 'error');
       }
     }
   }
