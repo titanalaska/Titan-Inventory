@@ -489,6 +489,18 @@
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyudFaJ0dsSYMo_uO8KF5WTvJrB-l3eppbTHenmbcPRO19qhcVg8_YJR5boDIsCU1QC/exec';
+
+// All AI calls route through Apps Script proxy (API key stays server-side)
+async function callAI(payload) {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'ai', payload: payload })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || 'AI request failed'));
+  return data;
+}
 const SHEET_ID = '1xxb6CJZnHSjEUYjPdHYtGHkjRZY02PHXkQXKAn--jUE';
 
 // Routes AI calls through the Apps Script's doPost 'ai' proxy, which holds the
