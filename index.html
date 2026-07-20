@@ -721,8 +721,7 @@ function renderProfileGate() {
         ${es ? 'Tu perfil' : 'Your profile'} <b class="profile-pending-name">${escapeHtml(myProfile.name)}</b> (${escapeHtml(myProfile.position)})
         ${es ? 'esta esperando que un administrador lo apruebe.' : "is waiting for an admin to approve it. You'll get full access as soon as that happens."}
       </p>
-      <button class="btn-save" style="width:100%;margin-bottom:8px" onclick="fetchProfiles()">${es ? 'Verificar de nuevo' : 'Check Again'}</button>
-      <button class="btn-cancel" style="width:100%" onclick="switchProfile()">${es ? 'No eres tu? Cambiar perfil' : 'Not you? Switch profile'}</button>
+      <button class="btn-save" style="width:100%" onclick="fetchProfiles()">${es ? 'Verificar de nuevo' : 'Check Again'}</button>
     `;
     return;
   }
@@ -742,10 +741,9 @@ function renderProfileGate() {
   if (myProfile && myProfile.status === 'approved') {
     body.innerHTML = `
       <h2>${es ? 'Sesion iniciada' : "You're Signed In"}</h2>
-      <p style="font-size:13px;color:var(--mid);margin-bottom:16px">
+      <p style="font-size:13px;color:var(--mid)">
         ${es ? 'Sesion iniciada como' : 'Signed in as'} <b class="profile-pending-name">${escapeHtml(myProfile.name)}</b> (${escapeHtml(myProfile.position)})
       </p>
-      <button class="btn-cancel" style="width:100%" onclick="switchProfile()">${es ? 'No eres tu? Cambiar perfil' : 'Not you? Switch profile'}</button>
     `;
     return;
   }
@@ -760,32 +758,67 @@ function renderProfileGate() {
     <div style="margin-top:14px;border-top:1px solid #333;padding-top:14px">
       <p style="font-size:12px;color:var(--mid);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">${es ? 'Nuevo aqui? Llena esto:' : 'New here? Fill this out:'}</p>
       <input type="text" class="name-input-large" id="newProfileName" placeholder="${es ? 'Tu nombre completo' : 'Your full name'}" style="margin-bottom:8px;font-size:14px;padding:10px">
-      <input type="text" class="name-input-large" id="newProfilePosition" placeholder="${es ? 'Puesto (ej. Capataz, Obrero)' : 'Position (e.g. Foreman, Laborer)'}" style="font-size:14px;padding:10px">
+      <input type="text" class="name-input-large" id="newProfilePosition" placeholder="${es ? 'Puesto (ej. Capataz, Obrero)' : 'Position (e.g. Foreman, Laborer)'}" style="margin-bottom:8px;font-size:14px;padding:10px">
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="name-input-large" id="newProfilePin" placeholder="${es ? 'Crea un PIN de 4 digitos' : 'Create a 4-digit PIN'}" style="font-size:14px;padding:10px;letter-spacing:4px">
       <button class="btn-save" style="margin-top:10px;width:100%" onclick="submitNewProfile()">${es ? 'Solicitar nuevo perfil' : 'Request New Profile'}</button>
     </div>
   `;
 }
 
+// Picking a name from the list no longer signs you straight in — it now asks
+// for that profile's own 4-digit PIN first, so tapping someone else's name
+// can't claim their identity (including admin access) without their PIN.
 function selectProfile(id) {
   const p = profiles.find(x => String(x.id) === String(id));
   if (!p) return;
-  myProfile = p;
-  currentUser = p.name;
-  saveProfileLocally();
-  document.getElementById('nameModal').classList.remove('open');
-  document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
-  showToast('Signed in as ' + p.name, 'success');
-  renderAdminPanel();
-  if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
+  const es = lang === 'es';
+  const body = document.getElementById('profileGateBody');
+  body.innerHTML = `
+    <h2>${escapeHtml(p.name)}</h2>
+    <p style="font-size:13px;color:var(--mid);margin-bottom:12px">${es ? 'Ingresa tu PIN de 4 digitos' : 'Enter your 4-digit PIN'}</p>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="name-input-large" id="profilePinInput" style="text-align:center;letter-spacing:10px;font-size:22px">
+    <div id="profilePinError" style="color:#e07070;font-size:12px;min-height:18px;margin-top:6px"></div>
+    <button class="btn-save" style="width:100%;margin-top:6px" onclick="confirmProfilePin(${p.id})">${es ? 'Confirmar' : 'Confirm'}</button>
+    <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="renderProfileGate()">${es ? 'Atras' : 'Back'}</button>
+  `;
+  const input = document.getElementById('profilePinInput');
+  input.focus();
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmProfilePin(p.id); });
+}
+
+async function confirmProfilePin(id) {
+  const es = lang === 'es';
+  const pin = document.getElementById('profilePinInput').value.trim();
+  const errEl = document.getElementById('profilePinError');
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = es ? 'Ingresa 4 digitos' : 'Enter 4 digits'; return; }
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: 'verifyPin', id, pin })}`);
+    const data = await res.json();
+    if (!data.valid) { errEl.textContent = es ? 'PIN incorrecto' : 'Incorrect PIN'; return; }
+    const p = profiles.find(x => String(x.id) === String(id));
+    myProfile = p;
+    currentUser = p.name;
+    saveProfileLocally();
+    document.getElementById('nameModal').classList.remove('open');
+    document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
+    showToast('Signed in as ' + p.name, 'success');
+    renderAdminPanel();
+    if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
+  } catch(e) {
+    errEl.textContent = es ? 'Error de conexion' : 'Connection error';
+  }
 }
 
 async function submitNewProfile() {
+  const es = lang === 'es';
   const name = document.getElementById('newProfileName').value.trim();
   const position = document.getElementById('newProfilePosition').value.trim();
-  if (!name || !position) { showToast(lang === 'es' ? 'Ingresa tu nombre y puesto' : 'Enter your name and position', 'error'); return; }
+  const pin = document.getElementById('newProfilePin').value.trim();
+  if (!name || !position) { showToast(es ? 'Ingresa tu nombre y puesto' : 'Enter your name and position', 'error'); return; }
+  if (!/^\d{4}$/.test(pin)) { showToast(es ? 'Crea un PIN de 4 digitos' : 'Create a 4-digit PIN', 'error'); return; }
   if (!APPS_SCRIPT_URL) { showToast('Profiles need the sheet configured', 'error'); return; }
   try {
-    const params = new URLSearchParams({ action: 'requestProfile', name, position });
+    const params = new URLSearchParams({ action: 'requestProfile', name, position, pin });
     const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
     const data = await res.json();
     if (data.error || data.id == null) throw new Error(data.error || 'Unexpected response');
@@ -793,10 +826,10 @@ async function submitNewProfile() {
     currentUser = myProfile.name;
     saveProfileLocally();
     document.getElementById('userBtn').textContent = '👤 ' + name.split(' ')[0];
-    showToast(lang === 'es' ? 'Perfil enviado - esperando aprobacion' : 'Profile submitted — waiting for approval', '');
+    showToast(es ? 'Perfil enviado - esperando aprobacion' : 'Profile submitted — waiting for approval', '');
     renderProfileGate();
   } catch(e) {
-    showToast(lang === 'es' ? 'No se pudo enviar el perfil' : 'Could not submit profile — check connection', 'error');
+    showToast(es ? 'No se pudo enviar el perfil' : 'Could not submit profile — check connection', 'error');
   }
 }
 
@@ -1331,7 +1364,17 @@ async function openDisposalLog() {
     </div>`).join('');
 }
 
-window.onload = () => { loadSavedProfile(); populateSelects(); loadItems(); fetchProfiles(); };
+window.onload = () => {
+  loadSavedProfile();
+  populateSelects();
+  loadItems();
+  // Prompt for identity right away rather than waiting for someone to tap a
+  // gated action — browsing itself stays open, but anyone not yet approved
+  // sees where they stand immediately instead of discovering it by accident.
+  fetchProfiles().then(() => {
+    if (!myProfile || myProfile.status !== 'approved') promptName();
+  });
+};
 
 async function loadItems() {
   const btn = document.getElementById('syncBtn');
