@@ -768,22 +768,28 @@ function renderProfileGate() {
 // Picking a name from the list no longer signs you straight in — it now asks
 // for that profile's own 4-digit PIN first, so tapping someone else's name
 // can't claim their identity (including admin access) without their PIN.
+// Profiles created before the PIN system existed have no PIN on file yet —
+// for those, this offers to CREATE one instead of asking to verify one that
+// was never set (which could never match, locking that identity out for good).
 function selectProfile(id) {
   const p = profiles.find(x => String(x.id) === String(id));
   if (!p) return;
   const es = lang === 'es';
   const body = document.getElementById('profileGateBody');
+  const claiming = !p.hasPin;
   body.innerHTML = `
     <h2>${escapeHtml(p.name)}</h2>
-    <p style="font-size:13px;color:var(--mid);margin-bottom:12px">${es ? 'Ingresa tu PIN de 4 digitos' : 'Enter your 4-digit PIN'}</p>
-    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="name-input-large" id="profilePinInput" style="text-align:center;letter-spacing:10px;font-size:22px">
+    <p style="font-size:13px;color:var(--mid);margin-bottom:12px">${claiming
+      ? (es ? 'Este perfil no tiene PIN todavia. Crea uno para reclamarlo.' : "This profile doesn't have a PIN yet — create one to claim it.")
+      : (es ? 'Ingresa tu PIN de 4 digitos' : 'Enter your 4-digit PIN')}</p>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="name-input-large" id="profilePinInput" style="text-align:center;letter-spacing:10px;font-size:22px" placeholder="${claiming ? (es ? 'Nuevo PIN' : 'New PIN') : ''}">
     <div id="profilePinError" style="color:#e07070;font-size:12px;min-height:18px;margin-top:6px"></div>
-    <button class="btn-save" style="width:100%;margin-top:6px" onclick="confirmProfilePin(${p.id})">${es ? 'Confirmar' : 'Confirm'}</button>
+    <button class="btn-save" style="width:100%;margin-top:6px" onclick="${claiming ? `claimProfilePin(${p.id})` : `confirmProfilePin(${p.id})`}">${claiming ? (es ? 'Crear PIN' : 'Create PIN') : (es ? 'Confirmar' : 'Confirm')}</button>
     <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="renderProfileGate()">${es ? 'Atras' : 'Back'}</button>
   `;
   const input = document.getElementById('profilePinInput');
   input.focus();
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmProfilePin(p.id); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') (claiming ? claimProfilePin(p.id) : confirmProfilePin(p.id)); });
 }
 
 async function confirmProfilePin(id) {
@@ -802,6 +808,31 @@ async function confirmProfilePin(id) {
     document.getElementById('nameModal').classList.remove('open');
     document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
     showToast('Signed in as ' + p.name, 'success');
+    renderAdminPanel();
+    if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
+  } catch(e) {
+    errEl.textContent = es ? 'Error de conexion' : 'Connection error';
+  }
+}
+
+async function claimProfilePin(id) {
+  const es = lang === 'es';
+  const pin = document.getElementById('profilePinInput').value.trim();
+  const errEl = document.getElementById('profilePinError');
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = es ? 'Ingresa 4 digitos' : 'Enter 4 digits'; return; }
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: 'claimPin', id, pin })}`);
+    const data = await res.json();
+    if (data.alreadySet) { errEl.textContent = es ? 'Este perfil ya tiene PIN' : 'This profile already has a PIN set'; return; }
+    if (!data.success) { errEl.textContent = es ? 'No se pudo crear el PIN' : 'Could not create PIN'; return; }
+    const p = profiles.find(x => String(x.id) === String(id));
+    if (p) p.hasPin = true;
+    myProfile = p;
+    currentUser = p.name;
+    saveProfileLocally();
+    document.getElementById('nameModal').classList.remove('open');
+    document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
+    showToast(es ? 'PIN creado — sesion iniciada' : 'PIN created — signed in', 'success');
     renderAdminPanel();
     if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
   } catch(e) {
