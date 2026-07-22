@@ -852,7 +852,19 @@ async function submitNewProfile() {
     const params = new URLSearchParams({ action: 'requestProfile', name, position, pin });
     const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
     const data = await res.json();
-    if (data.error || data.id == null) throw new Error(data.error || 'Unexpected response');
+    if (data.error) throw new Error(data.error);
+    if (data.duplicate) {
+      // Someone (often this same person on a new device) already has this
+      // name on file — route into sign-in for that profile instead of
+      // quietly minting a second identity for the same person.
+      const existing = { id: data.id, name: data.name, position: data.position, status: data.status, hasPin: data.hasPin };
+      const already = profiles.find(x => String(x.id) === String(existing.id));
+      if (already) Object.assign(already, existing); else profiles.push(existing);
+      showToast(es ? `Ya existe un perfil de "${data.name}" — inicia sesion con su PIN` : `A profile named "${data.name}" already exists — sign in with its PIN`, '');
+      selectProfile(existing.id);
+      return;
+    }
+    if (data.id == null) throw new Error('Unexpected response');
     myProfile = { id: data.id, name: data.name, position: data.position, status: 'pending' };
     currentUser = myProfile.name;
     saveProfileLocally();
