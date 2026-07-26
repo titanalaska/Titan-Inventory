@@ -86,7 +86,9 @@
   .tag-loc { background: #1a1500; color: #c8a000; }
   .tag-loc.unknown { background: #352010; color: #c8902a; }
   .tag-est { background: #352a10; color: var(--gold); }
-  .tag-nounit { background: #2e1a1a; color: #e07070; }
+  /* The missing unit belongs next to the number it makes ambiguous, not in the tag
+     row — as a tag it wrapped half the cards onto an extra line. */
+  .qty-nounit { font-size: 13px; font-weight: 700; color: #e07070; }
   .item-qty { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .qty-btn { width: 30px; height: 30px; border-radius: 50%; border: none; font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s, background 0.15s; flex-shrink: 0; }
   .qty-btn:active { transform: scale(0.9); }
@@ -158,6 +160,10 @@
 
   @media (max-width: 400px) {
     .detail-grid, .modal-grid { grid-template-columns: 1fr; }
+    /* Was three stacked rows on a phone. Search keeps its own full row — it is the
+       one control you actually type into — and the two filters share the next. */
+    .search-wrap { flex: 1 1 100%; }
+    select.filter-sel { flex: 1 1 0; min-width: 0; }
   }
   /* PROFILE GATE */
   .profile-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 4px; }
@@ -1818,12 +1824,13 @@ function renderItems() {
               <div class="item-meta">
                 <span class="tag ${locClass}">${escapeHtml(item.location || 'Unknown')}</span>
                 ${item.estimated ? `<span class="tag tag-est">${t('est')}</span>` : ''}
-                ${unit ? '' : `<span class="tag tag-nounit">${t('needsUnit')}</span>`}
               </div>
             </div>
             <div class="item-qty" onclick="event.stopPropagation()">
               <button class="qty-btn qty-minus" onclick="requireName(()=>changeQty(${item.id},-1))">−</button>
-              <span class="qty-num ${qtyClass(item)}">${item.qty}${unit ? ' <span class="qty-unit">'+escapeHtml(unitAbbr(unit))+'</span>' : ''}</span>
+              <span class="qty-num ${qtyClass(item)}">${item.qty}${unit
+                ? ' <span class="qty-unit">'+escapeHtml(unitAbbr(unit))+'</span>'
+                : ` <span class="qty-nounit" title="${t('needsUnit')}">?</span>`}</span>
               <button class="qty-btn qty-plus" onclick="requireName(()=>changeQty(${item.id},1))">+</button>
               <button class="dispose-btn" onclick="requireName(()=>openDisposalModal(${item.id}))" title="Log disposal">🗑</button>
             </div>
