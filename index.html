@@ -61,6 +61,28 @@
   .photo-status { font-size: 11px; color: var(--gold); margin-top: 6px; letter-spacing: 0.05em; }
   .photo-viewer { padding: 20px; cursor: zoom-out; }
   .photo-viewer img { max-width: 100%; max-height: 92vh; border-radius: 5px; object-fit: contain; }
+  /* Pull list */
+  .pull-banner { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #3a2c00; color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 9px 14px; border-bottom: 1px solid #5a4400; }
+  .pull-banner-done { background: var(--gold); color: #000; border: none; border-radius: 4px; padding: 5px 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; font-family: var(--font); text-transform: uppercase; }
+  .pull-badge { position: fixed; right: 20px; bottom: 92px; z-index: 60; display: flex; align-items: center; gap: 5px; background: var(--gold); color: #000; border: none; border-radius: 22px; height: 44px; padding: 0 16px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: var(--font); box-shadow: 0 3px 12px rgba(0,0,0,0.5); }
+  .pull-badge:active { transform: scale(0.94); }
+  .item-card.staged { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold); }
+  .qty-num.pull-staged { color: var(--gold); }
+  .pull-of { font-size: 11px; color: var(--mid); font-weight: 600; }
+  .pull-body { max-height: 46vh; overflow-y: auto; }
+  .pull-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid #222222; }
+  .pull-name { font-size: 13px; font-weight: 600; color: var(--snow); overflow-wrap: anywhere; }
+  .pull-sub { font-size: 11px; color: var(--mid); margin-top: 2px; }
+  .pull-qty-input { width: 60px; flex-shrink: 0; background: var(--iron); border: 1px solid #2a2a2a; color: var(--snow); font-size: 14px; font-weight: 700; text-align: center; padding: 7px 4px; border-radius: var(--radius); font-family: var(--font); outline: none; }
+  .pull-x { background: #2e1a1a; color: #e07070; border: none; border-radius: 4px; width: 30px; height: 30px; font-size: 14px; cursor: pointer; flex-shrink: 0; }
+  .pull-summary { font-size: 12px; color: var(--gold); letter-spacing: 0.05em; padding: 10px 0 4px; text-transform: uppercase; font-weight: 700; }
+  .paste-hint { font-size: 11px; color: var(--mid); text-transform: uppercase; letter-spacing: 0.06em; margin: 12px 0 4px; }
+  .paste-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #222222; }
+  .paste-check { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--gold); }
+  #pullPasteInput { width: 100%; background: var(--iron); border: 1px solid #2a2a2a; color: var(--snow); font-size: 14px; padding: 9px; border-radius: var(--radius); font-family: var(--font); outline: none; resize: vertical; }
+  .job-btn.pull-active { background: var(--gold) !important; color: #000 !important; border-color: var(--gold) !important; }
+  .job-pull-btn { background: #3a2c00; color: var(--gold); border: none; border-radius: 4px; padding: 6px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; font-family: var(--font); text-transform: uppercase; flex-shrink: 0; }
+  .job-pull-btn:hover { background: #5a4400; }
 
   .cat-jump { display: flex; gap: 6px; overflow-x: auto; padding: 8px 16px; background: var(--steel); scrollbar-width: none; }
   .cat-jump::-webkit-scrollbar { display: none; }
@@ -317,7 +339,11 @@
   <button class="log-btn" style="border-color:#217346;color:#3ba55d" onclick="openSheetView()">📊 View Sheet / Changes</button>
   <button class="job-btn" onclick="openJobChecker()">🔍 Check Job</button>
   <button class="job-btn" style="border-color:#5a2000;color:#e07030" onclick="openDisposalLog()">🗑 Disposal Log</button>
+  <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull Material</button>
+  <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 Pull From List</button>
 </div>
+
+<div class="pull-banner" id="pullBanner" style="display:none"></div>
 
 <div class="items-list" id="itemsList">
   <div class="loading-state"><div class="spinner"></div>Loading inventory…</div>
@@ -503,6 +529,45 @@
 </div>
 
 <button class="fab" onclick="requireName(openAddModal)" title="Add Item">+</button>
+<button class="pull-badge" id="pullBadge" style="display:none" onclick="openPullModal()" title="Pull list"></button>
+
+<!-- PULL LIST MODAL -->
+<div class="modal-overlay" id="pullModal">
+  <div class="modal name-modal">
+    <h2 id="pullModalTitle">🧺 Pull List</h2>
+    <div id="pullModalBody" class="pull-body"></div>
+    <div id="pullCommitRow" style="display:none">
+      <div class="pull-summary" id="pullSummary"></div>
+      <div class="modal-field full">
+        <label id="pullJobLabel">Job / reason</label>
+        <input type="text" id="pullJobInput" placeholder="e.g. Wolf — Phase 2">
+      </div>
+      <button class="btn-save" id="pullCommitBtn" style="width:100%;margin-top:8px" onclick="requireName(commitPull)">PULL ALL</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePullModal()">Close</button>
+      <button class="btn-delete" onclick="clearPull()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- PULL FROM PASTED LIST MODAL -->
+<div class="modal-overlay" id="pullPasteModal">
+  <div class="modal name-modal">
+    <h2 id="pullPasteTitle">📋 Pull From List</h2>
+    <div class="modal-field full">
+      <textarea id="pullPasteInput" rows="5" placeholder="12 goldflame spirea&#10;8 annabelle hydrangea&#10;20 dwarf birch"></textarea>
+    </div>
+    <button class="btn-save" style="width:100%" onclick="matchPastedList()">MATCH TO INVENTORY</button>
+    <div id="pullPasteResult"></div>
+    <div id="pasteAddRow" style="display:none;margin-top:10px">
+      <button class="btn-save" style="width:100%" onclick="addMatchesToPull()">ADD CHECKED TO PULL LIST</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePullPaste()">Close</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -552,6 +617,19 @@ const T = {
     uploading:'Uploading photo…', photoSaved:'Photo saved ✓', photoFail:'Photo upload failed',
     photoNoShare:'Photo saved but Drive blocked sharing — it may not display',
     confirmPhotoDel:'Remove this photo?',
+    pullModeOn:'Pull mode — tap items to add', done:'Done',
+    pullBannerText:'🧺 Pull mode — tap items to stage them',
+    pullEmpty:'Nothing staged yet. Turn on Pull Material and tap items.',
+    pullMissing:'Item no longer in inventory —',
+    pullSummary:'L items · U units staged', pullAll:'PULL ALL',
+    jobReq:'Enter a job or reason first', pulling:'Pulling…',
+    pullDone:'Pulled D items ✓', pullPartial:'Pulled D — F failed, check the sheet',
+    confirmClearPull:'Clear the whole pull list?',
+    pasteReq:'Paste a list first', matching:'🤖 Matching to inventory…',
+    matchFail:'Could not match — try again', reviewMatches:'Review matches before adding:',
+    noMatch:'No inventory match — skipped', pullAdded:'Added N to pull list ✓',
+    nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
+    pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     cancel:'Cancel', save:'SAVE', addItem:'ADD ITEM', delete:'DELETE', estMark:'Mark as estimated quantity',
     noItems:'No items match your search.', namereq:'Item name required',
     savedLocal:'Saved locally', savedSheet:'Saved to Google Sheets ✓', sheetUnreach:'Sheet unreachable — saved locally',
@@ -581,6 +659,19 @@ const T = {
     uploading:'Subiendo foto…', photoSaved:'Foto guardada ✓', photoFail:'Error al subir la foto',
     photoNoShare:'Foto guardada pero Drive bloqueó el acceso — puede no mostrarse',
     confirmPhotoDel:'¿Quitar esta foto?',
+    pullModeOn:'Modo retiro — toca los artículos', done:'Listo',
+    pullBannerText:'🧺 Modo retiro — toca para agregar',
+    pullEmpty:'Nada preparado. Activa Retirar Material y toca artículos.',
+    pullMissing:'Artículo ya no está en inventario —',
+    pullSummary:'L artículos · U unidades', pullAll:'RETIRAR TODO',
+    jobReq:'Escribe el trabajo o motivo', pulling:'Retirando…',
+    pullDone:'D artículos retirados ✓', pullPartial:'D retirados — F fallaron, revisa la hoja',
+    confirmClearPull:'¿Borrar toda la lista de retiro?',
+    pasteReq:'Pega una lista primero', matching:'🤖 Buscando en inventario…',
+    matchFail:'No se pudo emparejar — intenta de nuevo', reviewMatches:'Revisa antes de agregar:',
+    noMatch:'Sin coincidencia — omitido', pullAdded:'N agregados a la lista ✓',
+    nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
+    pullAllMatched:'AGREGAR TODO A LA LISTA',
     cancel:'Cancelar', save:'GUARDAR', addItem:'AGREGAR', delete:'ELIMINAR', estMark:'Marcar como cantidad estimada',
     noItems:'No hay artículos que coincidan.', namereq:'Se requiere nombre del artículo',
     savedLocal:'Guardado localmente', savedSheet:'Guardado en Google Sheets ✓', sheetUnreach:'Hoja no disponible — guardado localmente',
@@ -1530,7 +1621,277 @@ async function analyzePhoto(input) {
   analyzing.style.display = 'none';
 }
 
+// ---- PULL LIST ----
+// Collecting material and deducting it are separate jobs in the field: you gather
+// forty plants first and only then account for them. The pull list holds what you
+// picked up until you commit the whole lot in one go.
+let pullMode = false;
+let pullList = {};   // { itemId: qtyToPull }
+try { pullList = JSON.parse(localStorage.getItem('titanPullList') || '{}'); } catch(e) { pullList = {}; }
+function savePullList() { try { localStorage.setItem('titanPullList', JSON.stringify(pullList)); } catch(e) {} }
+
+function pullLineCount() { return Object.keys(pullList).length; }
+function pullUnitCount() { return Object.values(pullList).reduce((a, b) => a + Number(b || 0), 0); }
+
+function togglePullMode() {
+  pullMode = !pullMode;
+  expandedId = null;
+  renderItems();
+  updatePullUI();
+  if (pullMode) showToast(t('pullModeOn'), 'success');
+}
+
+function changePullQty(id, delta) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const cur = Number(pullList[id] || 0);
+  // Never let someone stage more than the yard says is there.
+  const next = Math.max(0, Math.min(Number(item.qty) || 0, cur + delta));
+  if (next <= 0) delete pullList[id]; else pullList[id] = next;
+  savePullList(); renderItems(); updatePullUI();
+}
+
+function setPullQty(id, raw) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const n = Math.max(0, Math.min(Number(item.qty) || 0, parseInt(raw) || 0));
+  if (n <= 0) delete pullList[id]; else pullList[id] = n;
+  savePullList(); renderPullModal(); updatePullUI(); renderItems();
+}
+
+function removeFromPull(id) { delete pullList[id]; savePullList(); renderPullModal(); updatePullUI(); renderItems(); }
+
+function clearPull() {
+  if (pullLineCount() && !confirm(t('confirmClearPull'))) return;
+  pullList = {}; savePullList(); renderPullModal(); updatePullUI(); renderItems();
+}
+
+function updatePullUI() {
+  const badge = document.getElementById('pullBadge');
+  const banner = document.getElementById('pullBanner');
+  const n = pullLineCount();
+  badge.style.display = n ? 'flex' : 'none';
+  badge.innerHTML = `🧺 <span>${n}</span>`;
+  banner.style.display = pullMode ? 'flex' : 'none';
+  banner.innerHTML = `<span>${t('pullBannerText')}</span>
+    <button class="pull-banner-done" onclick="togglePullMode()">${t('done')}</button>`;
+  const btn = document.getElementById('pullModeBtn');
+  if (btn) btn.classList.toggle('pull-active', pullMode);
+}
+
+function openPullModal() { document.getElementById('pullModal').classList.add('open'); renderPullModal(); }
+function closePullModal() { document.getElementById('pullModal').classList.remove('open'); }
+
+function renderPullModal() {
+  const body = document.getElementById('pullModalBody');
+  const ids = Object.keys(pullList);
+  if (!ids.length) {
+    body.innerHTML = `<div class="loading-state" style="color:#8a9aaa">${t('pullEmpty')}</div>`;
+    document.getElementById('pullCommitRow').style.display = 'none';
+    return;
+  }
+  document.getElementById('pullCommitRow').style.display = 'block';
+  let html = '';
+  ids.forEach(id => {
+    const item = items.find(i => String(i.id) === String(id));
+    const qty = pullList[id];
+    if (!item) {
+      html += `<div class="pull-row"><span style="flex:1;color:#e07070">${t('pullMissing')} #${escapeHtml(id)}</span>
+        <button class="pull-x" onclick="removeFromPull('${escapeHtml(id)}')">✕</button></div>`;
+      return;
+    }
+    const after = (Number(item.qty) || 0) - Number(qty);
+    html += `<div class="pull-row">
+      <div style="flex:1;min-width:0">
+        <div class="pull-name">${escapeHtml(itemName(item))}</div>
+        <div class="pull-sub">${escapeHtml(item.location || 'Unknown')} · ${item.qty} ${escapeHtml(unitAbbr(item.unit) || '')} → <strong>${after}</strong></div>
+      </div>
+      <input class="pull-qty-input" type="number" min="0" max="${item.qty}" value="${qty}"
+             onchange="setPullQty(${item.id}, this.value)">
+      <button class="pull-x" onclick="removeFromPull(${item.id})">✕</button>
+    </div>`;
+  });
+  body.innerHTML = html;
+  document.getElementById('pullSummary').textContent =
+    t('pullSummary').replace('L', pullLineCount()).replace('U', pullUnitCount());
+}
+
+// Adds to the list without disturbing anything already staged for that item.
+function addToPull(id, qty) {
+  const item = items.find(i => String(i.id) === String(id));
+  if (!item) return false;
+  const cur = Number(pullList[id] || 0);
+  const want = cur + (Number(qty) || 1);
+  pullList[id] = Math.max(0, Math.min(Number(item.qty) || 0, want));
+  if (pullList[id] <= 0) delete pullList[id];
+  savePullList();
+  return true;
+}
+
+async function commitPull() {
+  const ids = Object.keys(pullList);
+  if (!ids.length) return;
+  const job = document.getElementById('pullJobInput').value.trim();
+  if (!job) { showToast(t('jobReq'), 'error'); document.getElementById('pullJobInput').focus(); return; }
+
+  const btn = document.getElementById('pullCommitBtn');
+  btn.disabled = true; btn.textContent = t('pulling');
+
+  let done = 0, failed = 0;
+  const pulled = [];
+  for (const id of ids) {
+    const item = items.find(i => String(i.id) === String(id));
+    if (!item) { failed++; continue; }
+    const take = Math.min(Number(pullList[id]) || 0, Number(item.qty) || 0);
+    if (take <= 0) continue;
+    const before = Number(item.qty) || 0;
+    item.qty = before - take;
+    try {
+      await pushUpdateQuiet(item);
+      const u = unitAbbr(item.unit);
+      logChange('PULL', item.name, `${take}${u ? ' ' + u : ''} for ${job} — ${before} → ${item.qty}`);
+      pulled.push(id);
+      done++;
+    } catch(e) {
+      item.qty = before; // put it back rather than show a number the sheet never got
+      failed++;
+    }
+  }
+  // Clear only what actually landed. Anything that failed stays staged so a bad
+  // moment of signal doesn't lose the count someone walked the yard to build.
+  pulled.forEach(id => { delete pullList[id]; });
+  savePullList();
+  btn.disabled = false; btn.textContent = t('pullAll');
+  if (!failed) { document.getElementById('pullJobInput').value = ''; closePullModal(); }
+  else { renderPullModal(); }
+  updatePullUI(); renderItems();
+  showToast(failed ? t('pullPartial').replace('D', done).replace('F', failed)
+                   : t('pullDone').replace('D', done), failed ? 'error' : 'success');
+}
+
+// Same write as pushUpdate but without a toast per item — a 40-line pull would
+// otherwise fire 40 toasts.
+async function pushUpdateQuiet(item) {
+  if (!APPS_SCRIPT_URL) return;
+  const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', changedBy: currentUser });
+  const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
+  if (!res.ok) throw new Error('sheet write failed');
+}
+
+// ---- PULL FROM A PASTED LIST ----
+function openPullPaste() { document.getElementById('pullPasteModal').classList.add('open'); }
+function closePullPaste() { document.getElementById('pullPasteModal').classList.remove('open'); }
+
+async function matchPastedList() {
+  const input = document.getElementById('pullPasteInput').value.trim();
+  if (!input) { showToast(t('pasteReq'), 'error'); return; }
+  if (!APPS_SCRIPT_URL) { showToast(t('sheetUnreach'), 'error'); return; }
+  const out = document.getElementById('pullPasteResult');
+  out.innerHTML = `<div style="color:var(--gold);font-size:12px;padding:8px">${t('matching')}</div>`;
+  try {
+    const inventoryList = items.map(i => `ID${i.id}: ${i.name} (${i.category}) qty:${i.qty} loc:${i.location}`).join('\n');
+    const text = await callClaude({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
+      messages: [{ role:'user', content:
+`Match each line of this pull list to one inventory item.
+
+Pull list:
+${input}
+
+Inventory:
+${inventoryList}
+
+Return ONLY a JSON array:
+[{"line":"12 goldflame spirea","id":47,"matched":"Spiraea Goldflame #2","qty":12,"confidence":"high"}]
+
+Rules:
+- "id" must be the numeric ID of the matched inventory item, or null if nothing matches.
+- "qty" is how many that line calls for; default 1 if no number is given.
+- "confidence" is high, low, or none.
+- If several inventory rows share the same name, still pick one — the one with the
+  most stock — and set confidence "low" so a person can check it. Never return null
+  just because the line asks for more than one row holds.
+- Set confidence "low" whenever the requested qty exceeds that row's stock.
+No other text.` }]
+    });
+    const rows = JSON.parse(text.replace(/```json|```/g, '').trim());
+    renderPasteMatches(rows);
+  } catch(e) {
+    out.innerHTML = `<div style="color:#e07070;font-size:12px;padding:8px">${t('matchFail')}</div>`;
+  }
+}
+
+// Every match is shown with what it resolved to and gets a checkbox, because an
+// AI guess should not silently move inventory.
+function renderPasteMatches(rows) {
+  lastPasteMatches = rows;
+  const out = document.getElementById('pullPasteResult');
+  let html = `<div class="paste-hint">${t('reviewMatches')}</div>`;
+  rows.forEach((r, idx) => {
+    const item = r.id != null ? items.find(i => String(i.id) === String(r.id)) : null;
+    const ok = !!item;
+    const conf = String(r.confidence || '').toLowerCase();
+    const cls = !ok ? 'status-missing' : conf === 'high' ? 'status-ok' : 'status-low';
+    html += `<div class="paste-row">
+      <input type="checkbox" class="paste-check" data-idx="${idx}" ${ok && conf === 'high' ? 'checked' : ''} ${ok ? '' : 'disabled'}>
+      <div style="flex:1;min-width:0">
+        <div class="pull-name">${escapeHtml(r.line || '')}</div>
+        <div class="pull-sub ${cls}">${ok ? '→ ' + escapeHtml(item.name) + ' (#' + item.id + ', have ' + item.qty + ')' : t('noMatch')}</div>
+      </div>
+      <input class="pull-qty-input" type="number" min="0" data-qty="${idx}" value="${Number(r.qty) || 1}" ${ok ? '' : 'disabled'}>
+    </div>`;
+  });
+  out.innerHTML = html;
+  document.getElementById('pasteAddRow').style.display = rows.length ? 'block' : 'none';
+}
+let lastPasteMatches = [];
+
+function addMatchesToPull() {
+  let added = 0;
+  document.querySelectorAll('.paste-check:checked').forEach(cb => {
+    const idx = Number(cb.dataset.idx);
+    const row = lastPasteMatches[idx];
+    if (!row || row.id == null) return;
+    const qtyEl = document.querySelector(`[data-qty="${idx}"]`);
+    if (addToPull(row.id, Number(qtyEl.value) || 1)) added++;
+  });
+  updatePullUI(); renderItems();
+  closePullPaste();
+  document.getElementById('pullPasteInput').value = '';
+  document.getElementById('pullPasteResult').innerHTML = '';
+  showToast(added ? t('pullAdded').replace('N', added) : t('nothingAdded'), added ? 'success' : 'error');
+  if (added) openPullModal();
+}
+
 // ---- JOB CHECKER ----
+let lastJobResults = [];
+
+function pullFromJobRow(idx) {
+  const r = lastJobResults[idx];
+  if (!r || r.id == null) return;
+  const qtyEl = document.querySelector(`[data-jobqty="${idx}"]`);
+  const qty = Number(qtyEl && qtyEl.value) || 0;
+  if (qty <= 0) return;
+  if (addToPull(r.id, qty)) {
+    updatePullUI(); renderItems();
+    showToast(t('pullAdded').replace('N', 1), 'success');
+  }
+}
+
+function pullAllJobRows() {
+  let added = 0;
+  document.querySelectorAll('[data-jobqty]').forEach(el => {
+    const idx = Number(el.dataset.jobqty);
+    const r = lastJobResults[idx];
+    const qty = Number(el.value) || 0;
+    if (r && r.id != null && qty > 0 && addToPull(r.id, qty)) added++;
+  });
+  updatePullUI(); renderItems();
+  if (added) { closeJobChecker(); openPullModal(); showToast(t('pullAdded').replace('N', added), 'success'); }
+  else showToast(t('nothingAdded'), 'error');
+}
+
 function openJobChecker() { document.getElementById('jobModal').classList.add('open'); }
 function closeJobChecker() { document.getElementById('jobModal').classList.remove('open'); }
 
@@ -1559,26 +1920,39 @@ Current inventory:
 ${inventoryList}
 
 For each required item, check if we have enough in inventory. Return ONLY a JSON array like:
-[{"item": "4x4 pt posts", "needed": 11, "have": 37, "status": "OK", "location": "104", "note": ""},
- {"item": "concrete bags", "needed": 26, "have": 0, "status": "MISSING", "location": "", "note": "Not in inventory"}]
+[{"item": "4x4 pt posts", "id": 3, "matched": "4x4 treated posts", "needed": 11, "have": 37, "status": "OK", "location": "104", "note": ""},
+ {"item": "concrete bags", "id": null, "matched": "", "needed": 26, "have": 0, "status": "MISSING", "location": "", "note": "Not in inventory"}]
 
+"id" must be the numeric inventory ID you matched, or null if nothing matches. "matched" is that item's name.
 Status must be: OK (have enough), LOW (have some but not enough), MISSING (none in inventory), or UNKNOWN (cant match to inventory). No other text.`
       }]
     });
     const cleaned = text.replace(/```json|```/g, '').trim();
     const results = JSON.parse(cleaned);
 
+    lastJobResults = results;
     let html = '<div style="margin-top:12px">';
-    results.forEach(r => {
+    let anyPullable = false;
+    results.forEach((r, idx) => {
       const statusClass = r.status === 'OK' ? 'status-ok' : r.status === 'LOW' ? 'status-low' : r.status === 'MISSING' ? 'status-missing' : 'status-unknown';
+      const item = r.id != null ? items.find(i => String(i.id) === String(r.id)) : null;
+      // Only offer to pull what actually resolved to a row, and never more than is there.
+      const canPull = !!item && Number(item.qty) > 0;
+      if (canPull) anyPullable = true;
       html += `<div class="job-row">
         <span class="job-status ${statusClass}">${escapeHtml(r.status)}</span>
         <span style="flex:1;color:#ffffff;font-weight:600">${escapeHtml(r.item)}</span>
         <span style="color:#cccccc;font-size:13px">Need: ${escapeHtml(r.needed)} / Have: ${escapeHtml(r.have)}</span>
+        ${canPull ? `<input class="pull-qty-input" type="number" min="0" max="${item.qty}"
+             data-jobqty="${idx}" value="${Math.min(Number(r.needed) || 0, Number(item.qty))}">
+          <button class="job-pull-btn" onclick="pullFromJobRow(${idx})">${t('addToPull')}</button>` : ''}
       </div>`;
+      // Say what it matched, so a wrong guess is visible before anything moves.
+      if (item) html += `<div style="font-size:11px;color:#8a9aaa;padding:0 0 6px 8px">→ ${escapeHtml(item.name)} (#${item.id}${item.location ? ', ' + escapeHtml(item.location) : ''})</div>`;
       if (r.note) html += `<div style="font-size:12px;color:#aaaaaa;padding:2px 0 6px 8px">${escapeHtml(r.note)}${r.location ? ' — ' + escapeHtml(r.location) : ''}</div>`;
     });
     html += '</div>';
+    if (anyPullable) html += `<button class="btn-save" style="width:100%;margin-top:10px" onclick="pullAllJobRows()">${t('pullAllMatched')}</button>`;
     resultDiv.innerHTML = html;
   } catch(e) {
     resultDiv.innerHTML = '<div style="color:#e07070;font-size:12px;padding:8px">Could not complete check — try again</div>';
@@ -1725,6 +2099,7 @@ window.onload = () => {
   populateSelects();
   fetchLists();
   loadItems();
+  updatePullUI();   // a list staged before the phone locked is still waiting
   // Prompt for identity right away rather than waiting for someone to tap a
   // gated action — browsing itself stays open, but anyone not yet approved
   // sees where they stand immediately instead of discovering it by accident.
@@ -1811,9 +2186,10 @@ function renderItems() {
       const isExpanded = expandedId === item.id;
       const locClass = item.location === 'Unknown' ? 'tag-loc unknown' : 'tag-loc';
       const unit = normalizeUnit(item.unit);
+      const staged = Number(pullList[item.id] || 0);
       html += `
-        <div class="item-card ${item.estimated ? 'estimated' : ''}" id="card-${item.id}">
-          <div class="item-header" onclick="toggleExpand(${item.id})">
+        <div class="item-card ${item.estimated ? 'estimated' : ''} ${staged ? 'staged' : ''}" id="card-${item.id}">
+          <div class="item-header" onclick="${pullMode ? `changePullQty(${item.id},1)` : `toggleExpand(${item.id})`}">
             ${item.photo
               ? `<img class="item-thumb" src="${photoUrl(item.photo, 120)}" loading="lazy" alt=""
                       onclick="event.stopPropagation(); openPhotoViewer('${escapeHtml(item.photo)}')"
@@ -1826,6 +2202,12 @@ function renderItems() {
                 ${item.estimated ? `<span class="tag tag-est">${t('est')}</span>` : ''}
               </div>
             </div>
+            ${pullMode ? `
+            <div class="item-qty" onclick="event.stopPropagation()">
+              <button class="qty-btn qty-minus" onclick="changePullQty(${item.id},-1)">−</button>
+              <span class="qty-num pull-staged">${staged}<span class="pull-of">/${item.qty}</span></span>
+              <button class="qty-btn qty-plus" onclick="changePullQty(${item.id},1)">+</button>
+            </div>` : `
             <div class="item-qty" onclick="event.stopPropagation()">
               <button class="qty-btn qty-minus" onclick="requireName(()=>changeQty(${item.id},-1))">−</button>
               <span class="qty-num ${qtyClass(item)}">${item.qty}${unit
@@ -1833,7 +2215,7 @@ function renderItems() {
                 : ` <span class="qty-nounit" title="${t('needsUnit')}">?</span>`}</span>
               <button class="qty-btn qty-plus" onclick="requireName(()=>changeQty(${item.id},1))">+</button>
               <button class="dispose-btn" onclick="requireName(()=>openDisposalModal(${item.id}))" title="Log disposal">🗑</button>
-            </div>
+            </div>`}
           </div>
           <div class="item-detail ${isExpanded ? 'open' : ''}" id="detail-${item.id}">
             ${item.specs ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${escapeHtml(item.specs)}</div>` : ''}
