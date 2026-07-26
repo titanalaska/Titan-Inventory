@@ -48,6 +48,19 @@
   select.needs-unit { border-color: #e07070 !important; }
   .list-existing-label { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin: 14px 0 6px; }
   .list-existing { display: flex; flex-wrap: wrap; gap: 5px; max-height: 140px; overflow-y: auto; }
+  /* Photos */
+  .item-thumb { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; flex-shrink: 0; background: #222; cursor: zoom-in; }
+  .item-thumb.thumb-broken { visibility: hidden; }
+  .photo-row { margin-top: 10px; }
+  .photo-large { width: 100%; max-height: 260px; object-fit: cover; border-radius: 5px; display: block; margin-bottom: 8px; cursor: zoom-in; background: #222; }
+  .photo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-photo, .btn-photo-del { flex: 1; min-width: 120px; padding: 9px; border: none; border-radius: 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; text-transform: uppercase; }
+  .btn-photo { background: #1a2333; color: #7ba7d9; }
+  .btn-photo:hover { background: #24344d; }
+  .btn-photo-del { background: #2e1a1a; color: #e07070; flex: 0 0 auto; min-width: 0; }
+  .photo-status { font-size: 11px; color: var(--gold); margin-top: 6px; letter-spacing: 0.05em; }
+  .photo-viewer { padding: 20px; cursor: zoom-out; }
+  .photo-viewer img { max-width: 100%; max-height: 92vh; border-radius: 5px; object-fit: contain; }
 
   .cat-jump { display: flex; gap: 6px; overflow-x: auto; padding: 8px 16px; background: var(--steel); scrollbar-width: none; }
   .cat-jump::-webkit-scrollbar { display: none; }
@@ -325,6 +338,11 @@
   </div>
 </div>
 
+<!-- PHOTO VIEWER -->
+<div class="modal-overlay photo-viewer" id="photoViewer" onclick="closePhotoViewer()">
+  <img id="photoViewerImg" alt="">
+</div>
+
 <!-- NEW CATEGORY / LOCATION MODAL -->
 <div class="modal-overlay" id="listModal">
   <div class="modal name-modal">
@@ -524,6 +542,10 @@ const T = {
     newCatTitle:'Add New Category', newLocTitle:'Add New Location',
     valueReq:'Name required', listAdded:'Added ✓', alreadyExists:'Already exists as "X"',
     existingLabel:'Already in the list:',
+    addPhoto:'📷 Add Photo', replacePhoto:'📷 Replace Photo', removePhoto:'Remove',
+    uploading:'Uploading photo…', photoSaved:'Photo saved ✓', photoFail:'Photo upload failed',
+    photoNoShare:'Photo saved but Drive blocked sharing — it may not display',
+    confirmPhotoDel:'Remove this photo?',
     cancel:'Cancel', save:'SAVE', addItem:'ADD ITEM', delete:'DELETE', estMark:'Mark as estimated quantity',
     noItems:'No items match your search.', namereq:'Item name required',
     savedLocal:'Saved locally', savedSheet:'Saved to Google Sheets ✓', sheetUnreach:'Sheet unreachable — saved locally',
@@ -549,6 +571,10 @@ const T = {
     newCatTitle:'Agregar Nueva Categoría', newLocTitle:'Agregar Nueva Ubicación',
     valueReq:'Nombre requerido', listAdded:'Agregado ✓', alreadyExists:'Ya existe como "X"',
     existingLabel:'Ya en la lista:',
+    addPhoto:'📷 Agregar Foto', replacePhoto:'📷 Cambiar Foto', removePhoto:'Quitar',
+    uploading:'Subiendo foto…', photoSaved:'Foto guardada ✓', photoFail:'Error al subir la foto',
+    photoNoShare:'Foto guardada pero Drive bloqueó el acceso — puede no mostrarse',
+    confirmPhotoDel:'¿Quitar esta foto?',
     cancel:'Cancelar', save:'GUARDAR', addItem:'AGREGAR', delete:'ELIMINAR', estMark:'Marcar como cantidad estimada',
     noItems:'No hay artículos que coincidan.', namereq:'Se requiere nombre del artículo',
     savedLocal:'Guardado localmente', savedSheet:'Guardado en Google Sheets ✓', sheetUnreach:'Hoja no disponible — guardado localmente',
@@ -1356,16 +1382,102 @@ function updateTopsoilTotal() {
 }
 
 
+// ---- ITEM PHOTOS ----
+// Drive serves the thumbnail; the file id is all that rides in the Sheet.
+function photoUrl(id, size) {
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${size||400}`;
+}
+
+// Phones shoot 4000px/4MB. Shrinking before upload keeps a job-site connection
+// usable and stays well inside what Apps Script will accept in one POST.
+function shrinkImage(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width: w, height: h } = img;
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale); h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality || 0.75);
+      resolve(dataUrl.split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+    img.src = url;
+  });
+}
+
+async function uploadItemPhoto(input, itemId) {
+  if (!input.files || !input.files[0]) return;
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  if (!APPS_SCRIPT_URL) { showToast(t('sheetUnreach'), 'error'); return; }
+
+  const status = document.getElementById(`photostatus-${itemId}`);
+  if (status) { status.style.display = 'block'; status.textContent = t('uploading'); }
+  try {
+    const base64 = await shrinkImage(input.files[0], 1000, 0.75);
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action:'savePhoto', itemId: String(itemId), data: base64, mimeType:'image/jpeg' })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    item.photo = data.photoId;
+    logChange('PHOTO', item.name, 'Photo added');
+    // The site is public, so a photo Drive won't share is a photo nobody can see.
+    if (data.shareOk === false) showToast(t('photoNoShare'), 'error');
+    else showToast(t('photoSaved'), 'success');
+    renderItems();
+  } catch(e) {
+    showToast(t('photoFail'), 'error');
+    if (status) status.style.display = 'none';
+  }
+  input.value = '';
+}
+
+async function removeItemPhoto(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item || !item.photo) return;
+  if (!confirm(t('confirmPhotoDel'))) return;
+  item.photo = '';
+  logChange('PHOTO', item.name, 'Photo removed');
+  await pushUpdate(item);
+  renderItems();
+}
+
+function openPhotoViewer(id) {
+  document.getElementById('photoViewerImg').src = photoUrl(id, 1200);
+  document.getElementById('photoViewer').classList.add('open');
+}
+function closePhotoViewer() {
+  document.getElementById('photoViewer').classList.remove('open');
+  document.getElementById('photoViewerImg').src = '';
+}
+
 // ---- PHOTO TO ITEM ----
+// The shot taken to identify a new item is also the best photo of it, so it is held
+// here and uploaded once the item exists and has an id.
+let pendingNewPhoto = null;
+
 async function analyzePhoto(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
-  
+
   // Show preview
   const preview = document.getElementById('photoPreview');
   const analyzing = document.getElementById('aiAnalyzing');
   preview.src = URL.createObjectURL(file);
   preview.style.display = 'block';
+
+  try { pendingNewPhoto = await shrinkImage(file, 1000, 0.75); }
+  catch(e) { pendingNewPhoto = null; }
 
   if (!APPS_SCRIPT_URL) {
     showToast('AI photo ID needs the sheet configured — fill in manually', 'error');
@@ -1696,7 +1808,11 @@ function renderItems() {
       html += `
         <div class="item-card ${item.estimated ? 'estimated' : ''}" id="card-${item.id}">
           <div class="item-header" onclick="toggleExpand(${item.id})">
-            <div class="item-id">#${item.id}</div>
+            ${item.photo
+              ? `<img class="item-thumb" src="${photoUrl(item.photo, 120)}" loading="lazy" alt=""
+                      onclick="event.stopPropagation(); openPhotoViewer('${escapeHtml(item.photo)}')"
+                      onerror="this.classList.add('thumb-broken')">`
+              : `<div class="item-id">#${item.id}</div>`}
             <div class="item-main">
               <div class="item-name">${escapeHtml(itemName(item))}</div>
               <div class="item-meta">
@@ -1746,6 +1862,21 @@ function renderItems() {
                   ${t('estMark')}
                 </label>
               </div>
+            </div>
+            <div class="photo-row">
+              ${item.photo
+                ? `<img class="photo-large" src="${photoUrl(item.photo, 600)}" loading="lazy" alt=""
+                        onclick="openPhotoViewer('${escapeHtml(item.photo)}')">`
+                : ''}
+              <div class="photo-actions">
+                <input type="file" id="photoinput-${item.id}" accept="image/*" capture="environment"
+                       style="display:none" onchange="uploadItemPhoto(this, ${item.id})">
+                <button class="btn-photo" onclick="requireName(()=>document.getElementById('photoinput-${item.id}').click())">
+                  ${item.photo ? t('replacePhoto') : t('addPhoto')}
+                </button>
+                ${item.photo ? `<button class="btn-photo-del" onclick="requireName(()=>removeItemPhoto(${item.id}))">${t('removePhoto')}</button>` : ''}
+              </div>
+              <div class="photo-status" id="photostatus-${item.id}" style="display:none"></div>
             </div>
             <div class="detail-actions">
               <button class="btn-save" id="save-${item.id}" onclick="requireName(()=>saveItem(${item.id}))">${t('save')}</button>
@@ -1823,7 +1954,7 @@ async function deleteItem(id) {
 async function pushUpdate(item) {
   if (!APPS_SCRIPT_URL) { showToast(t('savedLocal'), ''); return; }
   try {
-    const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, changedBy: currentUser });
+    const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', changedBy: currentUser });
     await fetch(`${APPS_SCRIPT_URL}?${params}`);
     showToast(t('savedSheet'), 'success');
   } catch(e) { showToast(t('sheetUnreach'), 'error'); }
@@ -1832,6 +1963,7 @@ async function pushUpdate(item) {
 function openAddModal() { document.getElementById('addModal').classList.add('open'); document.getElementById('newName').focus(); }
 function closeAddModal() { document.getElementById('addModal').classList.remove('open'); resetAddModalPhoto(); }
 function resetAddModalPhoto() {
+  pendingNewPhoto = null;
   document.getElementById('photoUpload').value = '';
   document.getElementById('galleryUpload').value = '';
   const preview = document.getElementById('photoPreview');
@@ -1854,7 +1986,23 @@ async function addItem() {
   items.push(newItem);
   logChange('ADD', name, `Qty: ${newItem.qty}, Location: ${newItem.location}`);
   if (APPS_SCRIPT_URL) {
-    try { const params = new URLSearchParams({ action:'add', ...newItem, addedBy: currentUser }); await fetch(`${APPS_SCRIPT_URL}?${params}`); showToast(t('savedSheet'), 'success'); }
+    try {
+      const params = new URLSearchParams({ action:'add', ...newItem, addedBy: currentUser });
+      await fetch(`${APPS_SCRIPT_URL}?${params}`);
+      showToast(t('savedSheet'), 'success');
+      // The row exists now, so the identification shot can be attached to it.
+      if (pendingNewPhoto) {
+        try {
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action:'savePhoto', itemId: String(newItem.id), data: pendingNewPhoto, mimeType:'image/jpeg' })
+          });
+          const pd = await res.json();
+          if (pd.photoId) { newItem.photo = pd.photoId; showToast(t('photoSaved'), 'success'); }
+        } catch(photoErr) { showToast(t('photoFail'), 'error'); }
+      }
+    }
     catch(e) { showToast(t('syncFail'), 'error'); }
   } else { showToast(t('savedLocal'), ''); }
   closeAddModal();
