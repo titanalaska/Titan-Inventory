@@ -566,6 +566,7 @@ const UNITS = [
   {value:'bf',   label:'Board Feet (BF)',  abbr:'BF'},
   {value:'cy',   label:'Cubic Yards (CY)', abbr:'CY'},
   {value:'tons', label:'Tons (TON)',       abbr:'TON'},
+  {value:'plt',  label:'Pallets (PLT)',    abbr:'PLT'},
   {value:'bags', label:'Bags',             abbr:'bags'},
   {value:'gal',  label:'Gallons (GAL)',    abbr:'GAL'},
   {value:'box',  label:'Box',              abbr:'box'},
@@ -577,6 +578,7 @@ const UNIT_ALIASES = {
   'sq ft':'sf', 'sqft':'sf',
   'yards':'cy', 'yd':'cy', 'cu yd':'cy', 'cuyd':'cy',
   'each':'ea', 'ton':'tons',
+  'pallet':'plt', 'pallets':'plt', 'pal':'plt',
 };
 
 // Suppliers quote aggregate by the ton and soil products by the cubic yard, so the
@@ -584,9 +586,16 @@ const UNIT_ALIASES = {
 const CATEGORY_DEFAULT_UNIT = {
   'PIT & AGGREGATE MATERIALS':'tons',
   'HYDROSEEDING MATERIALS':'bags',
+  'MASONRY & RETAINING WALL':'plt',
 };
 // Bulk soil products ship by the cubic yard even when they sit in the aggregate bins.
 const CY_NAME_HINTS = /topsoil|top ?soil|fill|mulch|compost|bark|loam|screened/i;
+// Mortar and mix arrive on a pallet too, but the yard counts the bags on it. Match whole
+// words only — "reinforcement" ends in "cement", and a brand like Quikrete says nothing
+// about how the product is packaged.
+const BAG_NAME_HINTS = /\b(mortar|cement|grout|thin ?set|stucco|mix)\b/i;
+// Geogrid, fabric and wire come off a roll regardless of what category they sit in.
+const ROLL_NAME_HINTS = /\b(roll|geogrid|mesh|fabric|netting|burlap)\b/i;
 
 let lang = 'en';
 let items = [];
@@ -628,7 +637,10 @@ function unitAbbr(u) {
   return found ? found.abbr : v;
 }
 function defaultUnitFor(cat, name) {
-  if (CY_NAME_HINTS.test(String(name || ''))) return 'cy';
+  const n = String(name || '');
+  if (ROLL_NAME_HINTS.test(n)) return 'roll';
+  if (BAG_NAME_HINTS.test(n)) return 'bags';
+  if (CY_NAME_HINTS.test(n)) return 'cy';
   return CATEGORY_DEFAULT_UNIT[cat] || 'ea';
 }
 
