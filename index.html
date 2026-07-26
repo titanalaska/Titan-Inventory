@@ -41,6 +41,11 @@
 
   .stats-bar { background: var(--iron); padding: 8px 16px; display: flex; gap: 16px; font-size: 11px; color: var(--mid); letter-spacing: 0.06em; border-bottom: 1px solid #222222; flex-wrap: wrap; }
   .stats-bar span { color: var(--snow); font-weight: 600; }
+  .stat-clickable { cursor: pointer; user-select: none; padding: 0 6px; margin: -2px -6px; border-radius: 3px; }
+  .stat-clickable:hover { background: #2a2a2a; }
+  .stat-active { background: #2e1a1a; color: #e07070; }
+  .stat-active span { color: #e07070; }
+  select.needs-unit { border-color: #e07070 !important; }
 
   .cat-jump { display: flex; gap: 6px; overflow-x: auto; padding: 8px 16px; background: var(--steel); scrollbar-width: none; }
   .cat-jump::-webkit-scrollbar { display: none; }
@@ -66,6 +71,7 @@
   .tag-loc { background: #1a1500; color: #c8a000; }
   .tag-loc.unknown { background: #352010; color: #c8902a; }
   .tag-est { background: #352a10; color: var(--gold); }
+  .tag-nounit { background: #2e1a1a; color: #e07070; }
   .item-qty { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .qty-btn { width: 30px; height: 30px; border-radius: 50%; border: none; font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s, background 0.15s; flex-shrink: 0; }
   .qty-btn:active { transform: scale(0.9); }
@@ -76,6 +82,7 @@
   .qty-num { font-size: 17px; font-weight: 700; color: var(--snow); min-width: 36px; text-align: center; }
   .qty-num.qty-zero { color: #e07070; }
   .qty-num.qty-low { color: var(--gold); }
+  .qty-unit { font-size: 11px; font-weight: 600; color: var(--mid); letter-spacing: 0.04em; }
 
   .item-detail { display: none; padding: 0 12px 12px 40px; border-top: 1px solid #2a3a4a; }
   .item-detail.open { display: block; }
@@ -257,6 +264,7 @@
     <div id="statItemsLabel">Items: <span id="statItems">—</span></div>
     <div id="statShowingLabel">Showing: <span id="statShowing">—</span></div>
     <div id="statEstLabel">Est. flags: <span id="statEst">—</span></div>
+    <div id="statNoUnitLabel" class="stat-clickable" onclick="toggleNoUnitFilter()" title="Show only items missing a unit">Needs unit: <span id="statNoUnit">—</span></div>
   </div>
   <div class="cat-jump" id="catJump" style="margin:0 -16px"></div>
 </header>
@@ -333,7 +341,7 @@
       </div>
       <div class="modal-field full">
         <label id="labelName">Item Name</label>
-        <input type="text" id="newName">
+        <input type="text" id="newName" oninput="suggestUnit()">
       </div>
       <div class="modal-field">
         <label id="labelCat">Category</label>
@@ -348,8 +356,8 @@
         <input type="number" id="newQty" placeholder="0" min="0">
       </div>
       <div class="modal-field">
-        <label>Unit</label>
-        <select id="newUnit"></select>
+        <label id="labelUnit">Unit</label>
+        <select id="newUnit" onchange="this.dataset.touched='1'"></select>
       </div>
       <div class="modal-field full">
         <label id="labelSpecs">Specs / Notes</label>
@@ -493,6 +501,7 @@ const T = {
     allCats:'All Categories', allLocs:'All Locations', items:'Items:', showing:'Showing:', estFlags:'Est. flags:',
     addBtn:'+ Add Item', modalTitle:'Add New Item', labelName:'Item Name', labelCat:'Category',
     labelLoc:'Location', labelQty:'Quantity', labelSpecs:'Specs', labelEst:'Estimated quantity',
+    labelUnit:'Unit', pickUnit:'Set unit…', needsUnit:'no unit', noUnitStat:'Needs unit:',
     cancel:'Cancel', save:'SAVE', addItem:'ADD ITEM', delete:'DELETE', estMark:'Mark as estimated quantity',
     noItems:'No items match your search.', namereq:'Item name required',
     savedLocal:'Saved locally', savedSheet:'Saved to Google Sheets ✓', sheetUnreach:'Sheet unreachable — saved locally',
@@ -513,6 +522,7 @@ const T = {
     allCats:'Todas las Categorías', allLocs:'Todas las Ubicaciones', items:'Artículos:', showing:'Mostrando:', estFlags:'Estimados:',
     addBtn:'+ Agregar Artículo', modalTitle:'Agregar Nuevo Artículo', labelName:'Nombre del Artículo', labelCat:'Categoría',
     labelLoc:'Ubicación', labelQty:'Cantidad', labelSpecs:'Especificaciones', labelEst:'Cantidad estimada',
+    labelUnit:'Unidad', pickUnit:'Elegir unidad…', needsUnit:'sin unidad', noUnitStat:'Falta unidad:',
     cancel:'Cancelar', save:'GUARDAR', addItem:'AGREGAR', delete:'ELIMINAR', estMark:'Marcar como cantidad estimada',
     noItems:'No hay artículos que coincidan.', namereq:'Se requiere nombre del artículo',
     savedLocal:'Guardado localmente', savedSheet:'Guardado en Google Sheets ✓', sheetUnreach:'Hoja no disponible — guardado localmente',
@@ -547,22 +557,42 @@ const CATEGORY_ALIASES = {
 const LOCATION_ALIASES = {
   'Yard 104': '104',
 };
+// Trade abbreviations, per Gage's 7/24 review — a bare number doesn't say whether
+// 1453 cedar boards means 1453 pieces or 1453 linear feet.
 const UNITS = [
-  {value:'ea', label:'Each'},
-  {value:'tons', label:'Tons'},
-  {value:'yards', label:'Yards (cu yd)'},
-  {value:'ft', label:'Feet'},
-  {value:'sq ft', label:'Sq Ft'},
-  {value:'bags', label:'Bags'},
-  {value:'gal', label:'Gallons'},
-  {value:'box', label:'Box'},
-  {value:'roll', label:'Roll'},
+  {value:'ea',   label:'Each (EA)',        abbr:'EA'},
+  {value:'lf',   label:'Linear Feet (LF)', abbr:'LF'},
+  {value:'sf',   label:'Square Feet (SF)', abbr:'SF'},
+  {value:'bf',   label:'Board Feet (BF)',  abbr:'BF'},
+  {value:'cy',   label:'Cubic Yards (CY)', abbr:'CY'},
+  {value:'tons', label:'Tons (TON)',       abbr:'TON'},
+  {value:'bags', label:'Bags',             abbr:'bags'},
+  {value:'gal',  label:'Gallons (GAL)',    abbr:'GAL'},
+  {value:'box',  label:'Box',              abbr:'box'},
+  {value:'roll', label:'Roll',             abbr:'roll'},
 ];
+// Units written before the switch to trade abbreviations get remapped on load.
+const UNIT_ALIASES = {
+  'ft':'lf', 'feet':'lf', 'linear ft':'lf',
+  'sq ft':'sf', 'sqft':'sf',
+  'yards':'cy', 'yd':'cy', 'cu yd':'cy', 'cuyd':'cy',
+  'each':'ea', 'ton':'tons',
+};
+
+// Suppliers quote aggregate by the ton and soil products by the cubic yard, so the
+// Add form starts on whichever one the category implies.
+const CATEGORY_DEFAULT_UNIT = {
+  'PIT & AGGREGATE MATERIALS':'tons',
+  'HYDROSEEDING MATERIALS':'bags',
+};
+// Bulk soil products ship by the cubic yard even when they sit in the aggregate bins.
+const CY_NAME_HINTS = /topsoil|top ?soil|fill|mulch|compost|bark|loam|screened/i;
 
 let lang = 'en';
 let items = [];
 let expandedId = null;
 let collapsedCats = new Set();
+let noUnitOnly = false;
 let currentUser = '';
 let pendingAction = null;
 let translationCache = JSON.parse(localStorage.getItem('titanTranslationCache') || '{}');
@@ -585,6 +615,22 @@ function qtyClass(item) {
   return '';
 }
 function catSlug(cat) { return 'catdiv-' + cat.replace(/[^a-zA-Z0-9]+/g, '-'); }
+
+// An item with no unit reads as an arbitrary number, so unset stays unset and gets
+// flagged rather than silently defaulting to Each.
+function normalizeUnit(u) {
+  const v = String(u == null ? '' : u).trim().toLowerCase();
+  return UNIT_ALIASES[v] || v;
+}
+function unitAbbr(u) {
+  const v = normalizeUnit(u);
+  const found = UNITS.find(x => x.value === v);
+  return found ? found.abbr : v;
+}
+function defaultUnitFor(cat, name) {
+  if (CY_NAME_HINTS.test(String(name || ''))) return 'cy';
+  return CATEGORY_DEFAULT_UNIT[cat] || 'ea';
+}
 
 async function toggleLang() {
   lang = lang === 'en' ? 'es' : 'en';
@@ -639,6 +685,7 @@ function applyTranslations() {
   document.getElementById('statItemsLabel').innerHTML = t('items') + ' <span id="statItems">' + (document.getElementById('statItems')||{}).textContent + '</span>';
   document.getElementById('statShowingLabel').innerHTML = t('showing') + ' <span id="statShowing">' + (document.getElementById('statShowing')||{}).textContent + '</span>';
   document.getElementById('statEstLabel').innerHTML = t('estFlags') + ' <span id="statEst">' + (document.getElementById('statEst')||{}).textContent + '</span>';
+  document.getElementById('statNoUnitLabel').innerHTML = t('noUnitStat') + ' <span id="statNoUnit">' + (document.getElementById('statNoUnit')||{}).textContent + '</span>';
   document.getElementById('addBtn').textContent = t('addBtn');
   document.getElementById('modalTitle').textContent = t('modalTitle');
   document.getElementById('labelName').textContent = t('labelName');
@@ -973,7 +1020,11 @@ function populateSelects() {
   newLoc.innerHTML = `<option value="">Select…</option>`;
   LOCATIONS.forEach(l => { newLoc.innerHTML += `<option value="${l}">${l}</option>`; });
   const newUnit = document.getElementById('newUnit');
-  if (newUnit) { newUnit.innerHTML = UNITS.map(u => `<option value="${u.value}">${u.label}</option>`).join(''); }
+  if (newUnit) {
+    const prevUnit = newUnit.value;
+    newUnit.innerHTML = `<option value="">${t('pickUnit')}</option>` + UNITS.map(u => `<option value="${u.value}">${u.label}</option>`).join('');
+    newUnit.value = prevUnit;
+  }
 }
 
 // ---- EMBEDDED DATA ----
@@ -1289,6 +1340,17 @@ function toggleNurseryFields() {
   const show = cat === 'NURSERY STOCK';
   document.getElementById('nurseryFields').style.display = show ? 'block' : 'none';
   document.getElementById('nurseryCondition').style.display = show ? 'block' : 'none';
+  suggestUnit();
+}
+
+// Preselect the unit the category implies, but never overwrite a unit already picked by hand.
+function suggestUnit() {
+  const unitSel = document.getElementById('newUnit');
+  if (!unitSel || unitSel.dataset.touched === '1') return;
+  const cat = document.getElementById('newCat').value;
+  const name = document.getElementById('newName').value;
+  if (!cat && !name.trim()) { unitSel.value = ''; return; }
+  unitSel.value = defaultUnitFor(cat, name);
 }
 
 
@@ -1423,6 +1485,7 @@ async function loadItems() {
   const btn = document.getElementById('syncBtn');
   btn.classList.add('syncing'); btn.textContent = t('syncing');
   // Always load embedded data first so app is never blank
+  EMBEDDED.forEach(i => { i.unit = normalizeUnit(i.unit); });
   items = [...EMBEDDED];
   renderItems();
   if (APPS_SCRIPT_URL) {
@@ -1441,6 +1504,7 @@ async function loadItems() {
         data.items.forEach(i => {
           if (CATEGORY_ALIASES[i.category]) i.category = CATEGORY_ALIASES[i.category];
           if (LOCATION_ALIASES[i.location]) i.location = LOCATION_ALIASES[i.location];
+          i.unit = normalizeUnit(i.unit);
         });
         // Merge sheet data with any embedded seed items the sheet doesn't have yet
         // (e.g. nursery stock, or newer categories like Pit & Aggregate that haven't been synced to the sheet)
@@ -1466,11 +1530,14 @@ function renderItems() {
   let filtered = items.filter(item => {
     const name = String(item.name || ''), category = String(item.category || ''), location = String(item.location || ''), specs = String(item.specs || '');
     const ms = !search || name.toLowerCase().includes(search) || specs.toLowerCase().includes(search) || category.toLowerCase().includes(search) || String(item.id).includes(search);
+    if (noUnitOnly && normalizeUnit(item.unit)) return false;
     return ms && (!filterCat || category.trim() === filterCat.trim()) && (!filterLoc || location.trim() === filterLoc.trim());
   });
   document.getElementById('statItems').textContent = items.length;
   document.getElementById('statShowing').textContent = filtered.length;
   document.getElementById('statEst').textContent = items.filter(i => i.estimated).length;
+  document.getElementById('statNoUnit').textContent = items.filter(i => !normalizeUnit(i.unit)).length;
+  document.getElementById('statNoUnitLabel').classList.toggle('stat-active', noUnitOnly);
   const grouped = {};
   filtered.forEach(item => { const cat = item.category || 'UNSORTED'; if (!grouped[cat]) grouped[cat] = []; grouped[cat].push(item); });
   const catJump = document.getElementById('catJump');
@@ -1491,6 +1558,7 @@ function renderItems() {
     grouped[cat].forEach(item => {
       const isExpanded = expandedId === item.id;
       const locClass = item.location === 'Unknown' ? 'tag-loc unknown' : 'tag-loc';
+      const unit = normalizeUnit(item.unit);
       html += `
         <div class="item-card ${item.estimated ? 'estimated' : ''}" id="card-${item.id}">
           <div class="item-header" onclick="toggleExpand(${item.id})">
@@ -1500,11 +1568,12 @@ function renderItems() {
               <div class="item-meta">
                 <span class="tag ${locClass}">${escapeHtml(item.location || 'Unknown')}</span>
                 ${item.estimated ? `<span class="tag tag-est">${t('est')}</span>` : ''}
+                ${unit ? '' : `<span class="tag tag-nounit">${t('needsUnit')}</span>`}
               </div>
             </div>
             <div class="item-qty" onclick="event.stopPropagation()">
               <button class="qty-btn qty-minus" onclick="requireName(()=>changeQty(${item.id},-1))">−</button>
-              <span class="qty-num ${qtyClass(item)}">${item.qty}${item.unit && item.unit!=='ea' ? ' '+escapeHtml(item.unit) : ''}</span>
+              <span class="qty-num ${qtyClass(item)}">${item.qty}${unit ? ' <span class="qty-unit">'+escapeHtml(unitAbbr(unit))+'</span>' : ''}</span>
               <button class="qty-btn qty-plus" onclick="requireName(()=>changeQty(${item.id},1))">+</button>
               <button class="dispose-btn" onclick="requireName(()=>openDisposalModal(${item.id}))" title="Log disposal">🗑</button>
             </div>
@@ -1525,9 +1594,10 @@ function renderItems() {
                 </select>
               </div>
               <div class="detail-field">
-                <label>Unit</label>
-                <select id="unit-${item.id}" onchange="markDirty(${item.id})">
-                  ${UNITS.map(u => `<option value="${u.value}" ${(item.unit||'ea')===u.value?'selected':''}>${u.label}</option>`).join('')}
+                <label>${t('labelUnit')}</label>
+                <select id="unit-${item.id}" class="${unit ? '' : 'needs-unit'}" onchange="markDirty(${item.id})">
+                  ${unit ? '' : `<option value="" selected>${t('pickUnit')}</option>`}
+                  ${UNITS.map(u => `<option value="${u.value}" ${unit===u.value?'selected':''}>${u.label}${!unit && u.value===defaultUnitFor(item.category, item.name) ? ' ·' : ''}</option>`).join('')}
                 </select>
               </div>
               <div class="detail-field full">
@@ -1552,6 +1622,7 @@ function renderItems() {
   list.innerHTML = html;
 }
 
+function toggleNoUnitFilter() { noUnitOnly = !noUnitOnly; collapsedCats.clear(); renderItems(); }
 function toggleExpand(id) { expandedId = expandedId === id ? null : id; renderItems(); }
 function toggleCategory(cat) {
   if (collapsedCats.has(cat)) collapsedCats.delete(cat); else collapsedCats.add(cat);
@@ -1592,7 +1663,7 @@ async function saveItem(id) {
   const newEst = document.getElementById(`est-${id}`).checked;
   if (newLoc !== item.location) changes.push(`Location: ${item.location} → ${newLoc}`);
   if (newCat !== item.category) changes.push(`Category changed`);
-  if (newUnit !== (item.unit||'ea')) changes.push(`Unit: ${item.unit||'ea'} → ${newUnit}`);
+  if (newUnit !== normalizeUnit(item.unit)) changes.push(`Unit: ${unitAbbr(item.unit) || '(none)'} → ${unitAbbr(newUnit) || '(none)'}`);
   item.location = newLoc; item.category = newCat; item.unit = newUnit; item.specs = newSpecs; item.estimated = newEst;
   if (changes.length > 0) logChange('EDIT', item.name, changes.join(', '));
   else logChange('EDIT', item.name, 'Updated');
@@ -1616,7 +1687,7 @@ async function deleteItem(id) {
 async function pushUpdate(item) {
   if (!APPS_SCRIPT_URL) { showToast(t('savedLocal'), ''); return; }
   try {
-    const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:item.unit||'ea', specs:item.specs||'', estimated:item.estimated, changedBy: currentUser });
+    const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, changedBy: currentUser });
     await fetch(`${APPS_SCRIPT_URL}?${params}`);
     showToast(t('savedSheet'), 'success');
   } catch(e) { showToast(t('sheetUnreach'), 'error'); }
@@ -1636,7 +1707,7 @@ async function addItem() {
   const name = document.getElementById('newName').value.trim();
   if (!name) { showToast(t('namereq'), 'error'); return; }
   const maxId = items.length ? Math.max(...items.map(i => i.id)) : 0;
-  const newItem = { id: maxId+1, name, category: document.getElementById('newCat').value || CATEGORIES[0], location: document.getElementById('newLoc').value || 'Unknown', qty: Math.max(0, parseInt(document.getElementById('newQty').value)||0), unit: document.getElementById('newUnit').value || 'ea', specs: (() => {
+  const newItem = { id: maxId+1, name, category: document.getElementById('newCat').value || CATEGORIES[0], location: document.getElementById('newLoc').value || 'Unknown', qty: Math.max(0, parseInt(document.getElementById('newQty').value)||0), unit: normalizeUnit(document.getElementById('newUnit').value), specs: (() => {
     let s = document.getElementById('newSpecs').value.trim();
     const container = document.getElementById('newContainer') ? document.getElementById('newContainer').value : '';
     const condition = document.getElementById('newCondition') ? document.getElementById('newCondition').value : '';
@@ -1652,7 +1723,8 @@ async function addItem() {
   } else { showToast(t('savedLocal'), ''); }
   closeAddModal();
   document.getElementById('newName').value = ''; document.getElementById('newQty').value = ''; document.getElementById('newSpecs').value = ''; document.getElementById('newEst').checked = false;
-  document.getElementById('newUnit').value = 'ea';
+  const unitSel = document.getElementById('newUnit');
+  unitSel.value = ''; delete unitSel.dataset.touched;
   if (document.getElementById('newContainer')) document.getElementById('newContainer').value = '';
   if (document.getElementById('newCondition')) document.getElementById('newCondition').value = '';
   renderItems();
