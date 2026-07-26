@@ -83,6 +83,17 @@
   .job-btn.pull-active { background: var(--gold) !important; color: #000 !important; border-color: var(--gold) !important; }
   .job-pull-btn { background: #3a2c00; color: var(--gold); border: none; border-radius: 4px; padding: 6px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; font-family: var(--font); text-transform: uppercase; flex-shrink: 0; }
   .job-pull-btn:hover { background: #5a4400; }
+  /* Read-only peek shown while staging — enough to confirm you grabbed the right
+     plant, without the edit controls you don't want to touch mid-count. */
+  .peek { padding: 10px 0 4px; }
+  .peek-photo { width: 100%; max-height: 240px; object-fit: cover; border-radius: 5px; display: block; margin-bottom: 8px; cursor: zoom-in; background: #222; }
+  .peek-specs { font-size: 12px; color: var(--mid); margin-bottom: 8px; }
+  .peek-facts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11px; color: var(--mid); letter-spacing: 0.04em; margin-bottom: 10px; }
+  .peek-facts strong { color: var(--snow); font-weight: 700; }
+  .peek-stage { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .peek-stage label { font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+  .peek-quick { background: #3a2c00; color: var(--gold); border: none; border-radius: 4px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: var(--font); }
+  .peek-quick:hover { background: #5a4400; }
 
   .cat-jump { display: flex; gap: 6px; overflow-x: auto; padding: 8px 16px; background: var(--steel); scrollbar-width: none; }
   .cat-jump::-webkit-scrollbar { display: none; }
@@ -631,6 +642,7 @@ const T = {
     noMatch:'No inventory match — skipped', pullAdded:'Added N to pull list ✓',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
+    onHand:'On hand', staging:'Staging', takeAll:'All',
     cancel:'Cancel', save:'SAVE', addItem:'ADD ITEM', delete:'DELETE', estMark:'Mark as estimated quantity',
     noItems:'No items match your search.', namereq:'Item name required',
     savedLocal:'Saved locally', savedSheet:'Saved to Google Sheets ✓', sheetUnreach:'Sheet unreachable — saved locally',
@@ -674,6 +686,7 @@ const T = {
     noMatch:'Sin coincidencia — omitido', pullAdded:'N agregados a la lista ✓',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
+    onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
     cancel:'Cancelar', save:'GUARDAR', addItem:'AGREGAR', delete:'ELIMINAR', estMark:'Marcar como cantidad estimada',
     noItems:'No hay artículos que coincidan.', namereq:'Se requiere nombre del artículo',
     savedLocal:'Guardado localmente', savedSheet:'Guardado en Google Sheets ✓', sheetUnreach:'Hoja no disponible — guardado localmente',
@@ -2237,7 +2250,7 @@ function renderItems() {
       const staged = Number(pullList[item.id] || 0);
       html += `
         <div class="item-card ${item.estimated ? 'estimated' : ''} ${staged ? 'staged' : ''}" id="card-${item.id}">
-          <div class="item-header" onclick="${pullMode ? `changePullQty(${item.id},1)` : `toggleExpand(${item.id})`}">
+          <div class="item-header" onclick="toggleExpand(${item.id})">
             ${item.photo
               ? `<img class="item-thumb" src="${photoUrl(item.photo, 120)}" loading="lazy" alt=""
                       onclick="event.stopPropagation(); openPhotoViewer('${escapeHtml(item.photo)}')"
@@ -2266,6 +2279,25 @@ function renderItems() {
             </div>`}
           </div>
           <div class="item-detail ${isExpanded ? 'open' : ''}" id="detail-${item.id}">
+            ${pullMode ? `
+            <div class="peek">
+              ${item.photo ? `<img class="peek-photo" src="${photoUrl(item.photo, 600)}" loading="lazy" alt=""
+                     onclick="event.stopPropagation(); openPhotoViewer('${escapeHtml(item.photo)}')">` : ''}
+              ${item.specs ? `<div class="peek-specs">${escapeHtml(item.specs)}</div>` : ''}
+              <div class="peek-facts">
+                <span>${t('labelLoc')}: <strong>${escapeHtml(item.location || 'Unknown')}</strong></span>
+                <span>${t('labelCat')}: <strong>${escapeHtml(catLabel(item.category || ''))}</strong></span>
+                <span>${t('onHand')}: <strong>${item.qty}${unit ? ' ' + escapeHtml(unitAbbr(unit)) : ''}</strong></span>
+              </div>
+              <div class="peek-stage" onclick="event.stopPropagation()">
+                <label>${t('staging')}</label>
+                <input class="pull-qty-input" type="number" min="0" max="${item.qty}" value="${staged}"
+                       onchange="setPullQty(${item.id}, this.value)">
+                <button class="peek-quick" onclick="changePullQty(${item.id},5)">+5</button>
+                <button class="peek-quick" onclick="changePullQty(${item.id},10)">+10</button>
+                <button class="peek-quick" onclick="setPullQty(${item.id}, ${item.qty})">${t('takeAll')}</button>
+              </div>
+            </div>` : `
             ${item.specs ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${escapeHtml(item.specs)}</div>` : ''}
             <div class="detail-grid">
               <div class="detail-field">
@@ -2318,7 +2350,7 @@ function renderItems() {
             <div class="detail-actions">
               <button class="btn-save" id="save-${item.id}" onclick="requireName(()=>saveItem(${item.id}))">${t('save')}</button>
               <button class="btn-delete" onclick="requireName(()=>deleteItem(${item.id}))">${t('delete')}</button>
-            </div>
+            </div>`}
           </div>
         </div>`;
     });
