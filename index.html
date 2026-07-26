@@ -46,6 +46,8 @@
   .stat-active { background: #2e1a1a; color: #e07070; }
   .stat-active span { color: #e07070; }
   select.needs-unit { border-color: #e07070 !important; }
+  .list-existing-label { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin: 14px 0 6px; }
+  .list-existing { display: flex; flex-wrap: wrap; gap: 5px; max-height: 140px; overflow-y: auto; }
 
   .cat-jump { display: flex; gap: 6px; overflow-x: auto; padding: 8px 16px; background: var(--steel); scrollbar-width: none; }
   .cat-jump::-webkit-scrollbar { display: none; }
@@ -323,6 +325,22 @@
   </div>
 </div>
 
+<!-- NEW CATEGORY / LOCATION MODAL -->
+<div class="modal-overlay" id="listModal">
+  <div class="modal name-modal">
+    <h2 id="listModalTitle">Add New</h2>
+    <div class="modal-field full">
+      <input type="text" id="listModalInput" placeholder="Name…" onkeydown="if(event.key==='Enter')submitListValue()">
+    </div>
+    <div class="list-existing-label" id="listModalExistingLabel">Already in the list:</div>
+    <div class="list-existing" id="listModalExisting"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeListModal()">Cancel</button>
+      <button class="btn-save" id="listModalSave" onclick="submitListValue()">ADD</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD MODAL -->
 <div class="modal-overlay" id="addModal">
   <div class="modal">
@@ -345,11 +363,11 @@
       </div>
       <div class="modal-field">
         <label id="labelCat">Category</label>
-        <select id="newCat" onchange="toggleNurseryFields()"></select>
+        <select id="newCat" onfocus="this.dataset.prev=this.value" onchange="handleListSelect(this,'category'); toggleNurseryFields()"></select>
       </div>
       <div class="modal-field">
         <label id="labelLoc">Location</label>
-        <select id="newLoc"></select>
+        <select id="newLoc" onfocus="this.dataset.prev=this.value" onchange="handleListSelect(this,'location')"></select>
       </div>
       <div class="modal-field">
         <label id="labelQty">Quantity</label>
@@ -502,6 +520,10 @@ const T = {
     addBtn:'+ Add Item', modalTitle:'Add New Item', labelName:'Item Name', labelCat:'Category',
     labelLoc:'Location', labelQty:'Quantity', labelSpecs:'Specs', labelEst:'Estimated quantity',
     labelUnit:'Unit', pickUnit:'Set unit…', needsUnit:'no unit', noUnitStat:'Needs unit:',
+    addNewCat:'+ Add new category…', addNewLoc:'+ Add new location…',
+    newCatTitle:'Add New Category', newLocTitle:'Add New Location',
+    valueReq:'Name required', listAdded:'Added ✓', alreadyExists:'Already exists as "X"',
+    existingLabel:'Already in the list:',
     cancel:'Cancel', save:'SAVE', addItem:'ADD ITEM', delete:'DELETE', estMark:'Mark as estimated quantity',
     noItems:'No items match your search.', namereq:'Item name required',
     savedLocal:'Saved locally', savedSheet:'Saved to Google Sheets ✓', sheetUnreach:'Sheet unreachable — saved locally',
@@ -523,6 +545,10 @@ const T = {
     addBtn:'+ Agregar Artículo', modalTitle:'Agregar Nuevo Artículo', labelName:'Nombre del Artículo', labelCat:'Categoría',
     labelLoc:'Ubicación', labelQty:'Cantidad', labelSpecs:'Especificaciones', labelEst:'Cantidad estimada',
     labelUnit:'Unidad', pickUnit:'Elegir unidad…', needsUnit:'sin unidad', noUnitStat:'Falta unidad:',
+    addNewCat:'+ Agregar categoría…', addNewLoc:'+ Agregar ubicación…',
+    newCatTitle:'Agregar Nueva Categoría', newLocTitle:'Agregar Nueva Ubicación',
+    valueReq:'Nombre requerido', listAdded:'Agregado ✓', alreadyExists:'Ya existe como "X"',
+    existingLabel:'Ya en la lista:',
     cancel:'Cancelar', save:'GUARDAR', addItem:'AGREGAR', delete:'ELIMINAR', estMark:'Marcar como cantidad estimada',
     noItems:'No hay artículos que coincidan.', namereq:'Se requiere nombre del artículo',
     savedLocal:'Guardado localmente', savedSheet:'Guardado en Google Sheets ✓', sheetUnreach:'Hoja no disponible — guardado localmente',
@@ -542,8 +568,11 @@ const T = {
   }
 };
 
-const LOCATIONS = ['Unknown','Gray Building','104','Maui Lot','North C Street','South C Street','Red Building','Conex 1','Conex 2','Conex 3','Conex 4','Conex 5','Conex 6','Conex 7','Civil A','Civil B','Red Tool 1','Red Tool 2','Red Tool 3','Yard','Material Bins'];
-const CATEGORIES = ['LUMBER & POSTS','FENCE HARDWARE','DRAINAGE','LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS','MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT','NURSERY STOCK','PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT'];
+// These are the fallback lists. The Config tab in the Sheet is the real source of
+// truth once it loads, so the crew can add a conex or a category without waiting on
+// a code change — see fetchLists().
+let LOCATIONS = ['Unknown','Gray Building','104','Maui Lot','North C Street','South C Street','Red Building','Conex 1','Conex 2','Conex 3','Conex 4','Conex 5','Conex 6','Conex 7','Civil A','Civil B','Red Tool 1','Red Tool 2','Red Tool 3','Yard','Material Bins'];
+let CATEGORIES = ['LUMBER & POSTS','FENCE HARDWARE','DRAINAGE','LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS','MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT','NURSERY STOCK','PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT'];
 
 // Legacy names still sitting in the Google Sheet get silently remapped to their
 // current category/location on load, so old data never has to be hand-edited in the sheet.
@@ -1015,6 +1044,93 @@ function openSheetView() {
   window.open(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`, '_blank', 'noopener');
 }
 
+// ---- CATEGORY / LOCATION LISTS ----
+// The Sheet's Config tab wins over the hardcoded fallbacks once it answers, so a
+// location added on someone's phone shows up for the whole crew on their next sync.
+async function fetchLists() {
+  if (!APPS_SCRIPT_URL) return;
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getLists`);
+    const data = await res.json();
+    if (data.categories && data.categories.length) CATEGORIES = data.categories;
+    if (data.locations && data.locations.length) LOCATIONS = data.locations;
+    populateSelects();
+    renderItems();
+  } catch(e) { /* fallback lists already in place */ }
+}
+
+// Where the "+ Add new…" option was chosen from, so we can put the new value back
+// into that same dropdown once it saves.
+let pendingListTarget = null;
+
+function handleListSelect(selectEl, type) {
+  if (selectEl.value !== '__new__') return;
+  // Snap back to whatever was selected before, so backing out of the modal can't
+  // leave an item with a blank category and then save it that way.
+  selectEl.value = selectEl.dataset.prev || '';
+  openListModal(type, selectEl.id);
+}
+
+function openListModal(type, targetSelectId) {
+  pendingListTarget = { type, targetSelectId };
+  const existing = type === 'category' ? CATEGORIES : LOCATIONS;
+  document.getElementById('listModalTitle').textContent =
+    type === 'category' ? t('newCatTitle') : t('newLocTitle');
+  // Showing what already exists is the cheapest guard against someone adding
+  // "Conex 8" when the yard already calls it "Conex 08".
+  document.getElementById('listModalExistingLabel').textContent = t('existingLabel');
+  document.getElementById('listModalExisting').innerHTML =
+    existing.map(v => `<span class="tag tag-loc">${escapeHtml(v)}</span>`).join(' ');
+  document.getElementById('listModalInput').value = '';
+  document.getElementById('listModal').classList.add('open');
+  document.getElementById('listModalInput').focus();
+}
+function closeListModal() {
+  document.getElementById('listModal').classList.remove('open');
+  pendingListTarget = null;
+}
+
+async function submitListValue() {
+  if (!pendingListTarget) return;
+  const value = document.getElementById('listModalInput').value.trim();
+  if (!value) { showToast(t('valueReq'), 'error'); return; }
+  const { type, targetSelectId } = pendingListTarget;
+  if (!APPS_SCRIPT_URL) { showToast(t('sheetUnreach'), 'error'); return; }
+
+  const btn = document.getElementById('listModalSave');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const params = new URLSearchParams({ action:'addListValue', type, value, addedBy: currentUser });
+    const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
+    const data = await res.json();
+    if (data.duplicate) {
+      // Not an error — point them at the entry that already covers it.
+      showToast(t('alreadyExists').replace('X', data.existing), 'error');
+      applyListValue(type, data.existing, targetSelectId);
+      closeListModal();
+    } else if (data.error) {
+      showToast(data.error, 'error');
+    } else {
+      if (type === 'category') CATEGORIES.push(value); else LOCATIONS.push(value);
+      logChange('ADD', value, `New ${type} added`);
+      applyListValue(type, value, targetSelectId);
+      showToast(t('listAdded'), 'success');
+      closeListModal();
+    }
+  } catch(e) {
+    showToast(t('sheetUnreach'), 'error');
+  }
+  btn.disabled = false; btn.textContent = t('addItem');
+}
+
+function applyListValue(type, value, targetSelectId) {
+  populateSelects();
+  renderItems();
+  const sel = document.getElementById(targetSelectId);
+  if (sel) sel.value = value;
+  if (targetSelectId === 'newCat') toggleNurseryFields();
+}
+
 // ---- SELECTS ----
 function populateSelects() {
   const filterCat = document.getElementById('filterCat');
@@ -1027,10 +1143,15 @@ function populateSelects() {
   CATEGORIES.forEach(c => { filterCat.innerHTML += `<option value="${c}" ${prevCat===c?'selected':''}>${catLabel(c)}</option>`; });
   filterLoc.innerHTML = `<option value="">${t('allLocs')}</option>`;
   LOCATIONS.forEach(l => { filterLoc.innerHTML += `<option value="${l}" ${prevLoc===l?'selected':''}>${l}</option>`; });
+  const prevNewCat = newCat.value, prevNewLoc = newLoc.value;
   newCat.innerHTML = `<option value="">Select…</option>`;
   CATEGORIES.forEach(c => { newCat.innerHTML += `<option value="${c}">${catLabel(c)}</option>`; });
+  newCat.innerHTML += `<option value="__new__">${t('addNewCat')}</option>`;
+  newCat.value = prevNewCat;
   newLoc.innerHTML = `<option value="">Select…</option>`;
   LOCATIONS.forEach(l => { newLoc.innerHTML += `<option value="${l}">${l}</option>`; });
+  newLoc.innerHTML += `<option value="__new__">${t('addNewLoc')}</option>`;
+  newLoc.value = prevNewLoc;
   const newUnit = document.getElementById('newUnit');
   if (newUnit) {
     const prevUnit = newUnit.value;
@@ -1484,6 +1605,7 @@ async function openDisposalLog() {
 window.onload = () => {
   loadSavedProfile();
   populateSelects();
+  fetchLists();
   loadItems();
   // Prompt for identity right away rather than waiting for someone to tap a
   // gated action — browsing itself stays open, but anyone not yet approved
@@ -1595,14 +1717,16 @@ function renderItems() {
             <div class="detail-grid">
               <div class="detail-field">
                 <label>${t('labelLoc')}</label>
-                <select id="loc-${item.id}" onchange="markDirty(${item.id})">
+                <select id="loc-${item.id}" onfocus="this.dataset.prev=this.value" onchange="handleListSelect(this,'location'); markDirty(${item.id})">
                   ${LOCATIONS.map(l => `<option value="${l}" ${String(item.location||'').trim()===l?'selected':''}>${l}</option>`).join('')}
+                  <option value="__new__">${t('addNewLoc')}</option>
                 </select>
               </div>
               <div class="detail-field">
                 <label>${t('labelCat')}</label>
-                <select id="cat-${item.id}" onchange="markDirty(${item.id})">
+                <select id="cat-${item.id}" onfocus="this.dataset.prev=this.value" onchange="handleListSelect(this,'category'); markDirty(${item.id})">
                   ${CATEGORIES.map(c => `<option value="${c}" ${String(item.category||'').trim()===c?'selected':''}>${catLabel(c)}</option>`).join('')}
+                  <option value="__new__">${t('addNewCat')}</option>
                 </select>
               </div>
               <div class="detail-field">
