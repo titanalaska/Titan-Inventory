@@ -624,6 +624,7 @@ const T = {
     pullSummary:'L items · U units staged', pullAll:'PULL ALL',
     jobReq:'Enter a job or reason first', pulling:'Pulling…',
     pullDone:'Pulled D items ✓', pullPartial:'Pulled D — F failed, check the sheet',
+    pullShort:'Pulled D — S had less on hand than staged',
     confirmClearPull:'Clear the whole pull list?',
     pasteReq:'Paste a list first', matching:'🤖 Matching to inventory…',
     matchFail:'Could not match — try again', reviewMatches:'Review matches before adding:',
@@ -666,6 +667,7 @@ const T = {
     pullSummary:'L artículos · U unidades', pullAll:'RETIRAR TODO',
     jobReq:'Escribe el trabajo o motivo', pulling:'Retirando…',
     pullDone:'D artículos retirados ✓', pullPartial:'D retirados — F fallaron, revisa la hoja',
+    pullShort:'D retirados — S tenían menos de lo previsto',
     confirmClearPull:'¿Borrar toda la lista de retiro?',
     pasteReq:'Pega una lista primero', matching:'🤖 Buscando en inventario…',
     matchFail:'No se pudo emparejar — intenta de nuevo', reviewMatches:'Revisa antes de agregar:',
@@ -1737,6 +1739,35 @@ async function commitPull() {
   const btn = document.getElementById('pullCommitBtn');
   btn.disabled = true; btn.textContent = t('pulling');
 
+  // One request for the whole list. Falls through to the per-item path below if the
+  // deployed script predates bulkPull, so an un-redeployed backend still works.
+  const bulk = await tryBulkPull(job);
+  if (bulk) {
+    let bDone = 0, bFailed = 0, bShort = 0;
+    bulk.results.forEach(r => {
+      const item = items.find(i => String(i.id) === String(r.id));
+      if (r.ok) {
+        if (item) item.qty = r.after;
+        delete pullList[r.id];
+        if (Number(r.applied) < Number(r.requested)) bShort++;
+        bDone++;
+      } else {
+        // Someone else got there first — show the sheet's number, keep it staged.
+        if (item && r.before != null) item.qty = r.before;
+        bFailed++;
+      }
+    });
+    savePullList();
+    btn.disabled = false; btn.textContent = t('pullAll');
+    if (!bFailed) { document.getElementById('pullJobInput').value = ''; closePullModal(); }
+    else renderPullModal();
+    updatePullUI(); renderItems();
+    if (bFailed) showToast(t('pullPartial').replace('D', bDone).replace('F', bFailed), 'error');
+    else if (bShort) showToast(t('pullShort').replace('D', bDone).replace('S', bShort), 'error');
+    else showToast(t('pullDone').replace('D', bDone), 'success');
+    return;
+  }
+
   let done = 0, failed = 0;
   const pulled = [];
   for (const id of ids) {
@@ -1767,6 +1798,23 @@ async function commitPull() {
   updatePullUI(); renderItems();
   showToast(failed ? t('pullPartial').replace('D', done).replace('F', failed)
                    : t('pullDone').replace('D', done), failed ? 'error' : 'success');
+}
+
+// Returns the server's per-item results, or null if this deployment has no bulkPull
+// and the caller should fall back to writing one item at a time.
+async function tryBulkPull(job) {
+  if (!APPS_SCRIPT_URL) return null;
+  const payload = Object.keys(pullList).map(id => ({ id: Number(id), qty: Number(pullList[id]) }));
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action:'bulkPull', items: payload, job: job, who: currentUser })
+    });
+    const data = await res.json();
+    if (data && Array.isArray(data.results)) return data;
+    return null;
+  } catch(e) { return null; }
 }
 
 // Same write as pushUpdate but without a toast per item — a 40-line pull would
