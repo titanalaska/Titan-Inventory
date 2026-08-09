@@ -62,6 +62,7 @@
   .btn-photo-del { background: #2e1a1a; color: #e07070; flex: 0 0 auto; min-width: 0; }
   .photo-status { font-size: 11px; color: var(--gold); margin-top: 6px; letter-spacing: 0.05em; }
   .photo-viewer { padding: 20px; cursor: zoom-out; }
+  .modal-overlay.photo-viewer { z-index: 250; }
   .photo-viewer img { max-width: 100%; max-height: 92vh; border-radius: 5px; object-fit: contain; }
   /* Pull list */
   .pull-banner { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #3a2c00; color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 9px 14px; border-bottom: 1px solid #5a4400; }
@@ -312,6 +313,11 @@
   .tt-popup-tip, .mapboxgl-popup-tip { border-top-color: var(--steel) !important; }
   .map-popup-title { font-weight: 700; color: var(--gold); margin-bottom: 2px; }
   .map-popup-sub { font-size: 12px; color: var(--fog); }
+
+  /* LATEST AERIAL */
+  .aerial-date { font-size: 12px; color: var(--mid); margin-bottom: 12px; line-height: 1.5; }
+  .aerial-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .aerial-grid img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius); cursor: zoom-in; background: var(--iron); }
 </style>
 </head>
 <body>
@@ -373,6 +379,7 @@
   <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull Material</button>
   <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 Pull From List</button>
   <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openLocationsMap()">🗺 Map</button>
+  <button class="job-btn" style="border-color:#5a2a8a;color:#b389d9" onclick="openAerialPhotos()">🚁 Latest Aerial</button>
 </div>
 
 <div class="pull-banner" id="pullBanner" style="display:none"></div>
@@ -575,6 +582,18 @@
     <div class="map-unmapped-list" id="mapUnmappedList"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeLocationsMap()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- LATEST AERIAL MODAL -->
+<div class="modal-overlay" id="aerialModal">
+  <div class="modal" style="max-width:640px">
+    <h2 style="color:#b389d9">🚁 Latest Aerial Photos</h2>
+    <div class="aerial-date" id="aerialDateLabel"></div>
+    <div class="aerial-grid" id="aerialGrid"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('aerialModal').classList.remove('open')">Close</button>
     </div>
   </div>
 </div>
@@ -2324,6 +2343,29 @@ async function placeSelectedLocation(lat, lng) {
     }
   }
   toggleSetLocationMode();
+}
+
+// ── LATEST AERIAL PHOTOS ──────────────────────────────
+// Satellite imagery (even TomTom's) lags too far behind for a yard that
+// reshuffles constantly — drone photos pulled from BuilderTrend's daily
+// logs are the actual current view. Fixed structures (Conexes, Gray
+// Building, etc.) don't move, so these only need refreshing roughly
+// monthly, not automated: swap the files in /aerial and update the date
+// below, then commit. No BuilderTrend API needed for that cadence.
+const AERIAL_PHOTOS = ['aerial/yard-1.jpg', 'aerial/yard-2.jpg', 'aerial/yard-3.jpg', 'aerial/yard-4.jpg', 'aerial/yard-5.jpg', 'aerial/yard-6.jpg'];
+const AERIAL_PHOTOS_DATE = 'Aug 5, 2025';
+
+function openAerialPhotos() {
+  document.getElementById('aerialDateLabel').textContent =
+    `From ${AERIAL_PHOTOS_DATE}. Fixed structures (Conexes, Gray Building, etc.) are accurate — material piles and vehicles may have moved since.`;
+  document.getElementById('aerialGrid').innerHTML = AERIAL_PHOTOS
+    .map(src => `<img src="${src}" onclick="openAerialImage('${src}')">`).join('');
+  document.getElementById('aerialModal').classList.add('open');
+}
+
+function openAerialImage(src) {
+  document.getElementById('photoViewerImg').src = src;
+  document.getElementById('photoViewer').classList.add('open');
 }
 
 window.onload = () => {
