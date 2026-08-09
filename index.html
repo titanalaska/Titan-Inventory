@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TITAN ALASKA — Inventory</title>
+<link rel="stylesheet" href="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css">
+<script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"></script>
 <style>
   :root {
     --black: #0a0a0a; --steel: #111111; --iron: #1a1a1a;
@@ -292,6 +294,24 @@
   .disposal-entry .d-item { color: var(--snow); font-weight: 600; }
   .disposal-entry .d-cause { color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
   .disposal-entry .d-time { color: #555; font-size: 10px; }
+
+  /* LOCATIONS MAP */
+  #locationsMapCanvas { width: 100%; height: 320px; border-radius: var(--radius); background: var(--iron); overflow: hidden; }
+  .map-location-marker {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--rust); color: var(--snow);
+    border: 2px solid var(--snow); box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+  }
+  .map-set-mode { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .map-set-mode select { flex: 1; min-width: 140px; }
+  .map-set-active { border: 2px solid var(--gold) !important; }
+  .map-unmapped-label { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin: 12px 0 4px; }
+  .map-unmapped-list { font-size: 12px; color: var(--fog); line-height: 1.6; }
+  /* TomTom's default light popup clashes with the dark theme */
+  .tt-popup-content, .mapboxgl-popup-content { background: var(--steel) !important; color: var(--snow) !important; border-radius: var(--radius) !important; font-family: var(--font) !important; }
+  .tt-popup-tip, .mapboxgl-popup-tip { border-top-color: var(--steel) !important; }
+  .map-popup-title { font-weight: 700; color: var(--gold); margin-bottom: 2px; }
+  .map-popup-sub { font-size: 12px; color: var(--fog); }
 </style>
 </head>
 <body>
@@ -352,6 +372,7 @@
   <button class="job-btn" style="border-color:#5a2000;color:#e07030" onclick="openDisposalLog()">🗑 Disposal Log</button>
   <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull Material</button>
   <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 Pull From List</button>
+  <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openLocationsMap()">🗺 Map</button>
 </div>
 
 <div class="pull-banner" id="pullBanner" style="display:none"></div>
@@ -535,6 +556,25 @@
     <div id="disposalLogList" style="margin-top:8px;max-height:60vh;overflow-y:auto"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="document.getElementById('disposalViewModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOCATIONS MAP MODAL -->
+<div class="modal-overlay" id="mapModal">
+  <div class="modal" style="max-width:640px">
+    <h2 style="color:#5a9fd4">🗺 Storage Locations</h2>
+    <div id="mapAdminControls" style="display:none">
+      <div class="map-set-mode">
+        <select id="mapSetLocSelect"></select>
+        <button class="btn-save" id="mapSetLocBtn" onclick="toggleSetLocationMode()">📍 Tap Map To Place</button>
+      </div>
+    </div>
+    <div id="locationsMapCanvas"></div>
+    <div class="map-unmapped-label" id="mapUnmappedLabel" style="display:none">Not yet on the map:</div>
+    <div class="map-unmapped-list" id="mapUnmappedList"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeLocationsMap()">Close</button>
     </div>
   </div>
 </div>
@@ -2153,6 +2193,137 @@ async function openDisposalLog() {
       ${e.note ? '<span style="color:var(--mid);font-size:12px"> — ' + escapeHtml(e.note) + '</span>' : ''}
       <br><span class="d-time">${escapeHtml(e.time)} | Before: ${escapeHtml(e.beforeQty)} → After: ${escapeHtml(e.afterQty)}</span>
     </div>`).join('');
+}
+
+// ── STORAGE LOCATIONS MAP ────────────────────────────
+// Named location strings (Gray Building, Conex 3, Material Bins, etc.) plotted
+// on a real map for the first time — coordinates live in their own "Locations"
+// sheet tab since a bin's name alone doesn't say where it physically sits.
+const TOMTOM_API_KEY = 'Uj3etMIVUsO9ZO7Z1TeklWioWSkLs5tY';
+let locationsMap = null;
+let locationsMapReady = false;
+let savedLocations = []; // [{name, lat, lng}]
+let locationMarkers = [];
+let settingLocationMode = false;
+
+async function fetchLocations() {
+  if (!APPS_SCRIPT_URL) return;
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getLocations`);
+    const data = await res.json();
+    savedLocations = data.locations || [];
+  } catch (e) { /* map just shows nothing plotted yet */ }
+}
+
+function openLocationsMap() {
+  document.getElementById('mapModal').classList.add('open');
+  const adminControls = document.getElementById('mapAdminControls');
+  const isAdminUser = !!(myProfile && myProfile.isAdmin && myProfile.status === 'approved');
+  adminControls.style.display = isAdminUser ? 'block' : 'none';
+  if (isAdminUser) populateLocationSelect();
+  // TomTom needs a visible, sized container — the modal must already be open
+  // before the map initializes, or it renders at zero height.
+  if (!locationsMap) {
+    setTimeout(initLocationsMap, 50);
+  } else {
+    setTimeout(() => { try { locationsMap.resize(); } catch (e) {} }, 50);
+    fetchLocations().then(renderLocationMarkers);
+  }
+}
+
+function closeLocationsMap() {
+  document.getElementById('mapModal').classList.remove('open');
+  if (settingLocationMode) toggleSetLocationMode();
+}
+
+function populateLocationSelect() {
+  const sel = document.getElementById('mapSetLocSelect');
+  sel.innerHTML = LOCATIONS.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+}
+
+function initLocationsMap() {
+  try {
+    tt.setProductInfo('Titan Alaska Inventory', '1.0');
+    locationsMap = tt.map({
+      key: TOMTOM_API_KEY,
+      container: 'locationsMapCanvas',
+      center: [-149.9003, 61.2181],
+      zoom: 16,
+      style: 'https://api.tomtom.com/style/1/style/*?map=2/basic_street-satellite&poi=2/poi_dynamic-satellite&key=' + TOMTOM_API_KEY,
+    });
+    locationsMap.addControl(new tt.NavigationControl(), 'top-right');
+    locationsMap.on('load', () => {
+      locationsMapReady = true;
+      fetchLocations().then(renderLocationMarkers);
+    });
+    locationsMap.on('click', (e) => {
+      if (!settingLocationMode) return;
+      placeSelectedLocation(e.lngLat.lat, e.lngLat.lng);
+    });
+  } catch (e) {
+    const canvas = document.getElementById('locationsMapCanvas');
+    if (canvas) canvas.outerHTML = '<div style="padding:20px;text-align:center;color:var(--mid);font-size:12px">Map unavailable — check connection</div>';
+  }
+}
+
+function renderLocationMarkers() {
+  if (!locationsMapReady) return;
+  locationMarkers.forEach(m => m.remove());
+  locationMarkers = savedLocations.map(loc => {
+    const el = document.createElement('div');
+    el.className = 'map-location-marker';
+    el.textContent = '📦';
+    const atLoc = items.filter(i => i.location === loc.name);
+    const totalQty = atLoc.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+    const popup = new tt.Popup({ offset: 20 }).setHTML(
+      `<div class="map-popup-title">${escapeHtml(loc.name)}</div><div class="map-popup-sub">${atLoc.length} item${atLoc.length !== 1 ? 's' : ''} · ${totalQty.toLocaleString()} total qty</div>`
+    );
+    return new tt.Marker({ element: el, anchor: 'center' }).setLngLat([loc.lng, loc.lat]).setPopup(popup).addTo(locationsMap);
+  });
+
+  if (savedLocations.length === 1) {
+    locationsMap.setCenter([savedLocations[0].lng, savedLocations[0].lat]);
+  } else if (savedLocations.length > 1) {
+    const lats = savedLocations.map(l => l.lat), lngs = savedLocations.map(l => l.lng);
+    const bounds = new tt.LngLatBounds([Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]);
+    locationsMap.fitBounds(bounds, { padding: 60, maxZoom: 19 });
+  }
+
+  const mappedNames = new Set(savedLocations.map(l => l.name));
+  const unmapped = LOCATIONS.filter(l => !mappedNames.has(l));
+  const label = document.getElementById('mapUnmappedLabel');
+  const list = document.getElementById('mapUnmappedList');
+  if (unmapped.length) {
+    label.style.display = 'block';
+    list.textContent = unmapped.join(', ');
+  } else {
+    label.style.display = 'none';
+    list.textContent = '';
+  }
+}
+
+function toggleSetLocationMode() {
+  settingLocationMode = !settingLocationMode;
+  const btn = document.getElementById('mapSetLocBtn');
+  btn.textContent = settingLocationMode ? '❌ Cancel (tap the map)' : '📍 Tap Map To Place';
+  btn.classList.toggle('map-set-active', settingLocationMode);
+}
+
+async function placeSelectedLocation(lat, lng) {
+  const name = document.getElementById('mapSetLocSelect').value;
+  if (name) {
+    try {
+      const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: 'setLocation', name, lat, lng })}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'not saved');
+      showToast(`${name} pinned ✓`, 'success');
+      await fetchLocations();
+      renderLocationMarkers();
+    } catch (e) {
+      showToast('Could not save location — check connection', 'error');
+    }
+  }
+  toggleSetLocationMode();
 }
 
 window.onload = () => {
