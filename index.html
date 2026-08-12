@@ -616,15 +616,28 @@
 <!-- RETURN TO YARD MODAL -->
 <div class="modal-overlay" id="returnModal">
   <div class="modal name-modal">
-    <h2 style="color:#5ac48a">↩ Return To Yard</h2>
+    <h2 style="color:#5ac48a" id="returnTitle">↩ Return To Yard</h2>
     <div class="return-item" id="returnItemName"></div>
     <div class="modal-field full">
-      <label>How many are coming back?</label>
+      <label>What happened?</label>
+      <select id="returnDirection" onchange="onReturnDirectionPick()">
+        <option value="back">Came back from a job</option>
+        <option value="out">Went out to a job</option>
+      </select>
+    </div>
+    <div class="modal-field full">
+      <label id="returnQtyLabel">How many are coming back?</label>
       <input type="number" id="returnQty" min="1" value="1">
     </div>
     <div class="modal-field full">
-      <label>Back from which job?</label>
+      <label id="returnJobLabel">Back from which job?</label>
       <select id="returnJobSelect" onchange="onReturnJobPick()"></select>
+    </div>
+    <div class="modal-field full">
+      <label class="est-toggle">
+        <input type="checkbox" id="returnRecordOnly" onchange="onReturnJobPick()">
+        The count is already right — just fix the job record
+      </label>
     </div>
     <div class="modal-field full" id="returnJobOtherWrap" style="display:none">
       <label>Job name</label>
@@ -804,6 +817,13 @@ const T = {
     returnHintOther:'This will be logged as a return, but no job gets credited.',
     returnQtyReq:'Enter how many are coming back',
     returnDone:'N returned to the yard from J ✓',
+    returnTitle:'↩ Return To Yard', returnQtyLabel:'How many are coming back?',
+    returnJobLabel:'Back from which job?',
+    outTitle:'📤 Out To A Job', outQtyLabel:'How many went out?',
+    outJobLabel:'Out to which job?', outHint:'This takes them off the shelf and puts them on the job.',
+    outDone:'N logged out to J ✓', outTooMany:'That is more than the yard has',
+    returnHintRecordOnly:'The count stays at Q. Only the job record changes.',
+    countUnchanged:'(count unchanged)',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     onHand:'On hand', staging:'Staging', takeAll:'All',
@@ -874,6 +894,13 @@ const T = {
     returnHintOther:'Se registrará la devolución, pero ningún trabajo recibe crédito.',
     returnQtyReq:'Escribe cuántos regresan',
     returnDone:'N devueltos al patio de J ✓',
+    returnTitle:'↩ Devolver Al Patio', returnQtyLabel:'¿Cuántos regresan?',
+    returnJobLabel:'¿De cuál trabajo regresan?',
+    outTitle:'📤 Salida A Un Trabajo', outQtyLabel:'¿Cuántos salieron?',
+    outJobLabel:'¿A cuál trabajo salieron?', outHint:'Los saca del patio y los pone en el trabajo.',
+    outDone:'N registrados para J ✓', outTooMany:'Es más de lo que hay en el patio',
+    returnHintRecordOnly:'La cantidad se queda en Q. Solo cambia el registro del trabajo.',
+    countUnchanged:'(cantidad sin cambio)',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
     onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
@@ -2599,6 +2626,40 @@ function jobsOutFor(itemNameStr) {
     .map(j => ({ job: j, out: rec[j] }));
 }
 
+// Sending something out can be to any job the yard has ever seen, not only the
+// ones this particular item is already on.
+function allKnownJobs() {
+  const seen = {};
+  Object.keys(jobLedger || {}).forEach(n => Object.keys(jobLedger[n]).forEach(j => { seen[j] = true; }));
+  return Object.keys(seen).sort();
+}
+
+function returnIsOutbound() { return document.getElementById('returnDirection').value === 'out'; }
+function returnIsRecordOnly() { return document.getElementById('returnRecordOnly').checked; }
+
+// Outbound and inbound need different job lists, so the picker is rebuilt whenever
+// the direction changes rather than filtered after the fact.
+function onReturnDirectionPick() {
+  const item = items.find(i => i.id === returnItemId);
+  const out = returnIsOutbound();
+  document.getElementById('returnTitle').textContent = out ? t('outTitle') : t('returnTitle');
+  document.getElementById('returnQtyLabel').textContent = out ? t('outQtyLabel') : t('returnQtyLabel');
+  document.getElementById('returnJobLabel').textContent = out ? t('outJobLabel') : t('returnJobLabel');
+
+  const sel = document.getElementById('returnJobSelect');
+  if (out) {
+    sel.innerHTML = allKnownJobs().map(j => `<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join('') +
+      `<option value="__other__">${t('returnOtherJob')}</option>`;
+  } else {
+    const jobs = item ? jobsOutFor(item.name) : [];
+    sel.innerHTML = jobs.map(j =>
+        `<option value="${escapeHtml(j.job)}">${escapeHtml(j.job)} — ${j.out} ${t('stillOut')}</option>`
+      ).join('') + `<option value="__other__">${t('returnOtherJob')}</option>`;
+    sel.value = jobs.length ? jobs[0].job : '__other__';
+  }
+  onReturnJobPick();
+}
+
 async function openReturnModal(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
@@ -2607,17 +2668,13 @@ async function openReturnModal(id) {
     `${escapeHtml(itemName(item))}<span>${t('onHand')}: ${item.qty}${normalizeUnit(item.unit) ? ' ' + escapeHtml(unitAbbr(item.unit)) : ''}</span>`;
   document.getElementById('returnQty').value = 1;
   document.getElementById('returnJobOther').value = '';
+  document.getElementById('returnDirection').value = 'back';
+  document.getElementById('returnRecordOnly').checked = false;
   document.getElementById('returnHint').textContent = t('returnLoading');
   document.getElementById('returnModal').classList.add('open');
 
   if (jobLedger === null) await loadJobLedger();
-  const jobs = jobsOutFor(item.name);
-  const sel = document.getElementById('returnJobSelect');
-  sel.innerHTML = jobs.map(j =>
-      `<option value="${escapeHtml(j.job)}">${escapeHtml(j.job)} — ${j.out} ${t('stillOut')}</option>`
-    ).join('') + `<option value="__other__">${t('returnOtherJob')}</option>`;
-  sel.value = jobs.length ? jobs[0].job : '__other__';
-  onReturnJobPick();
+  onReturnDirectionPick();
 }
 
 function onReturnJobPick() {
@@ -2626,6 +2683,16 @@ function onReturnJobPick() {
   document.getElementById('returnJobOtherWrap').style.display = other ? 'block' : 'none';
   const item = items.find(i => i.id === returnItemId);
   const hint = document.getElementById('returnHint');
+
+  // The count-already-right case is the whole reason this exists: the material
+  // moved in the yard and someone recorded it the blunt way, so only the job
+  // attribution is wrong. Saying plainly that the number will not move is the
+  // difference between fixing the record and double-counting.
+  if (returnIsRecordOnly()) {
+    hint.innerHTML = t('returnHintRecordOnly').replace('Q', '<b>' + (item ? item.qty : '?') + '</b>');
+    return;
+  }
+  if (returnIsOutbound()) { hint.textContent = t('outHint'); return; }
   if (other || !item) { hint.textContent = t('returnHintOther'); return; }
   const rec = jobsOutFor(item.name).find(j => j.job === sel.value);
   hint.innerHTML = rec
@@ -2649,21 +2716,39 @@ async function confirmReturn() {
     : sel.value);
   if (!job) { showToast(t('jobReq'), 'error'); document.getElementById('returnJobOther').focus(); return; }
 
+  const outbound = returnIsOutbound();
+  const recordOnly = returnIsRecordOnly();
   const before = Number(item.qty) || 0;
-  item.qty = before + qty;
-  const ok = await pushUpdate(item);
-  if (!ok) { item.qty = before; return; }
+
+  if (outbound && !recordOnly && qty > before) { showToast(t('outTooMany'), 'error'); return; }
+
+  // Record-only leaves the count exactly where it is and writes history alone.
+  // The log still has to read "before → after", so both are the same number —
+  // which is the honest description of what happened.
+  const after = recordOnly ? before : (outbound ? before - qty : before + qty);
+  if (!recordOnly) {
+    item.qty = after;
+    const ok = await pushUpdate(item);
+    if (!ok) { item.qty = before; return; }
+  }
 
   const u = unitAbbr(item.unit);
-  logChange('RETURN', item.name, `${qty}${u ? ' ' + u : ''} back from ${job} — ${before} → ${item.qty}`);
+  const detail = outbound
+    ? `${qty}${u ? ' ' + u : ''} for ${job} — ${before} → ${after}`
+    : `${qty}${u ? ' ' + u : ''} back from ${job} — ${before} → ${after}`;
+  logChange(outbound ? 'PULL' : 'RETURN', item.name, detail);
+
   // Keep the ledger honest without another round trip.
   if (!jobLedger) jobLedger = {};
   if (!jobLedger[item.name]) jobLedger[item.name] = {};
-  jobLedger[item.name][job] = (jobLedger[item.name][job] || 0) - qty;
+  jobLedger[item.name][job] = (jobLedger[item.name][job] || 0) + (outbound ? qty : -qty);
 
   closeReturnModal();
   renderItems();
-  showToast(t('returnDone').replace('N', qty).replace('J', job), 'success');
+  showToast(
+    (outbound ? t('outDone') : t('returnDone')).replace('N', qty).replace('J', job) +
+      (recordOnly ? ' ' + t('countUnchanged') : ''),
+    'success');
 }
 
 function openDisposalModal(id) {
