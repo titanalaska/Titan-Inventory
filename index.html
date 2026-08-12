@@ -339,6 +339,13 @@
   .zone-mini-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
   .zone-where-btn { background: none; border: 1px solid #2a5a8a; color: #5a9fd4; border-radius: 4px; padding: 4px 9px; font-family: var(--font); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 
+  /* Return to yard */
+  .return-item { font-size: 14px; font-weight: 700; color: var(--snow); margin-bottom: 12px; }
+  .return-item span { display: block; font-size: 12px; font-weight: 400; color: var(--mid); margin-top: 2px; }
+  .return-hint { font-size: 12px; color: var(--mid); line-height: 1.5; margin-top: 10px; min-height: 18px; }
+  .return-hint b { color: #5ac48a; }
+  .return-btn { background: none; border: 1px solid #2a6a4a; color: #5ac48a; border-radius: 4px; padding: 4px 9px; font-family: var(--font); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+
   /* Shared pull list — other people's staged lines */
   .pull-group-label { font-size: 10px; color: var(--mid); letter-spacing: 0.08em; text-transform: uppercase; margin: 10px 0 4px; }
   .pull-row-other { opacity: 0.75; }
@@ -606,6 +613,31 @@
   </div>
 </div>
 
+<!-- RETURN TO YARD MODAL -->
+<div class="modal-overlay" id="returnModal">
+  <div class="modal name-modal">
+    <h2 style="color:#5ac48a">↩ Return To Yard</h2>
+    <div class="return-item" id="returnItemName"></div>
+    <div class="modal-field full">
+      <label>How many are coming back?</label>
+      <input type="number" id="returnQty" min="1" value="1">
+    </div>
+    <div class="modal-field full">
+      <label>Back from which job?</label>
+      <select id="returnJobSelect" onchange="onReturnJobPick()"></select>
+    </div>
+    <div class="modal-field full" id="returnJobOtherWrap" style="display:none">
+      <label>Job name</label>
+      <input type="text" id="returnJobOther" placeholder="e.g. Wolf — Phase 2">
+    </div>
+    <div class="return-hint" id="returnHint"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeReturnModal()">Cancel</button>
+      <button class="btn-save" onclick="confirmReturn()">Return To Yard</button>
+    </div>
+  </div>
+</div>
+
 <button class="fab" onclick="requireName(openAddModal)" title="Add Item">+</button>
 <button class="pull-badge" id="pullBadge" style="display:none" onclick="openPullModal()" title="Pull list"></button>
 
@@ -766,6 +798,12 @@ const T = {
     pullYours:'Yours', pullOthers:'Staged by others', claimedBy:'N claimed',
     signInNeeded:'Sign in to make changes',
     confirmSignOut:'Sign out on this device?', signedOut:'Signed out',
+    returnBtn:'↩ Return', returnLoading:'Checking what is still out…',
+    stillOut:'still out', returnOtherJob:'— another job / not job related —',
+    returnHint:'N still out on J. Returning here credits them back to that job.',
+    returnHintOther:'This will be logged as a return, but no job gets credited.',
+    returnQtyReq:'Enter how many are coming back',
+    returnDone:'N returned to the yard from J ✓',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     onHand:'On hand', staging:'Staging', takeAll:'All',
@@ -830,6 +868,12 @@ const T = {
     pullYours:'Tuyo', pullOthers:'Preparado por otros', claimedBy:'N apartados',
     signInNeeded:'Inicia sesión para hacer cambios',
     confirmSignOut:'¿Cerrar sesión en este dispositivo?', signedOut:'Sesión cerrada',
+    returnBtn:'↩ Devolver', returnLoading:'Revisando qué sigue afuera…',
+    stillOut:'aún afuera', returnOtherJob:'— otro trabajo / no es de trabajo —',
+    returnHint:'N aún en J. Devolverlos aquí se los acredita a ese trabajo.',
+    returnHintOther:'Se registrará la devolución, pero ningún trabajo recibe crédito.',
+    returnQtyReq:'Escribe cuántos regresan',
+    returnDone:'N devueltos al patio de J ✓',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
     onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
@@ -2507,6 +2551,121 @@ function suggestUnit() {
 let disposalLog = [];
 let disposalItemId = null;
 
+// ---- RETURN TO YARD ----
+// Material that comes back has to come back *against the job it left on*, or the
+// job keeps carrying stock it never used. A plain + on the card was the whole
+// problem: two Amur Maple came home and the tallia job still showed them out,
+// while the Forsythia that replaced them showed up nowhere.
+let returnItemId = null;
+let jobLedger = null;   // { itemName: { job: net units still out } }
+
+// Reads the Change Log back into "what is still out, and on which job".
+// PULL reads "2 ea for tallia — 51 → 49"; RETURN reads "2 ea back from tallia — 49 → 51".
+// The unit is optional, hence the optional word between the count and "for"/"back".
+function parseJobLedger(entries) {
+  const out = {};
+  (entries || []).forEach(e => {
+    const name = String(e.itemName || '');
+    const detail = String(e.detail || '');
+    const type = String(e.type || '');
+    // The job name is greedy and the trailing "— before → after" is the anchor.
+    // Matching lazily up to the first em-dash split "Wolf — Phase 2" into "Wolf",
+    // and that is the example in the pull list's own placeholder.
+    let m = null, dir = 0;
+    if (type === 'PULL' && (m = detail.match(/^(\d+)(?:\s+\S+)?\s+for\s+(.+)\s+—\s*\d+\s*→\s*\d+\s*$/))) dir = 1;
+    else if (type === 'RETURN' && (m = detail.match(/^(\d+)(?:\s+\S+)?\s+back from\s+(.+)\s+—\s*\d+\s*→\s*\d+\s*$/))) dir = -1;
+    if (!dir || !m) return;
+    const job = m[2].trim();
+    if (!out[name]) out[name] = {};
+    out[name][job] = (out[name][job] || 0) + dir * (Number(m[1]) || 0);
+  });
+  return out;
+}
+
+async function loadJobLedger() {
+  if (!APPS_SCRIPT_URL) { jobLedger = {}; return; }
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getLog`);
+    const data = await res.json();
+    jobLedger = parseJobLedger(data.entries);
+  } catch(e) { jobLedger = {}; }
+}
+
+function jobsOutFor(itemNameStr) {
+  const rec = (jobLedger || {})[itemNameStr] || {};
+  return Object.keys(rec)
+    .filter(j => rec[j] > 0)
+    .sort((a, b) => rec[b] - rec[a])
+    .map(j => ({ job: j, out: rec[j] }));
+}
+
+async function openReturnModal(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  returnItemId = id;
+  document.getElementById('returnItemName').innerHTML =
+    `${escapeHtml(itemName(item))}<span>${t('onHand')}: ${item.qty}${normalizeUnit(item.unit) ? ' ' + escapeHtml(unitAbbr(item.unit)) : ''}</span>`;
+  document.getElementById('returnQty').value = 1;
+  document.getElementById('returnJobOther').value = '';
+  document.getElementById('returnHint').textContent = t('returnLoading');
+  document.getElementById('returnModal').classList.add('open');
+
+  if (jobLedger === null) await loadJobLedger();
+  const jobs = jobsOutFor(item.name);
+  const sel = document.getElementById('returnJobSelect');
+  sel.innerHTML = jobs.map(j =>
+      `<option value="${escapeHtml(j.job)}">${escapeHtml(j.job)} — ${j.out} ${t('stillOut')}</option>`
+    ).join('') + `<option value="__other__">${t('returnOtherJob')}</option>`;
+  sel.value = jobs.length ? jobs[0].job : '__other__';
+  onReturnJobPick();
+}
+
+function onReturnJobPick() {
+  const sel = document.getElementById('returnJobSelect');
+  const other = sel.value === '__other__';
+  document.getElementById('returnJobOtherWrap').style.display = other ? 'block' : 'none';
+  const item = items.find(i => i.id === returnItemId);
+  const hint = document.getElementById('returnHint');
+  if (other || !item) { hint.textContent = t('returnHintOther'); return; }
+  const rec = jobsOutFor(item.name).find(j => j.job === sel.value);
+  hint.innerHTML = rec
+    ? t('returnHint').replace('N', '<b>' + rec.out + '</b>').replace('J', escapeHtml(rec.job))
+    : t('returnHintOther');
+}
+
+function closeReturnModal() {
+  document.getElementById('returnModal').classList.remove('open');
+  returnItemId = null;
+}
+
+async function confirmReturn() {
+  const item = items.find(i => i.id === returnItemId);
+  if (!item) return;
+  const qty = parseInt(document.getElementById('returnQty').value, 10);
+  if (!Number.isInteger(qty) || qty < 1) { showToast(t('returnQtyReq'), 'error'); return; }
+  const sel = document.getElementById('returnJobSelect');
+  const job = (sel.value === '__other__'
+    ? document.getElementById('returnJobOther').value.trim()
+    : sel.value);
+  if (!job) { showToast(t('jobReq'), 'error'); document.getElementById('returnJobOther').focus(); return; }
+
+  const before = Number(item.qty) || 0;
+  item.qty = before + qty;
+  const ok = await pushUpdate(item);
+  if (!ok) { item.qty = before; return; }
+
+  const u = unitAbbr(item.unit);
+  logChange('RETURN', item.name, `${qty}${u ? ' ' + u : ''} back from ${job} — ${before} → ${item.qty}`);
+  // Keep the ledger honest without another round trip.
+  if (!jobLedger) jobLedger = {};
+  if (!jobLedger[item.name]) jobLedger[item.name] = {};
+  jobLedger[item.name][job] = (jobLedger[item.name][job] || 0) - qty;
+
+  closeReturnModal();
+  renderItems();
+  showToast(t('returnDone').replace('N', qty).replace('J', job), 'success');
+}
+
 function openDisposalModal(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
@@ -3278,8 +3437,9 @@ function renderItems() {
               </div>
             </div>` : `
             ${item.specs ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${escapeHtml(item.specs)}</div>` : ''}
-            <div style="margin-top:8px">
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
               <button class="zone-where-btn" onclick="event.stopPropagation(); whereIsItem(${item.id})">${t('whereBtn')}</button>
+              <button class="return-btn" onclick="event.stopPropagation(); requireName(()=>openReturnModal(${item.id}))">${t('returnBtn')}</button>
             </div>
             <div class="detail-grid">
               <div class="detail-field">
