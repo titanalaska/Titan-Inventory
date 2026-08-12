@@ -765,6 +765,7 @@ const T = {
     zoneNewArea:'— a new area —',
     pullYours:'Yours', pullOthers:'Staged by others', claimedBy:'N claimed',
     signInNeeded:'Sign in to make changes',
+    confirmSignOut:'Sign out on this device?', signedOut:'Signed out',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     onHand:'On hand', staging:'Staging', takeAll:'All',
@@ -828,6 +829,7 @@ const T = {
     zoneNewArea:'— un área nueva —',
     pullYours:'Tuyo', pullOthers:'Preparado por otros', claimedBy:'N apartados',
     signInNeeded:'Inicia sesión para hacer cambios',
+    confirmSignOut:'¿Cerrar sesión en este dispositivo?', signedOut:'Sesión cerrada',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
     onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
@@ -1144,12 +1146,35 @@ function renderProfileGate() {
   // Re-opening Sign In while already approved used to fall through to the raw
   // picker again, which is how a first-time user ended up re-selecting a
   // different existing name by accident. Show current identity plainly instead.
+  // Approved but no token is a real state, not a contradiction: a phone signed in
+  // before sessions existed, or the session expired or was revoked. It used to land
+  // here and be told "You're Signed In" with nothing to tap — a dead end that left
+  // writes silently refused. Ask for the PIN instead.
+  if (myProfile && myProfile.status === 'approved' && !authToken) {
+    body.innerHTML = `
+      <h2>${es ? 'Confirma tu PIN' : 'Confirm Your PIN'}</h2>
+      <p style="font-size:13px;color:var(--mid);margin-bottom:14px">
+        ${es
+          ? 'Para guardar cambios necesitas confirmar tu PIN una vez.'
+          : 'Changes are not saving until you confirm your PIN once.'}
+        <br><b class="profile-pending-name">${escapeHtml(myProfile.name)}</b> (${escapeHtml(myProfile.position)})
+      </p>
+      <button class="btn-save" style="width:100%" onclick="selectProfile(${myProfile.id})">
+        ${es ? 'Ingresar PIN' : 'Enter PIN'}</button>
+      <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="switchProfile()">
+        ${es ? 'Soy otra persona' : "I'm someone else"}</button>
+    `;
+    return;
+  }
+
   if (myProfile && myProfile.status === 'approved') {
     body.innerHTML = `
       <h2>${es ? 'Sesion iniciada' : "You're Signed In"}</h2>
-      <p style="font-size:13px;color:var(--mid)">
+      <p style="font-size:13px;color:var(--mid);margin-bottom:14px">
         ${es ? 'Sesion iniciada como' : 'Signed in as'} <b class="profile-pending-name">${escapeHtml(myProfile.name)}</b> (${escapeHtml(myProfile.position)})
       </p>
+      <button class="btn-cancel" style="width:100%" onclick="signOutNow()">
+        ${es ? 'Cerrar sesion' : 'Sign Out'}</button>
     `;
     return;
   }
@@ -1292,10 +1317,19 @@ async function submitNewProfile() {
 function switchProfile() {
   myProfile = null;
   currentUser = '';
+  setAuthToken('');
   localStorage.removeItem('titan_profile');
   document.getElementById('userBtn').textContent = '👤 ' + t('signIn');
   document.getElementById('adminBtn').style.display = 'none';
   fetchProfiles();
+}
+
+// A device now carries a 45-day credential, so handing a phone to someone else --
+// or losing one -- needs an answer that isn't "clear your browser data".
+function signOutNow() {
+  if (!confirm(t('confirmSignOut'))) return;
+  switchProfile();
+  showToast(t('signedOut'), '');
 }
 
 // ---- ADMIN APPROVALS ----
@@ -2001,6 +2035,13 @@ function renderPullModal() {
     return;
   }
   document.getElementById('pullCommitRow').style.display = 'block';
+  // Same reason as the main list: a pull list you built by walking the yard comes
+  // out in tap order, which is useless for checking it against a truck.
+  ids.sort((a, b) => {
+    const ia = items.find(i => String(i.id) === String(a));
+    const ib = items.find(i => String(i.id) === String(b));
+    return String(ia ? itemName(ia) : a).localeCompare(String(ib ? itemName(ib) : b), undefined, { numeric: true, sensitivity: 'base' });
+  });
   let html = '';
   if (ids.length && sharedPull.length) html += `<div class="pull-group-label">${t('pullYours')}</div>`;
   ids.forEach(id => {
@@ -2917,7 +2958,7 @@ function renderZoneBody(node, id) {
   } else {
     html += `<div class="zone-items">` + here
       .slice()
-      .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+      .sort((a, b) => String(itemName(a)).localeCompare(String(itemName(b)), undefined, { numeric: true, sensitivity: 'base' }))
       .map(i => `<div class="zone-item-row">
         <span class="zi-name">${escapeHtml(itemName(i))}${i.specs ? ' <span style="color:var(--mid);font-size:11px">' + escapeHtml(i.specs) + '</span>' : ''}</span>
         <span class="zi-qty">${i.qty}${normalizeUnit(i.unit) ? ' ' + escapeHtml(unitAbbr(i.unit)) : ''}</span>
@@ -3172,6 +3213,12 @@ function renderItems() {
       <span class="cat-chevron">${isCollapsed ? '▸' : '▾'}</span>${catLabel(cat)}<span class="cat-count">${grouped[cat].length}</span>
     </div>`;
     if (isCollapsed) return;
+    // Sheet order is the order things happened to be entered, which is no order at
+    // all when you are standing in front of 86 shrubs looking for one name.
+    // `numeric` keeps "2x4" before "10x10" instead of sorting them as text.
+    grouped[cat].sort((a, b) =>
+      String(itemName(a)).localeCompare(String(itemName(b)), undefined, { numeric: true, sensitivity: 'base' })
+    );
     grouped[cat].forEach(item => {
       const isExpanded = expandedId === item.id;
       const locClass = item.location === 'Unknown' ? 'tag-loc unknown' : 'tag-loc';
@@ -3314,13 +3361,20 @@ async function changeQty(id, delta) {
   if (!item) return;
   const oldQty = item.qty;
   item.qty = Math.max(0, item.qty + delta);
-  const qtyEl = document.querySelector(`#card-${id} .qty-num`);
-  if (qtyEl) {
-    qtyEl.textContent = item.qty + (item.unit && item.unit!=='ea' ? ' '+item.unit : '');
-    qtyEl.className = `qty-num ${qtyClass(item)}`;
-  }
+  const paint = () => {
+    const qtyEl = document.querySelector(`#card-${id} .qty-num`);
+    if (qtyEl) {
+      qtyEl.textContent = item.qty + (item.unit && item.unit!=='ea' ? ' '+item.unit : '');
+      qtyEl.className = `qty-num ${qtyClass(item)}`;
+    }
+  };
+  paint();
+  // The number changes on screen before the Sheet has agreed, which is right for
+  // a phone on yard signal — but only if a refusal puts it back. Otherwise the
+  // count silently drifts away from the Sheet and looks saved.
+  const ok = await pushUpdate(item);
+  if (!ok) { item.qty = oldQty; paint(); return; }
   logChange(delta > 0 ? '＋' : '－', item.name, `${oldQty} → ${item.qty}`);
-  await pushUpdate(item);
 }
 
 async function saveItem(id) {
@@ -3367,8 +3421,10 @@ async function deleteItem(id) {
   expandedId = null; renderItems();
 }
 
+// Returns true only when the Sheet actually took the write, so callers can undo
+// what they optimistically showed on screen.
 async function pushUpdate(item) {
-  if (!APPS_SCRIPT_URL) { showToast(t('savedLocal'), ''); return; }
+  if (!APPS_SCRIPT_URL) { showToast(t('savedLocal'), ''); return false; }
   try {
     const params = authedParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', changedBy: currentUser });
     const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
@@ -3376,10 +3432,11 @@ async function pushUpdate(item) {
     // write would have said "Saved ✓" while the sheet never changed, which is a
     // worse failure than an error message.
     const data = await res.json();
-    if (handleAuthFailure(data)) return;
-    if (data && data.error) { showToast(data.error, 'error'); return; }
+    if (handleAuthFailure(data)) return false;
+    if (data && data.error) { showToast(data.error, 'error'); return false; }
     showToast(t('savedSheet'), 'success');
-  } catch(e) { showToast(t('sheetUnreach'), 'error'); }
+    return true;
+  } catch(e) { showToast(t('sheetUnreach'), 'error'); return false; }
 }
 
 function openAddModal() { document.getElementById('addModal').classList.add('open'); document.getElementById('newName').focus(); }
