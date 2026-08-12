@@ -2403,8 +2403,14 @@ async function openDisposalLog() {
 // Building, etc.) don't move, so these only need refreshing roughly
 // monthly, not automated: swap the files in /aerial and update the date
 // below, then commit. No BuilderTrend API needed for that cadence.
-const AERIAL_PHOTOS = ['aerial/yard-1.jpg', 'aerial/yard-2.jpg', 'aerial/yard-3.jpg', 'aerial/yard-4.jpg', 'aerial/yard-5.jpg', 'aerial/yard-6.jpg'];
-const AERIAL_PHOTOS_DATE = 'Aug 4, 2026';
+const AERIAL_PHOTOS = [
+  'aerial/yard-overview.jpg', 'aerial/yard-core.jpg', 'zones/nursery-104.jpg',
+  'zones/nursery-104-oblique.jpg', 'zones/storage-strip.jpg', 'zones/material-bins.jpg',
+  'zones/gray-building.jpg', 'zones/blue-conexes.jpg', 'zones/pit.jpg', 'zones/pit-oblique.jpg',
+  'zones/new-building.jpg', 'zones/new-building-nadir.jpg', 'aerial/graded-lot.jpg',
+  'aerial/graded-lot-oblique.jpg', 'aerial/graded-lot-oblique-2.jpg'
+];
+const AERIAL_PHOTOS_DATE = 'Aug 11, 2026';
 
 function openAerialPhotos() {
   document.getElementById('aerialDateLabel').textContent =
@@ -2434,25 +2440,32 @@ function openAerialImage(src) {
 // survive any image size or a whole new drone flight at a different altitude. They
 // are drawn in the app by an admin, never hand-authored here -- see beginZoneDraw.
 const ZONE_SEED = {
-  root: { label: 'Titan Yard', photos: ['aerial/yard-1.jpg','aerial/yard-2.jpg','aerial/yard-3.jpg','aerial/yard-4.jpg','aerial/yard-5.jpg','aerial/yard-6.jpg'],
-          note: 'Tap an area, or use the buttons below.', children: ['nursery104','bins','gray','red','conexes','maui','pit','civil','cstreet','yardgen','unknown'], regions: [] },
+  // yard-overview is the whole property in one frame — the only shot that works as a
+  // starting point. The graded-lot photos sit here rather than under a zone name
+  // because nobody has told me which lot it is, and a confidently mislabelled photo
+  // is worse for a crew than an unsorted one.
+  root: { label: 'Titan Yard', photos: ['aerial/yard-overview.jpg','aerial/yard-core.jpg','aerial/graded-lot.jpg','aerial/graded-lot-oblique.jpg','aerial/graded-lot-oblique-2.jpg'],
+          note: 'Tap an area, or use the buttons below.', children: ['nursery104','bins','gray','red','conexes','newbldg','maui','pit','civil','cstreet','yardgen','unknown'], regions: [] },
 
-  nursery104: { label: '104 — Nursery & Storage', photos: ['zones/nursery-104.jpg'], locs: ['104'], children: [], regions: [] },
-  bins:       { label: 'Material Bins', photos: ['aerial/yard-1.jpg'], locs: ['Material Bins'], children: [], regions: [] },
+  // 129 of 205 items are filed under bare "104" — this node is the one most worth
+  // subdividing, which is why it carries the closest imagery we have.
+  nursery104: { label: '104 — Nursery & Storage', photos: ['zones/nursery-104.jpg','zones/nursery-104-oblique.jpg','zones/storage-strip.jpg'], locs: ['104'], children: [], regions: [] },
+  bins:       { label: 'Material Bins', photos: ['zones/material-bins.jpg','aerial/yard-core.jpg'], locs: ['Material Bins'], children: [], regions: [] },
+  newbldg:    { label: 'New Maintenance Building', photos: ['zones/new-building.jpg','zones/new-building-nadir.jpg'], locs: [], children: [], regions: [] },
 
   // An interior node subdivides a photo; it does NOT re-claim its parent's location.
   // Two nodes owning "Gray Building" made "Where is it?" land on the deeper one,
   // which has no photo yet — an empty placeholder instead of the picture that exists.
   // Give an interior node its own `locs` only once the yard has a finer label for it.
-  gray:       { label: 'Gray Building', photos: ['zones/gray-building.jpg'], locs: ['Gray Building'], children: ['grayIn'], regions: [] },
+  gray:       { label: 'Gray Building', photos: ['zones/gray-building.jpg','aerial/yard-core.jpg'], locs: ['Gray Building'], children: ['grayIn'], regions: [] },
   grayIn:     { label: 'Gray Building — Inside', photos: [], locs: [], children: [], regions: [] },
 
-  red:        { label: 'Red Building', photos: [], locs: ['Red Building'], children: ['redt1','redt2','redt3'], regions: [] },
+  red:        { label: 'Red Building', photos: ['aerial/yard-core.jpg'], locs: ['Red Building'], children: ['redt1','redt2','redt3'], regions: [] },
   redt1:      { label: 'Red Tool 1', photos: [], locs: ['Red Tool 1'], children: [], regions: [] },
   redt2:      { label: 'Red Tool 2', photos: [], locs: ['Red Tool 2'], children: [], regions: [] },
   redt3:      { label: 'Red Tool 3', photos: [], locs: ['Red Tool 3'], children: [], regions: [] },
 
-  conexes:    { label: 'Blue Conexes', photos: ['zones/blue-conexes.jpg','zones/office-to-conexes.jpg'], locs: [],
+  conexes:    { label: 'Blue Conexes', photos: ['zones/blue-conexes.jpg','zones/new-building-nadir.jpg'], locs: [],
                 children: ['cx1','cx2','cx3','cx4','cx5','cx6','cx7'], regions: [] },
   cx1: { label: 'Conex 1', photos: [], locs: ['Conex 1'], children: [], regions: [] },
   cx2: { label: 'Conex 2', photos: [], locs: ['Conex 2'], children: [], regions: [] },
@@ -2463,7 +2476,7 @@ const ZONE_SEED = {
   cx7: { label: 'Conex 7', photos: [], locs: ['Conex 7'], children: [], regions: [] },
 
   maui:    { label: 'Maui Lot', photos: ['zones/maui-lot.jpg','zones/maui-lot-2.jpg'], locs: ['Maui Lot'], children: [], regions: [] },
-  pit:     { label: 'Pit & Aggregate', photos: ['zones/pit-topsoil.jpg'], locs: [], children: [], regions: [] },
+  pit:     { label: 'Pit & Aggregate', photos: ['zones/pit.jpg','zones/pit-oblique.jpg','zones/pit-topsoil.jpg'], locs: [], children: [], regions: [] },
   civil:   { label: 'Civil', photos: [], locs: [], children: ['civA','civB'], regions: [] },
   civA:    { label: 'Civil A', photos: [], locs: ['Civil A'], children: [], regions: [] },
   civB:    { label: 'Civil B', photos: [], locs: ['Civil B'], children: [], regions: [] },
