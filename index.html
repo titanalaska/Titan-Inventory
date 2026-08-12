@@ -699,6 +699,10 @@ const T = {
     pasteReq:'Paste a list first', matching:'🤖 Matching to inventory…',
     matchFail:'Could not match — try again', reviewMatches:'Review matches before adding:',
     noMatch:'No inventory match — skipped', pullAdded:'Added N to pull list ✓',
+    pullAddedSplit:'Added N ✓ — R spread across multiple rows',
+    pullAddedShort:'Added N — S more than the yard has, check before loading',
+    have:'have', acrossRows:'across N rows', shortBy:'SHORT BY N',
+    otherSizes:'N other size(s)',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     onHand:'On hand', staging:'Staging', takeAll:'All',
@@ -743,6 +747,10 @@ const T = {
     pasteReq:'Pega una lista primero', matching:'🤖 Buscando en inventario…',
     matchFail:'No se pudo emparejar — intenta de nuevo', reviewMatches:'Revisa antes de agregar:',
     noMatch:'Sin coincidencia — omitido', pullAdded:'N agregados a la lista ✓',
+    pullAddedSplit:'N agregados ✓ — R repartidos entre varias filas',
+    pullAddedShort:'N agregados — faltan S, revisa antes de cargar',
+    have:'hay', acrossRows:'en N filas', shortBy:'FALTAN N',
+    otherSizes:'N otro(s) tamaño(s)',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
     onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
@@ -1790,16 +1798,60 @@ function renderPullModal() {
     t('pullSummary').replace('L', pullLineCount()).replace('U', pullUnitCount());
 }
 
-// Adds to the list without disturbing anything already staged for that item.
+// ---- POOLING ACROSS ROWS OF THE SAME THING ----
+// The yard keeps one species in several rows — Swedish Columnar Aspen sits in
+// #84, #85, #86 and more. A demand list that says "40 aspen" has to draw from all
+// of them, but only where the rows really hold the same thing: #84 is 1.5" caliper
+// and #86 is 3", and swapping one for the other is not a rounding error, it's the
+// wrong tree on the truck. So specs are part of the identity, and rows that differ
+// on specs are surfaced to a person rather than pooled behind their back.
+function normKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+function poolKey(item) { return [normKey(item.name), normKey(item.category), normKey(item.specs)].join('|'); }
+function speciesKey(item) { return [normKey(item.name), normKey(item.category)].join('|'); }
+
+// Rows holding the identical thing, the tapped row first, then deepest stock first
+// so a pull empties the big pile before it starts breaking into the small ones.
+function fungibleRows(item) {
+  const key = poolKey(item);
+  return items
+    .filter(i => poolKey(i) === key)
+    .sort((a, b) => (String(a.id) === String(item.id) ? -1 : String(b.id) === String(item.id) ? 1
+                    : (Number(b.qty) || 0) - (Number(a.qty) || 0)));
+}
+
+// Same name and category but a different spec — never pooled, only reported.
+function variantRows(item) {
+  const sk = speciesKey(item), pk = poolKey(item);
+  return items.filter(i => speciesKey(i) === sk && poolKey(i) !== pk);
+}
+
+// What the pool could still give up, ignoring whatever is already staged.
+function pooledAvailable(item) {
+  return fungibleRows(item).reduce((sum, r) =>
+    sum + Math.max(0, (Number(r.qty) || 0) - Number(pullList[r.id] || 0)), 0);
+}
+
+// Stages qty against the row you picked and spills the remainder onto identical
+// rows. Returns { placed, short, rows } — `short` is what the yard genuinely
+// cannot cover, which the caller must show rather than swallow.
 function addToPull(id, qty) {
   const item = items.find(i => String(i.id) === String(id));
-  if (!item) return false;
-  const cur = Number(pullList[id] || 0);
-  const want = cur + (Number(qty) || 1);
-  pullList[id] = Math.max(0, Math.min(Number(item.qty) || 0, want));
-  if (pullList[id] <= 0) delete pullList[id];
+  if (!item) return { placed: 0, short: Number(qty) || 1, rows: 0 };
+  let remaining = Math.max(0, Number(qty) || 1);
+  let placed = 0, rows = 0;
+  for (const row of fungibleRows(item)) {
+    if (remaining <= 0) break;
+    const staged = Number(pullList[row.id] || 0);
+    const room = Math.max(0, (Number(row.qty) || 0) - staged);
+    if (room <= 0) continue;
+    const take = Math.min(room, remaining);
+    pullList[row.id] = staged + take;
+    remaining -= take;
+    placed += take;
+    rows++;
+  }
   savePullList();
-  return true;
+  return { placed, short: remaining, rows };
 }
 
 async function commitPull() {
@@ -1909,7 +1961,7 @@ async function matchPastedList() {
   const out = document.getElementById('pullPasteResult');
   out.innerHTML = `<div style="color:var(--gold);font-size:12px;padding:8px">${t('matching')}</div>`;
   try {
-    const inventoryList = items.map(i => `ID${i.id}: ${i.name} (${i.category}) qty:${i.qty} loc:${i.location}`).join('\n');
+    const inventoryList = items.map(i => `ID${i.id}: ${i.name} (${i.category}) specs:${i.specs || '-'} qty:${i.qty} loc:${i.location}`).join('\n');
     const text = await callClaude({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1500,
@@ -1929,10 +1981,13 @@ Rules:
 - "id" must be the numeric ID of the matched inventory item, or null if nothing matches.
 - "qty" is how many that line calls for; default 1 if no number is given.
 - "confidence" is high, low, or none.
-- If several inventory rows share the same name, still pick one — the one with the
-  most stock — and set confidence "low" so a person can check it. Never return null
-  just because the line asks for more than one row holds.
-- Set confidence "low" whenever the requested qty exceeds that row's stock.
+- If several rows share the same name AND the same specs, pick any one of them and
+  keep confidence "high" — stock spread over identical rows is pooled automatically.
+- If rows share the name but differ in specs (caliper, gallon size, B&B vs container),
+  that is a real product difference. Pick the one the line best describes, and set
+  confidence "low" if the line does not say which size it wants.
+- Never return null just because one row holds less than the line asks for. Row stock
+  is not the constraint and must not affect confidence.
 No other text.` }]
     });
     const rows = JSON.parse(text.replace(/```json|```/g, '').trim());
@@ -1952,14 +2007,31 @@ function renderPasteMatches(rows) {
     const item = r.id != null ? items.find(i => String(i.id) === String(r.id)) : null;
     const ok = !!item;
     const conf = String(r.confidence || '').toLowerCase();
-    const cls = !ok ? 'status-missing' : conf === 'high' ? 'status-ok' : 'status-low';
+    const want = Number(r.qty) || 1;
+    // Availability is the whole pool, not the one row the matcher happened to pick,
+    // so "have 3" stops scaring someone off a species the yard has 40 of.
+    const pool = ok ? fungibleRows(item) : [];
+    const have = ok ? pooledAvailable(item) : 0;
+    const variants = ok ? variantRows(item) : [];
+    const shortBy = Math.max(0, want - have);
+    const cls = !ok ? 'status-missing' : shortBy > 0 ? 'status-missing' : conf === 'high' ? 'status-ok' : 'status-low';
+    let sub;
+    if (!ok) sub = t('noMatch');
+    else {
+      sub = '→ ' + escapeHtml(item.name) + ' (#' + item.id + ', ' + t('have') + ' ' + have
+          + (pool.length > 1 ? ' ' + t('acrossRows').replace('N', pool.length) : '') + ')';
+      if (shortBy > 0) sub += ' · ' + t('shortBy').replace('N', shortBy);
+    }
     html += `<div class="paste-row">
       <input type="checkbox" class="paste-check" data-idx="${idx}" ${ok && conf === 'high' ? 'checked' : ''} ${ok ? '' : 'disabled'}>
       <div style="flex:1;min-width:0">
         <div class="pull-name">${escapeHtml(r.line || '')}</div>
-        <div class="pull-sub ${cls}">${ok ? '→ ' + escapeHtml(item.name) + ' (#' + item.id + ', have ' + item.qty + ')' : t('noMatch')}</div>
+        <div class="pull-sub ${cls}">${sub}</div>
+        ${variants.length ? `<div class="pull-sub status-low">${t('otherSizes').replace('N', variants.length)}: ${
+          variants.slice(0, 3).map(v => escapeHtml((v.specs || '?') + ' ×' + v.qty)).join(', ')
+        }${variants.length > 3 ? '…' : ''}</div>` : ''}
       </div>
-      <input class="pull-qty-input" type="number" min="0" data-qty="${idx}" value="${Number(r.qty) || 1}" ${ok ? '' : 'disabled'}>
+      <input class="pull-qty-input" type="number" min="0" data-qty="${idx}" value="${want}" ${ok ? '' : 'disabled'}>
     </div>`;
   });
   out.innerHTML = html;
@@ -1968,20 +2040,36 @@ function renderPasteMatches(rows) {
 let lastPasteMatches = [];
 
 function addMatchesToPull() {
-  let added = 0;
+  let added = 0, shortLines = 0, splitLines = 0;
   document.querySelectorAll('.paste-check:checked').forEach(cb => {
     const idx = Number(cb.dataset.idx);
     const row = lastPasteMatches[idx];
     if (!row || row.id == null) return;
     const qtyEl = document.querySelector(`[data-qty="${idx}"]`);
-    if (addToPull(row.id, Number(qtyEl.value) || 1)) added++;
+    const res = addToPull(row.id, Number(qtyEl.value) || 1);
+    if (res.placed > 0) added++;
+    if (res.rows > 1) splitLines++;
+    if (res.short > 0) shortLines++;
   });
   updatePullUI(); renderItems();
   closePullPaste();
   document.getElementById('pullPasteInput').value = '';
   document.getElementById('pullPasteResult').innerHTML = '';
-  showToast(added ? t('pullAdded').replace('N', added) : t('nothingAdded'), added ? 'success' : 'error');
+  reportStaging(added, splitLines, shortLines);
   if (added) openPullModal();
+}
+
+// One place to say what actually got staged. A line the yard cannot cover is the
+// thing worth interrupting for — that is the count that used to vanish silently.
+function reportStaging(added, splitLines, shortLines) {
+  if (!added) { showToast(t('nothingAdded'), 'error'); return; }
+  if (shortLines) {
+    showToast(t('pullAddedShort').replace('N', added).replace('S', shortLines), 'error');
+  } else if (splitLines) {
+    showToast(t('pullAddedSplit').replace('N', added).replace('R', splitLines), 'success');
+  } else {
+    showToast(t('pullAdded').replace('N', added), 'success');
+  }
 }
 
 // ---- JOB CHECKER ----
@@ -1993,23 +2081,26 @@ function pullFromJobRow(idx) {
   const qtyEl = document.querySelector(`[data-jobqty="${idx}"]`);
   const qty = Number(qtyEl && qtyEl.value) || 0;
   if (qty <= 0) return;
-  if (addToPull(r.id, qty)) {
-    updatePullUI(); renderItems();
-    showToast(t('pullAdded').replace('N', 1), 'success');
-  }
+  const res = addToPull(r.id, qty);
+  updatePullUI(); renderItems();
+  reportStaging(res.placed > 0 ? 1 : 0, res.rows > 1 ? 1 : 0, res.short > 0 ? 1 : 0);
 }
 
 function pullAllJobRows() {
-  let added = 0;
+  let added = 0, shortLines = 0, splitLines = 0;
   document.querySelectorAll('[data-jobqty]').forEach(el => {
     const idx = Number(el.dataset.jobqty);
     const r = lastJobResults[idx];
     const qty = Number(el.value) || 0;
-    if (r && r.id != null && qty > 0 && addToPull(r.id, qty)) added++;
+    if (!r || r.id == null || qty <= 0) return;
+    const res = addToPull(r.id, qty);
+    if (res.placed > 0) added++;
+    if (res.rows > 1) splitLines++;
+    if (res.short > 0) shortLines++;
   });
   updatePullUI(); renderItems();
-  if (added) { closeJobChecker(); openPullModal(); showToast(t('pullAdded').replace('N', added), 'success'); }
-  else showToast(t('nothingAdded'), 'error');
+  if (added) { closeJobChecker(); openPullModal(); }
+  reportStaging(added, splitLines, shortLines);
 }
 
 function openJobChecker() { document.getElementById('jobModal').classList.add('open'); }
