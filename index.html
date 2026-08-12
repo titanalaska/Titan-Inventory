@@ -338,6 +338,12 @@
   .zone-mini-btn.danger { border-color: #6a2a2a; color: #e07070; }
   .zone-mini-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
   .zone-where-btn { background: none; border: 1px solid #2a5a8a; color: #5a9fd4; border-radius: 4px; padding: 4px 9px; font-family: var(--font); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+
+  /* Shared pull list — other people's staged lines */
+  .pull-group-label { font-size: 10px; color: var(--mid); letter-spacing: 0.08em; text-transform: uppercase; margin: 10px 0 4px; }
+  .pull-row-other { opacity: 0.75; }
+  .pull-other-qty { color: var(--fog); font-weight: 700; font-size: 14px; padding-right: 4px; }
+  .qty-num .pull-claimed { color: #e08a4a; font-size: 10px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -749,6 +755,7 @@ const T = {
     zoneSaved:'Area "N" saved ✓', zoneExported:'Zones exported — send the file to Claude to commit',
     zoneConfirmClear:'Remove every drawn area on this photo?',
     zoneNoMatch:'No zone covers "L" yet — draw one on the yard photo',
+    pullYours:'Yours', pullOthers:'Staged by others', claimedBy:'N claimed',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     onHand:'On hand', staging:'Staging', takeAll:'All',
@@ -808,6 +815,7 @@ const T = {
     zoneSaved:'Área "N" guardada ✓', zoneExported:'Zonas exportadas — envía el archivo a Claude',
     zoneConfirmClear:'¿Borrar todas las áreas dibujadas en esta foto?',
     zoneNoMatch:'Ninguna zona cubre "L" todavía — dibuja una en la foto del patio',
+    pullYours:'Tuyo', pullOthers:'Preparado por otros', claimedBy:'N apartados',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
     onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
@@ -1795,9 +1803,83 @@ async function analyzePhoto(input) {
 // forty plants first and only then account for them. The pull list holds what you
 // picked up until you commit the whole lot in one go.
 let pullMode = false;
-let pullList = {};   // { itemId: qtyToPull }
+let pullList = {};   // MY staged lines: { itemId: qtyToPull }
 try { pullList = JSON.parse(localStorage.getItem('titanPullList') || '{}'); } catch(e) { pullList = {}; }
-function savePullList() { try { localStorage.setItem('titanPullList', JSON.stringify(pullList)); } catch(e) {} }
+
+// Everyone else's staged lines, from the Sheet: [{who, itemId, qty, job}].
+// The list is shared because two people loading the same truck were each
+// building a private list on their own phone and finding out at the tailgate.
+let sharedPull = [];
+let pullSyncTimer = null;
+let pullSyncing = false;
+
+// Local first, Sheet second. A tap has to feel instant on yard signal, so the
+// staged count lands in localStorage immediately and the push is debounced —
+// and because a push always carries this worker's WHOLE slice, a dropped
+// request costs nothing but a moment of staleness.
+function savePullList() {
+  try { localStorage.setItem('titanPullList', JSON.stringify(pullList)); } catch(e) {}
+  schedulePullSync();
+}
+
+function schedulePullSync() {
+  if (!APPS_SCRIPT_URL || !currentUser) return;
+  clearTimeout(pullSyncTimer);
+  pullSyncTimer = setTimeout(pushPullList, 1200);
+}
+
+async function pushPullList() {
+  if (!APPS_SCRIPT_URL || !currentUser || pullSyncing) return;
+  pullSyncing = true;
+  try {
+    const entries = Object.keys(pullList).map(id => ({ id: id, qty: Number(pullList[id]) || 0 }));
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'syncPull', who: currentUser, entries: entries,
+        job: (document.getElementById('pullJobInput') || {}).value || ''
+      })
+    });
+    const data = await res.json();
+    if (data && Array.isArray(data.entries)) {
+      applySharedPull(data.entries);
+      updatePullUI(); renderPullModal(); renderItems();
+    }
+  } catch(e) { /* stays local; the next change pushes the same whole slice */ }
+  pullSyncing = false;
+}
+
+async function fetchPullList() {
+  if (!APPS_SCRIPT_URL) return;
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getPullList`);
+    const data = await res.json();
+    if (data && Array.isArray(data.entries)) {
+      applySharedPull(data.entries);
+      updatePullUI(); renderItems();
+    }
+  } catch(e) { /* older deployments have no pull tab — list stays per-device */ }
+}
+
+// My own rows come back in the payload too; drop them, since localStorage is
+// the authority for what this phone has staged.
+function applySharedPull(entries) {
+  const me = normKey(currentUser);
+  sharedPull = entries.filter(e => normKey(e.who) !== me || !me);
+}
+
+// What other people already have staged against an item. Their claim is as real
+// as mine — ignoring it is how two lists add up to more than the yard holds.
+function stagedByOthers(id) {
+  const key = String(id);
+  return sharedPull.reduce((s, e) => s + (String(e.itemId) === key ? Number(e.qty) || 0 : 0), 0);
+}
+
+// The most I can still stage on one row: stock, minus what others claimed.
+function roomOnRow(item) {
+  return Math.max(0, (Number(item.qty) || 0) - stagedByOthers(item.id));
+}
 
 function pullLineCount() { return Object.keys(pullList).length; }
 function pullUnitCount() { return Object.values(pullList).reduce((a, b) => a + Number(b || 0), 0); }
@@ -1807,15 +1889,16 @@ function togglePullMode() {
   expandedId = null;
   renderItems();
   updatePullUI();
-  if (pullMode) showToast(t('pullModeOn'), 'success');
+  if (pullMode) { showToast(t('pullModeOn'), 'success'); fetchPullList(); }
 }
 
 function changePullQty(id, delta) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   const cur = Number(pullList[id] || 0);
-  // Never let someone stage more than the yard says is there.
-  const next = Math.max(0, Math.min(Number(item.qty) || 0, cur + delta));
+  // Never stage more than the yard says is there, minus whatever someone else
+  // has already spoken for.
+  const next = Math.max(0, Math.min(roomOnRow(item), cur + delta));
   if (next <= 0) delete pullList[id]; else pullList[id] = next;
   savePullList(); renderItems(); updatePullUI();
 }
@@ -1823,7 +1906,7 @@ function changePullQty(id, delta) {
 function setPullQty(id, raw) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-  const n = Math.max(0, Math.min(Number(item.qty) || 0, parseInt(raw) || 0));
+  const n = Math.max(0, Math.min(roomOnRow(item), parseInt(raw) || 0));
   if (n <= 0) delete pullList[id]; else pullList[id] = n;
   savePullList(); renderPullModal(); updatePullUI(); renderItems();
 }
@@ -1838,7 +1921,7 @@ function clearPull() {
 function updatePullUI() {
   const badge = document.getElementById('pullBadge');
   const banner = document.getElementById('pullBanner');
-  const n = pullLineCount();
+  const n = pullLineCount() + sharedPull.length;
   badge.style.display = n ? 'flex' : 'none';
   badge.innerHTML = `🧺 <span>${n}</span>`;
   banner.style.display = pullMode ? 'flex' : 'none';
@@ -1848,19 +1931,24 @@ function updatePullUI() {
   if (btn) btn.classList.toggle('pull-active', pullMode);
 }
 
-function openPullModal() { document.getElementById('pullModal').classList.add('open'); renderPullModal(); }
+function openPullModal() {
+  document.getElementById('pullModal').classList.add('open');
+  renderPullModal();
+  fetchPullList().then(renderPullModal);   // catch up on anyone else's staging
+}
 function closePullModal() { document.getElementById('pullModal').classList.remove('open'); }
 
 function renderPullModal() {
   const body = document.getElementById('pullModalBody');
   const ids = Object.keys(pullList);
-  if (!ids.length) {
+  if (!ids.length && !sharedPull.length) {
     body.innerHTML = `<div class="loading-state" style="color:#8a9aaa">${t('pullEmpty')}</div>`;
     document.getElementById('pullCommitRow').style.display = 'none';
     return;
   }
   document.getElementById('pullCommitRow').style.display = 'block';
   let html = '';
+  if (ids.length && sharedPull.length) html += `<div class="pull-group-label">${t('pullYours')}</div>`;
   ids.forEach(id => {
     const item = items.find(i => String(i.id) === String(id));
     const qty = pullList[id];
@@ -1880,9 +1968,28 @@ function renderPullModal() {
       <button class="pull-x" onclick="removeFromPull(${item.id})">✕</button>
     </div>`;
   });
+  // Other people's lines are shown but not editable — you can see that Kyle has
+  // 20 spoken for so you don't go looking for them, but you cannot quietly
+  // change his count from your phone.
+  if (sharedPull.length) {
+    html += `<div class="pull-group-label">${t('pullOthers')}</div>`;
+    sharedPull.slice().sort((a, b) => String(a.who).localeCompare(String(b.who))).forEach(e => {
+      const item = items.find(i => String(i.id) === String(e.itemId));
+      html += `<div class="pull-row pull-row-other">
+        <div style="flex:1;min-width:0">
+          <div class="pull-name">${escapeHtml(item ? itemName(item) : '#' + e.itemId)}</div>
+          <div class="pull-sub">${escapeHtml(e.who)}${e.job ? ' · ' + escapeHtml(e.job) : ''}</div>
+        </div>
+        <span class="pull-other-qty">${e.qty}</span>
+      </div>`;
+    });
+  }
+
   body.innerHTML = html;
+  const lines = pullLineCount() + sharedPull.length;
+  const units = pullUnitCount() + sharedPull.reduce((s, e) => s + (Number(e.qty) || 0), 0);
   document.getElementById('pullSummary').textContent =
-    t('pullSummary').replace('L', pullLineCount()).replace('U', pullUnitCount());
+    t('pullSummary').replace('L', lines).replace('U', units);
 }
 
 // ---- POOLING ACROSS ROWS OF THE SAME THING ----
@@ -1912,10 +2019,11 @@ function variantRows(item) {
   return items.filter(i => speciesKey(i) === sk && poolKey(i) !== pk);
 }
 
-// What the pool could still give up, ignoring whatever is already staged.
+// What the pool could still give up, after both my staged lines and everyone
+// else's are taken off the top.
 function pooledAvailable(item) {
   return fungibleRows(item).reduce((sum, r) =>
-    sum + Math.max(0, (Number(r.qty) || 0) - Number(pullList[r.id] || 0)), 0);
+    sum + Math.max(0, roomOnRow(r) - Number(pullList[r.id] || 0)), 0);
 }
 
 // Stages qty against the row you picked and spills the remainder onto identical
@@ -1929,7 +2037,7 @@ function addToPull(id, qty) {
   for (const row of fungibleRows(item)) {
     if (remaining <= 0) break;
     const staged = Number(pullList[row.id] || 0);
-    const room = Math.max(0, (Number(row.qty) || 0) - staged);
+    const room = Math.max(0, roomOnRow(row) - staged);
     if (room <= 0) continue;
     const take = Math.min(room, remaining);
     pullList[row.id] = staged + take;
@@ -1943,7 +2051,7 @@ function addToPull(id, qty) {
 
 async function commitPull() {
   const ids = Object.keys(pullList);
-  if (!ids.length) return;
+  if (!ids.length && !sharedPull.length) return;
   // Every write here is "on-hand minus what we took", so committing against the
   // baked-in snapshot would push a months-old number into the Sheet as if it were
   // a fresh count. The staged list survives in localStorage, so waiting costs nothing.
@@ -1972,6 +2080,10 @@ async function commitPull() {
         bFailed++;
       }
     });
+    // The server drops the committed rows from the shared tab, so mirror that
+    // here rather than waiting for the next fetch to catch up.
+    const committed = new Set(bulk.results.filter(r => r.ok).map(r => String(r.id)));
+    sharedPull = sharedPull.filter(e => !committed.has(String(e.itemId)));
     savePullList();
     btn.disabled = false; btn.textContent = t('pullAll');
     if (!bFailed) { document.getElementById('pullJobInput').value = ''; closePullModal(); }
@@ -2019,7 +2131,13 @@ async function commitPull() {
 // and the caller should fall back to writing one item at a time.
 async function tryBulkPull(job) {
   if (!APPS_SCRIPT_URL) return null;
-  const payload = Object.keys(pullList).map(id => ({ id: Number(id), qty: Number(pullList[id]) }));
+  // The truck leaves once. Commit takes everyone's staged lines together, summed
+  // per item, so two people loading side by side produce one deduction each --
+  // not one person's half quietly pulled and the other's left behind.
+  const combined = {};
+  Object.keys(pullList).forEach(id => { combined[id] = (combined[id] || 0) + (Number(pullList[id]) || 0); });
+  sharedPull.forEach(e => { combined[e.itemId] = (combined[e.itemId] || 0) + (Number(e.qty) || 0); });
+  const payload = Object.keys(combined).map(id => ({ id: Number(id), qty: combined[id] }));
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -2820,6 +2938,7 @@ window.onload = () => {
   fetchLists();
   loadItems();
   updatePullUI();   // a list staged before the phone locked is still waiting
+  fetchPullList();  // …and someone else may have staged against it since
   // Prompt for identity right away rather than waiting for someone to tap a
   // gated action — browsing itself stays open, but anyone not yet approved
   // sees where they stand immediately instead of discovering it by accident.
@@ -2923,6 +3042,7 @@ function renderItems() {
       const locClass = item.location === 'Unknown' ? 'tag-loc unknown' : 'tag-loc';
       const unit = normalizeUnit(item.unit);
       const staged = Number(pullList[item.id] || 0);
+      const claimed = stagedByOthers(item.id);
       html += `
         <div class="item-card ${item.estimated ? 'estimated' : ''} ${staged ? 'staged' : ''}" id="card-${item.id}">
           <div class="item-header" onclick="toggleExpand(${item.id})">
@@ -2941,7 +3061,9 @@ function renderItems() {
             ${pullMode ? `
             <div class="item-qty" onclick="event.stopPropagation()">
               <button class="qty-btn qty-minus" onclick="changePullQty(${item.id},-1)">−</button>
-              <span class="qty-num pull-staged">${staged}<span class="pull-of">/${item.qty}</span></span>
+              <span class="qty-num pull-staged">${staged}<span class="pull-of">/${item.qty}</span>${
+                claimed ? `<br><span class="pull-claimed">${t('claimedBy').replace('N', claimed)}</span>` : ''
+              }</span>
               <button class="qty-btn qty-plus" onclick="changePullQty(${item.id},1)">+</button>
             </div>` : `
             <div class="item-qty" onclick="event.stopPropagation()">
