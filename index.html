@@ -690,7 +690,7 @@ async function callAI(payload) {
   const res = await fetch(APPS_SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'ai', payload: payload })
+    body: authedBody({ action: 'ai', payload: payload })
   });
   const data = await res.json();
   if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || 'AI request failed'));
@@ -705,7 +705,7 @@ async function callClaude(payload) {
   const res = await fetch(APPS_SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'ai', payload })
+    body: authedBody({ action: 'ai', payload })
   });
   const data = await res.json();
   if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || 'AI request failed'));
@@ -756,6 +756,7 @@ const T = {
     zoneConfirmClear:'Remove every drawn area on this photo?',
     zoneNoMatch:'No zone covers "L" yet — draw one on the yard photo',
     pullYours:'Yours', pullOthers:'Staged by others', claimedBy:'N claimed',
+    signInNeeded:'Sign in to make changes',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     onHand:'On hand', staging:'Staging', takeAll:'All',
@@ -816,6 +817,7 @@ const T = {
     zoneConfirmClear:'¿Borrar todas las áreas dibujadas en esta foto?',
     zoneNoMatch:'Ninguna zona cubre "L" todavía — dibuja una en la foto del patio',
     pullYours:'Tuyo', pullOthers:'Preparado por otros', claimedBy:'N apartados',
+    signInNeeded:'Inicia sesión para hacer cambios',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
     onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
@@ -1021,6 +1023,41 @@ function applyTranslations() {
 let profiles = [];
 let myProfile = null;
 
+// ---- SESSION TOKEN ----
+// The page is public, so it cannot hold a secret worth having. What it can hold is
+// a token this device earned by typing a PIN the page never contained. Every write
+// carries it; the server checks it and stamps the Change Log from it, so "who did
+// this" is no longer whatever the caller typed.
+let authToken = '';
+try { authToken = localStorage.getItem('titan_token') || ''; } catch(e) {}
+
+function setAuthToken(tok) {
+  authToken = tok || '';
+  try {
+    if (authToken) localStorage.setItem('titan_token', authToken);
+    else localStorage.removeItem('titan_token');
+  } catch(e) {}
+}
+
+// Anything that changes data goes through here so a token can never be forgotten
+// on one call and remembered on the next.
+function authedParams(obj) {
+  return new URLSearchParams(Object.assign({}, obj, { token: authToken }));
+}
+function authedBody(obj) {
+  return JSON.stringify(Object.assign({}, obj, { token: authToken }));
+}
+
+// A refused write means the session died — expired, revoked, or never existed.
+// Say so once and put the sign-in panel up rather than failing silently.
+function handleAuthFailure(data) {
+  if (!data || !data.authRequired) return false;
+  setAuthToken('');
+  showToast(data.error || t('signInNeeded'), 'error');
+  promptName();
+  return true;
+}
+
 function loadSavedProfile() {
   const saved = localStorage.getItem('titan_profile');
   if (saved) {
@@ -1159,10 +1196,16 @@ async function confirmProfilePin(id) {
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: 'verifyPin', id, pin })}`);
     const data = await res.json();
-    if (!data.valid) { errEl.textContent = es ? 'PIN incorrecto' : 'Incorrect PIN'; return; }
+    if (!data.valid) {
+      if (data.lockedOut) { errEl.textContent = data.error; return; }
+      errEl.textContent = (es ? 'PIN incorrecto' : 'Incorrect PIN') +
+        (data.attemptsLeft != null ? ` (${data.attemptsLeft} ${es ? 'intentos' : 'tries'})` : '');
+      return;
+    }
     const p = profiles.find(x => String(x.id) === String(id));
     myProfile = p;
     currentUser = p.name;
+    setAuthToken(data.token);
     saveProfileLocally();
     document.getElementById('nameModal').classList.remove('open');
     document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
@@ -1183,11 +1226,12 @@ async function claimProfilePin(id) {
     const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: 'claimPin', id, pin })}`);
     const data = await res.json();
     if (data.alreadySet) { errEl.textContent = es ? 'Este perfil ya tiene PIN' : 'This profile already has a PIN set'; return; }
-    if (!data.success) { errEl.textContent = es ? 'No se pudo crear el PIN' : 'Could not create PIN'; return; }
+    if (!data.success) { errEl.textContent = data.error || (es ? 'No se pudo crear el PIN' : 'Could not create PIN'); return; }
     const p = profiles.find(x => String(x.id) === String(id));
     if (p) p.hasPin = true;
     myProfile = p;
     currentUser = p.name;
+    setAuthToken(data.token);
     saveProfileLocally();
     document.getElementById('nameModal').classList.remove('open');
     document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
@@ -1273,7 +1317,7 @@ function closeAdminPanel() { document.getElementById('adminModal').classList.rem
 
 async function approveProfile(id) {
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({action:'approveProfile', id})}`);
+    const res = await fetch(`${APPS_SCRIPT_URL}?${authedParams({action:'approveProfile', id})}`);
     const data = await res.json();
     if (data.error || !data.success) throw new Error(data.error || 'Unexpected response');
     showToast('Approved', 'success');
@@ -1284,7 +1328,7 @@ async function approveProfile(id) {
 
 async function rejectProfile(id) {
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({action:'rejectProfile', id})}`);
+    const res = await fetch(`${APPS_SCRIPT_URL}?${authedParams({action:'rejectProfile', id})}`);
     const data = await res.json();
     if (data.error || !data.success) throw new Error(data.error || 'Unexpected response');
     showToast('Rejected', '');
@@ -1298,7 +1342,7 @@ async function logChange(type, itemNameStr, detail) {
   if (!APPS_SCRIPT_URL || !currentUser) return;
   const now = new Date();
   try {
-    const params = new URLSearchParams({
+    const params = authedParams({
       action: 'log',
       who: currentUser,
       type,
@@ -1371,7 +1415,7 @@ async function submitListValue() {
   const btn = document.getElementById('listModalSave');
   btn.disabled = true; btn.textContent = '…';
   try {
-    const params = new URLSearchParams({ action:'addListValue', type, value, addedBy: currentUser });
+    const params = authedParams({ action:'addListValue', type, value, addedBy: currentUser });
     const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
     const data = await res.json();
     if (data.duplicate) {
@@ -1699,7 +1743,7 @@ async function uploadItemPhoto(input, itemId) {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action:'savePhoto', itemId: String(itemId), data: base64, mimeType:'image/jpeg' })
+      body: authedBody({ action:'savePhoto', itemId: String(itemId), data: base64, mimeType:'image/jpeg' })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -1836,7 +1880,7 @@ async function pushPullList() {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
+      body: authedBody({
         action: 'syncPull', who: currentUser, entries: entries,
         job: (document.getElementById('pullJobInput') || {}).value || ''
       })
@@ -2065,6 +2109,7 @@ async function commitPull() {
   // One request for the whole list. Falls through to the per-item path below if the
   // deployed script predates bulkPull, so an un-redeployed backend still works.
   const bulk = await tryBulkPull(job);
+  if (bulk === 'auth') { btn.disabled = false; btn.textContent = t('pullAll'); return; }
   if (bulk) {
     let bDone = 0, bFailed = 0, bShort = 0;
     bulk.results.forEach(r => {
@@ -2142,9 +2187,12 @@ async function tryBulkPull(job) {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action:'bulkPull', items: payload, job: job, who: currentUser })
+      body: authedBody({ action:'bulkPull', items: payload, job: job, who: currentUser })
     });
     const data = await res.json();
+    // A refused session must stop here. Falling through to the per-item path
+    // would fire one doomed request per line and bury the real reason.
+    if (data && data.authRequired) { handleAuthFailure(data); return 'auth'; }
     if (data && Array.isArray(data.results)) return data;
     return null;
   } catch(e) { return null; }
@@ -2154,9 +2202,14 @@ async function tryBulkPull(job) {
 // otherwise fire 40 toasts.
 async function pushUpdateQuiet(item) {
   if (!APPS_SCRIPT_URL) return;
-  const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', changedBy: currentUser });
+  const params = authedParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', changedBy: currentUser });
   const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
   if (!res.ok) throw new Error('sheet write failed');
+  // Apps Script answers 200 even when it refused the write, so the body is the
+  // only place a rejection shows up. Throwing here lets commitPull roll the
+  // quantity back instead of banking a deduction the sheet never took.
+  const data = await res.json();
+  if (data && data.error) throw new Error(data.error);
 }
 
 // ---- PULL FROM A PASTED LIST ----
@@ -2458,7 +2511,7 @@ async function confirmDisposal() {
   // Push to sheet
   if (APPS_SCRIPT_URL) {
     try {
-      const params = new URLSearchParams({
+      const params = authedParams({
         action: 'disposal',
         who: currentUser,
         itemId: item.id,
@@ -2943,7 +2996,9 @@ window.onload = () => {
   // gated action — browsing itself stays open, but anyone not yet approved
   // sees where they stand immediately instead of discovering it by accident.
   fetchProfiles().then(() => {
-    if (!myProfile || myProfile.status !== 'approved') promptName();
+    // A profile cached from before sessions existed has no token, so ask for the
+    // PIN once on open rather than letting the first edit of the day fail.
+    if (!myProfile || myProfile.status !== 'approved' || !authToken) promptName();
   });
 };
 
@@ -3211,10 +3266,22 @@ async function deleteItem(id) {
   const item = items.find(i => i.id === id);
   const msg = t('confirmDelete').replace('ID', id);
   if (!confirm(msg)) return;
-  logChange('DELETE', item ? item.name : `#${id}`, 'Removed from inventory');
+  const wasAt = items.indexOf(item);
   items = items.filter(i => i.id !== id);
   if (APPS_SCRIPT_URL) {
-    try { await fetch(`${APPS_SCRIPT_URL}?action=delete&id=${id}`); showToast(t('deleted'), 'success'); }
+    try {
+      const res = await fetch(`${APPS_SCRIPT_URL}?${authedParams({action:'delete', id:id})}`);
+      const data = await res.json();
+      // Put it back rather than leave the screen disagreeing with the sheet.
+      if ((data && data.error) || handleAuthFailure(data)) {
+        if (item) items.splice(wasAt < 0 ? items.length : wasAt, 0, item);
+        if (data && data.error && !data.authRequired) showToast(data.error, 'error');
+        expandedId = null; renderItems();
+        return;
+      }
+      logChange('DELETE', item ? item.name : `#${id}`, 'Removed from inventory');
+      showToast(t('deleted'), 'success');
+    }
     catch(e) { showToast(t('deletedLocal'), 'error'); }
   } else { showToast(t('deleted'), 'success'); }
   expandedId = null; renderItems();
@@ -3223,8 +3290,14 @@ async function deleteItem(id) {
 async function pushUpdate(item) {
   if (!APPS_SCRIPT_URL) { showToast(t('savedLocal'), ''); return; }
   try {
-    const params = new URLSearchParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', changedBy: currentUser });
-    await fetch(`${APPS_SCRIPT_URL}?${params}`);
+    const params = authedParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', changedBy: currentUser });
+    const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
+    // This used to fire the success toast without reading the reply. A refused
+    // write would have said "Saved ✓" while the sheet never changed, which is a
+    // worse failure than an error message.
+    const data = await res.json();
+    if (handleAuthFailure(data)) return;
+    if (data && data.error) { showToast(data.error, 'error'); return; }
     showToast(t('savedSheet'), 'success');
   } catch(e) { showToast(t('sheetUnreach'), 'error'); }
 }
@@ -3256,7 +3329,7 @@ async function addItem() {
   logChange('ADD', name, `Qty: ${newItem.qty}, Location: ${newItem.location}`);
   if (APPS_SCRIPT_URL) {
     try {
-      const params = new URLSearchParams({ action:'add', ...newItem, addedBy: currentUser });
+      const params = authedParams({ action:'add', ...newItem, addedBy: currentUser });
       await fetch(`${APPS_SCRIPT_URL}?${params}`);
       showToast(t('savedSheet'), 'success');
       // The row exists now, so the identification shot can be attached to it.
@@ -3265,7 +3338,7 @@ async function addItem() {
           const res = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action:'savePhoto', itemId: String(newItem.id), data: pendingNewPhoto, mimeType:'image/jpeg' })
+            body: authedBody({ action:'savePhoto', itemId: String(newItem.id), data: pendingNewPhoto, mimeType:'image/jpeg' })
           });
           const pd = await res.json();
           if (pd.photoId) { newItem.photo = pd.photoId; showToast(t('photoSaved'), 'success'); }
