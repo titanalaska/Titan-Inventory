@@ -67,6 +67,9 @@
   /* Pull list */
   .pull-banner { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #3a2c00; color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 9px 14px; border-bottom: 1px solid #5a4400; }
   .pull-banner-done { background: var(--gold); color: #000; border: none; border-radius: 4px; padding: 5px 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; font-family: var(--font); text-transform: uppercase; }
+  /* Red, not gold — a stale count that reads as live is how material leaves uncredited. */
+  .stale-banner { position: sticky; top: 0; z-index: 41; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #3a1a1a; color: #ffb0b0; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 9px 14px; border-bottom: 1px solid #6a2a2a; }
+  .stale-retry { background: #e07070; color: #2a0f0f; border: none; border-radius: 4px; padding: 5px 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; font-family: var(--font); text-transform: uppercase; white-space: nowrap; }
   .pull-badge { position: fixed; right: 20px; bottom: 92px; z-index: 60; display: flex; align-items: center; gap: 5px; background: var(--gold); color: #000; border: none; border-radius: 22px; height: 44px; padding: 0 16px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: var(--font); box-shadow: 0 3px 12px rgba(0,0,0,0.5); }
   .pull-badge:active { transform: scale(0.94); }
   .item-card.staged { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold); }
@@ -382,6 +385,7 @@
   <button class="job-btn" style="border-color:#5a2a8a;color:#b389d9" onclick="openAerialPhotos()">🚁 Latest Aerial</button>
 </div>
 
+<div class="stale-banner" id="staleBanner" style="display:none"></div>
 <div class="pull-banner" id="pullBanner" style="display:none"></div>
 
 <div class="items-list" id="itemsList">
@@ -703,6 +707,8 @@ const T = {
     pullAddedShort:'Added N — S more than the yard has, check before loading',
     have:'have', acrossRows:'across N rows', shortBy:'SHORT BY N',
     otherSizes:'N other size(s)',
+    staleWarn:'⚠ OFFLINE — counts below are a saved copy from D, not live',
+    retry:'Retry', pullNeedsLive:'Cannot pull while offline — sync first, your list is saved',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     onHand:'On hand', staging:'Staging', takeAll:'All',
@@ -751,6 +757,8 @@ const T = {
     pullAddedShort:'N agregados — faltan S, revisa antes de cargar',
     have:'hay', acrossRows:'en N filas', shortBy:'FALTAN N',
     otherSizes:'N otro(s) tamaño(s)',
+    staleWarn:'⚠ SIN CONEXIÓN — las cantidades son una copia del D, no están al día',
+    retry:'Reintentar', pullNeedsLive:'No se puede retirar sin conexión — sincroniza, tu lista está guardada',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
     onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
@@ -945,6 +953,7 @@ function applyTranslations() {
   if (!currentUser) document.getElementById('userBtn').textContent = '👤 ' + t('signIn');
   renderProfileGate();
   populateSelects();
+  updateStaleBanner();
 }
 
 // ---- PROFILES ----
@@ -1366,21 +1375,28 @@ function populateSelects() {
 }
 
 // ---- EMBEDDED DATA ----
+// A snapshot of the Sheet, baked in so the app opens to something on a dead signal
+// at the yard. It is a seed and nothing more: the Sheet overwrites it completely the
+// moment it answers. Never merge leftovers from here into live data — rows deleted
+// in the Sheet would come back from the dead, and every stale count in here would
+// pass itself off as current.
+const EMBEDDED_DATE = '2026-08-11';
 const EMBEDDED = [
   {id:1,category:'LUMBER & POSTS',name:'Cedar fence boards',qty:1453,specs:'6" wide x 6ft tall',estimated:false,location:'104'},
   {id:2,category:'LUMBER & POSTS',name:'6x6 treated posts (Severe Weather #2)',qty:8,specs:'5.5x5.5x8ft, Item #476205',estimated:false,location:'104'},
-  {id:3,category:'LUMBER & POSTS',name:'4x4 treated posts (Severe Weather Ground Contact)',qty:37,specs:'3.56x3.56x8ft, STD&BTR',estimated:false,location:'104'},
-  {id:4,category:'LUMBER & POSTS',name:'4x6 treated posts (Severe Weather Ground Contact #2)',qty:24,specs:'3.56x5.62x10ft',estimated:false,location:'104'},
+  {id:3,category:'LUMBER & POSTS',name:'4x4 treated posts (Severe Weather Ground Contact)',qty:38,specs:'3.56x3.56x8ft, STD&BTR',estimated:false,location:'104'},
+  {id:4,category:'LUMBER & POSTS',name:'4x6 treated posts (Severe Weather Ground Contact #2)',qty:18,specs:'3.56x5.62x10ft',estimated:false,location:'104'},
   {id:5,category:'LUMBER & POSTS',name:'8x8 timbers (HFR #2BTR S4S)',qty:13,specs:'8x8x12ft, CAC treated',estimated:false,location:'104'},
   {id:6,category:'LUMBER & POSTS',name:'2x2 treated (Severe Weather #1)',qty:121,specs:'1.37x1.37x8ft, CA-C above ground',estimated:false,location:'104'},
   {id:7,category:'LUMBER & POSTS',name:'2x4 treated (Severe Weather #2)',qty:7,specs:'1.5x3.5x8ft, CA-C above ground',estimated:false,location:'104'},
   {id:8,category:'LUMBER & POSTS',name:'2x6 treated (Severe Weather #2)',qty:6,specs:'1.5x5.5x8ft, CA-C above ground',estimated:false,location:'104'},
-  {id:9,category:'LUMBER & POSTS',name:'Tree mounting stakes',qty:30,specs:'6ft tall',estimated:false,location:'104'},
+  {id:9,category:'LUMBER & POSTS',name:'Tree mounting stakes',qty:0,specs:'6ft tall',estimated:false,location:'104'},
   {id:10,category:'LUMBER & POSTS',name:'Cedar Square Top Post Caps (4x4)',qty:22,specs:'Home Depot, cedar',estimated:false,location:'104'},
-  {id:11,category:'FENCE HARDWARE',name:'T-posts (steel)',qty:140,specs:'8ft, green with clips',estimated:true,location:'104'},
-  {id:12,category:'DRAINAGE',name:'4" corrugated drain pipe (full bundles)',qty:2,specs:'100ft each = 200ft total, no sock',estimated:false,location:'104'},
-  {id:13,category:'DRAINAGE',name:'4" corrugated drain pipe (partial)',qty:1,specs:'~75ft total, no sock',estimated:true,location:'104'},
+  {id:11,category:'FENCE HARDWARE',name:'T-posts (steel)',qty:149,specs:'8ft, green with clips',estimated:true,location:'104'},
+  {id:12,category:'DRAINAGE',name:'4" corrugated drain pipe (full bundles)',qty:2,specs:'100ft each = 200ft total, no sock',estimated:false,location:'104',unit:'ea'},
+  {id:13,category:'DRAINAGE',name:'4" corrugated drain pipe (partial)',qty:3,specs:'~75ft total, no sock',estimated:true,location:'104',unit:'ea'},
   {id:14,category:'DRAINAGE',name:'12" galvanized steel culvert couplers',qty:18,specs:'Corrugated steel',estimated:false,location:'104'},
+  {id:15,category:'HYDROSEEDING MATERIALS',name:'Astro Mulch (hydro mulch)',qty:11,specs:'Seed planting, Alaska Inc.',estimated:false,location:'Unknown'},
   {id:16,category:'FENCE HARDWARE',name:'Black decorative finial post caps',qty:28,specs:'2-3/8" diameter, slip-on',estimated:false,location:'Gray Building'},
   {id:17,category:'FENCE HARDWARE',name:'3" black ring-style post caps (prong clips)',qty:77,specs:'3" diameter',estimated:false,location:'Gray Building'},
   {id:18,category:'FENCE HARDWARE',name:'2" black ring-style post caps (prong clips)',qty:12,specs:'2" diameter',estimated:false,location:'Gray Building'},
@@ -1408,13 +1424,13 @@ const EMBEDDED = [
   {id:40,category:'FENCE HARDWARE',name:'Galvanized tension bands C-shape/hook style',qty:52,specs:'Large diameter',estimated:false,location:'Gray Building'},
   {id:41,category:'FENCE HARDWARE',name:'Galvanized tension bands large single wrap',qty:25,specs:'Slotted tabs',estimated:false,location:'Gray Building'},
   {id:42,category:'FENCE HARDWARE',name:'Galvanized tension bands full ring style',qty:45,specs:'Prong clips',estimated:true,location:'Gray Building'},
-  {id:43,category:'FENCE HARDWARE',name:'Galvanized barbed wire arms/brackets',qty:45,specs:'Mounts to post top',estimated:false,location:'Gray Building'},
+  {id:43,category:'FENCE HARDWARE',name:'Galvanized barbed wire arms/brackets',qty:33,specs:'Mounts to post top',estimated:false,location:'Gray Building'},
   {id:44,category:'FENCE HARDWARE',name:'Galvanized flat plate brackets (~4" wide)',qty:3,specs:'2 bolt holes',estimated:false,location:'Gray Building'},
   {id:45,category:'FENCE HARDWARE',name:'Galvanized fence rail brackets/brace bands',qty:60,specs:'',estimated:true,location:'Gray Building'},
   {id:46,category:'FENCE HARDWARE',name:'Galvanized carriage bolts 2.5"',qty:65,specs:'Estimated',estimated:true,location:'Gray Building'},
   {id:47,category:'FENCE HARDWARE',name:'Galvanized carriage bolts 3/8" x 3" (boxed)',qty:50,specs:'#CBG3750300',estimated:false,location:'Gray Building'},
   {id:48,category:'FENCE HARDWARE',name:'Galvanized carriage bolts 3/8" (loose)',qty:175,specs:'With bag of nuts/washers',estimated:true,location:'Gray Building'},
-  {id:49,category:'FENCE HARDWARE',name:'Galvanized pipe rail couplers/sleeves',qty:37,specs:'1-3/4" diameter',estimated:false,location:'Gray Building'},
+  {id:49,category:'FENCE HARDWARE',name:'Galvanized pipe rail couplers/sleeves',qty:16,specs:'',estimated:false,location:'Gray Building'},
   {id:50,category:'FENCE HARDWARE',name:'Black wire fence tie hooks',qty:104,specs:'',estimated:false,location:'Gray Building'},
   {id:51,category:'FENCE HARDWARE',name:'Galvanized wire fence tie hooks',qty:4000,specs:'Multiple bags, estimated',estimated:true,location:'Gray Building'},
   {id:52,category:'FENCE HARDWARE',name:'L&C Enterprises Easy Twist Ties 9ga galvanized',qty:500,specs:'2-3/8" mesh, 1 box near full',estimated:true,location:'Gray Building'},
@@ -1430,7 +1446,7 @@ const EMBEDDED = [
   {id:62,category:'LANDSCAPE HARDWARE',name:'Black poly sheeting 6mil',qty:1,specs:'20x100ft, 2000 sq ft',estimated:false,location:'Conex 5'},
   {id:63,category:'FENCE HARDWARE',name:'Trex Hideaway Universal Fastener Kit',qty:1,specs:'900 fasteners w/ preset screws + drive bit, covers 500 sq ft',estimated:false,location:'Conex 5'},
   {id:64,category:'FENCE HARDWARE',name:'C-Deck Composite Deck Screws Winchester Grey',qty:1,specs:'10x2-3/4", 1750ct bucket',estimated:false,location:'Conex 5'},
-  {id:65,category:'MASONRY & RETAINING WALL',name:'Quikrete Expansion Joint Strips',qty:1,specs:'Box of ~14 strips, 4"x5ft each',estimated:false,location:'Conex 5'},
+  {id:65,category:'MASONRY & RETAINING WALL',name:'Quikrete Expansion Joint Strips',qty:1,specs:'Box of ~11 strips, 4"x5ft each',estimated:false,location:'Conex 5'},
   {id:66,category:'FENCE HARDWARE',name:'Cascades 12" Spikes',qty:3,specs:'Part #0010794, 2 full + 1 partial',estimated:true,location:'Conex 5'},
   {id:67,category:'FENCE HARDWARE',name:'Garden Craft Hardware Cloth 1/4" mesh',qty:3,specs:'24"x10ft rolls, galvanized',estimated:false,location:'Conex 5'},
   {id:68,category:'DRAINAGE',name:'Universal Downspout Extender - Black',qty:11,specs:'Fits standard 4" drain tile',estimated:false,location:'Conex 5'},
@@ -1441,26 +1457,23 @@ const EMBEDDED = [
   {id:73,category:'MISC/EQUIPMENT',name:'Metal Platform Bed Frame',qty:25,specs:'SKU BF-3611V3-TWIN, black, twin',estimated:false,location:'Conex 4'},
   {id:74,category:'MISC/EQUIPMENT',name:'Memory Foam Twin Mattress 5"',qty:25,specs:'SKU MAT-ME-BA-5T',estimated:false,location:'Conex 4'},
   {id:75,category:'FENCE HARDWARE',name:'Moose-proofing fencing wire',qty:2,specs:'~4ft tall x 50ft per roll',estimated:false,location:'Conex 3'},
-  {id:76,category:'FENCE HARDWARE',name:'CAMO EdgeClip Decking Fasteners',qty:1,specs:'900 ct., covers 500 sq ft, 3/16" spacing, grooved decking',estimated:false,location:'Gray Building'},
-  {id:77,category:'FENCE HARDWARE',name:'Galvanized Barbed Wire Spool',qty:1,specs:'Large spool, galvanized',estimated:false,location:'Gray Building'},
-  {id:78,category:'FENCE HARDWARE',name:'Ameristar Mont-Plus Double Ring Black',qty:172,specs:'Part #AB112, 40/box, ASSA ABLOY/Ameristar',estimated:false,location:'Gray Building'},
-  {id:79,category:'FENCE HARDWARE',name:'Ameristar Black 3/4" Plastic Plug',qty:1,specs:'Part #PB7519-30, 1 box/570 plugs, 19/bag x 30 bags, Ameristar/ASSA ABLOY',estimated:false,location:'Gray Building'},
-  {id:80,category:'FENCE HARDWARE',name:'Ameristar Bolt-On Hinge Kit Double Gate Black',qty:1,specs:'Part #AGBD, 2-3/4" upright/2-1/2" post, 14.3 lbs',estimated:false,location:'Gray Building'},
-  {id:81,category:'FENCE HARDWARE',name:'Sumo Gate Hardware by Lockey USA',qty:1,specs:'Model B110, Box 2 of 2, Lockey USA',estimated:false,location:'Gray Building'},
-  {id:82,category:'FENCE HARDWARE',name:'Ameristar Mont-Plus Universal Bracket Black',qty:60,specs:'Part #BB112SR, fits 2-1/2" post, 40 bags/box, Montage Plus, ASSA ABLOY',estimated:false,location:'Gray Building'},
-  {id:83,category:'FENCE HARDWARE',name:'Master Halco Adjustable 180 Degree Gate Hinge Commercial/Industrial',qty:1,specs:'Part #011020, up to 420 lbs, sold per pair, Master Halco',estimated:false,location:'Gray Building'},
-  {id:84,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:9,specs:'1.5" cal, B&B',estimated:false,location:'104'},
-  {id:85,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:3,specs:'2" cal, B&B',estimated:false,location:'104'},
+  {id:76,category:'LUMBER & POSTS',name:'4x4x10 Pressure Treated.',qty:0,specs:'',estimated:false,location:'104'},
+  {id:77,category:'PIT & AGGREGATE MATERIALS',name:'D-1',qty:17,specs:'',estimated:true,location:'Material Bins',unit:'tons'},
+  {id:78,category:'PIT & AGGREGATE MATERIALS',name:'3/4 Crushed Rock',qty:28,specs:'',estimated:true,location:'Material Bins',unit:'ea'},
+  {id:79,category:'PIT & AGGREGATE MATERIALS',name:'Class II Boulders',qty:25,specs:'',estimated:true,location:'Material Bins',unit:'ea'},
+  {id:80,category:'PIT & AGGREGATE MATERIALS',name:'Class I Boulders',qty:3,specs:'',estimated:true,location:'Material Bins',unit:'ea'},
+  {id:81,category:'MASONRY & RETAINING WALL',name:'Concrete reinforce fence roll',qty:1,specs:'20ft',estimated:false,location:'104'},
+  {id:83,category:'MISC/EQUIPMENT',name:'black aluminum edging',qty:5,specs:'20ft',estimated:false,location:'104'},
   {id:86,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:3,specs:'3" cal, B&B',estimated:false,location:'104'},
   {id:87,category:'NURSERY STOCK',name:'Paper Birch',qty:2,specs:'1.5" cal, B&B, park grade',estimated:false,location:'104'},
   {id:88,category:'NURSERY STOCK',name:'River Birch',qty:40,specs:'1-2" cal, B&B, park grade',estimated:false,location:'104'},
   {id:89,category:'NURSERY STOCK',name:'Helena Maple',qty:1,specs:'1.5" cal, B&B',estimated:false,location:'104'},
-  {id:90,category:'NURSERY STOCK',name:'Siberian Crabapple',qty:3,specs:'2" cal, B&B',estimated:false,location:'104'},
+  {id:90,category:'NURSERY STOCK',name:'Siberian Crabapple',qty:2,specs:'2" cal, B&B',estimated:false,location:'104'},
   {id:91,category:'NURSERY STOCK',name:'Siberian Crabapple',qty:2,specs:'2.5" cal, B&B',estimated:false,location:'104'},
-  {id:92,category:'NURSERY STOCK',name:'Cutleaf Weeping Birch',qty:4,specs:'1.5-2.5" cal, B&B',estimated:false,location:'104'},
+  {id:92,category:'NURSERY STOCK',name:'Cutleaf Weeping Birch',qty:3,specs:'1.5-2.5" cal, B&B',estimated:false,location:'104'},
   {id:93,category:'NURSERY STOCK',name:'Cardinal Mountain Ash',qty:7,specs:'1.5" cal, B&B',estimated:false,location:'104'},
   {id:94,category:'NURSERY STOCK',name:'Crimson King Maple',qty:6,specs:'1.5-2" cal, B&B',estimated:false,location:'104'},
-  {id:95,category:'NURSERY STOCK',name:'Red Oak',qty:2,specs:'1.5" cal, B&B',estimated:false,location:'104'},
+  {id:95,category:'NURSERY STOCK',name:'Red Oak',qty:2,specs:'1.5" cal, B&B',estimated:false,location:'104',unit:'ea'},
   {id:96,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:2,specs:'6 ft ht, B&B, sellable',estimated:false,location:'104'},
   {id:97,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:3,specs:'6 ft ht, B&B, rough/not sellable',estimated:false,location:'104'},
   {id:98,category:'NURSERY STOCK',name:'Colorado Blue Spruce',qty:2,specs:'5 ft ht, B&B',estimated:false,location:'104'},
@@ -1474,81 +1487,106 @@ const EMBEDDED = [
   {id:106,category:'NURSERY STOCK',name:'Deborah Maple',qty:3,specs:'2" cal, B&B',estimated:false,location:'104'},
   {id:107,category:'NURSERY STOCK',name:'Norway Maple',qty:2,specs:'clump, ~10 ft ht, B&B',estimated:false,location:'104'},
   {id:108,category:'NURSERY STOCK',name:'Amur Maple',qty:3,specs:'clump, B&B',estimated:false,location:'104'},
-  {id:109,category:'NURSERY STOCK',name:'Abbotswood Potentilla',qty:39,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:110,category:'NURSERY STOCK',name:'Alpine Currant',qty:48,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:111,category:'NURSERY STOCK',name:'Bailey Compact Cranberrybush',qty:8,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:112,category:'NURSERY STOCK',name:'Bergenia',qty:1,specs:'1 gal, container',estimated:false,location:'104'},
-  {id:113,category:'NURSERY STOCK',name:'Birds Nest Spruce',qty:3,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:114,category:'NURSERY STOCK',name:'Blueberry Northcountry',qty:3,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:109,category:'NURSERY STOCK',name:'Abbotswood Potentilla',qty:20,specs:'5 gal, original nursery stock (pre-Bailey)',estimated:false,location:'104',unit:'ea'},
+  {id:110,category:'NURSERY STOCK',name:'Alpine Currant',qty:7,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:111,category:'NURSERY STOCK',name:'Bailey Compact Cranberrybush',qty:3,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:112,category:'NURSERY STOCK',name:'Bergenia',qty:1,specs:'1 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:113,category:'NURSERY STOCK',name:'Birds Nest Spruce',qty:1,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:114,category:'NURSERY STOCK',name:'Blueberry Northcountry',qty:2,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
   {id:115,category:'NURSERY STOCK',name:'Cotoneaster Hedge',qty:92,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
-  {id:116,category:'NURSERY STOCK',name:'False Ash-leaf Spirea',qty:44,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:117,category:'NURSERY STOCK',name:'Forsythia',qty:28,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:116,category:'NURSERY STOCK',name:'False Ash-leaf Spirea',qty:4,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:117,category:'NURSERY STOCK',name:'Forsythia',qty:21,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
   {id:118,category:'NURSERY STOCK',name:'Gold Drop Potentilla',qty:6,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:119,category:'NURSERY STOCK',name:'Gold Mound Spirea',qty:102,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
+  {id:119,category:'NURSERY STOCK',name:'Gold Mound Spirea',qty:32,specs:'5 gal, original nursery stock (pre-Bailey)',estimated:false,location:'104',unit:'ea'},
   {id:120,category:'NURSERY STOCK',name:'Goldfinger Potentilla',qty:2,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:121,category:'NURSERY STOCK',name:'Goldflame Spirea',qty:26,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
-  {id:122,category:'NURSERY STOCK',name:'Green Velvet Boxwood',qty:35,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:123,category:'NURSERY STOCK',name:'Katherine Dykes Potentilla',qty:6,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:121,category:'NURSERY STOCK',name:'Goldflame Spirea (Bailey)',qty:127,specs:'5 gal, Bailey 2026',estimated:false,location:'104',unit:'ea'},
+  {id:122,category:'NURSERY STOCK',name:'Green Velvet Boxwood',qty:2,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:123,category:'NURSERY STOCK',name:'Katherine Dykes Potentilla',qty:4,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
   {id:124,category:'NURSERY STOCK',name:'Lemon Meringue Potentilla',qty:50,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
   {id:125,category:'NURSERY STOCK',name:'McKays White Potentilla',qty:35,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
-  {id:126,category:'NURSERY STOCK',name:'Rosa rugosa (mauve + alba)',qty:100,specs:'5 gal, Bailey 2026, combined total',estimated:false,location:'104'},
-  {id:127,category:'NURSERY STOCK',name:'Native Saskatoon',qty:1,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:126,category:'NURSERY STOCK',name:'Rosa rugosa (mauve + alba) (Bailey)',qty:94,specs:'5 gal, Bailey 2026, combined total',estimated:false,location:'104',unit:'ea'},
+  {id:127,category:'NURSERY STOCK',name:'Native Saskatoon',qty:4,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
   {id:128,category:'NURSERY STOCK',name:'Purple Leaf Plum / Sand Cherry',qty:3,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:129,category:'NURSERY STOCK',name:'Red Twig Dogwood',qty:246,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
-  {id:130,category:'NURSERY STOCK',name:'Siberian Peashrub',qty:4,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:129,category:'NURSERY STOCK',name:'Red Twig Dogwood (Bailey)',qty:246,specs:'5 gal, Bailey 2026',estimated:false,location:'104',unit:'ea'},
+  {id:130,category:'NURSERY STOCK',name:'Siberian Peashrub',qty:3,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
   {id:131,category:'NURSERY STOCK',name:'Superstar Spirea',qty:9,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:132,category:'NURSERY STOCK',name:'Tor Birchleaf Spirea',qty:10,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:133,category:'NURSERY STOCK',name:'Common Purple Lilac',qty:3,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
-  {id:134,category:'NURSERY STOCK',name:'Amur Maple',qty:51,specs:'5 gal, Bailey 2026',estimated:false,location:'104'},
-  {id:135,category:'NURSERY STOCK',name:'Donald Wyman Lilac',qty:24,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:136,category:'NURSERY STOCK',name:'James MacFarlane Lilac',qty:17,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:137,category:'NURSERY STOCK',name:'Miss Canada Lilac',qty:11,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:138,category:'NURSERY STOCK',name:'Miss Kim Lilac',qty:19,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:139,category:'NURSERY STOCK',name:'Villosa Late Lilac',qty:8,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:132,category:'NURSERY STOCK',name:'Tor Birchleaf Spirea',qty:4,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:133,category:'NURSERY STOCK',name:'Common Purple Lilac',qty:3,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:134,category:'NURSERY STOCK',name:'Amur Maple (Bailey)',qty:49,specs:'5 gal, Bailey 2026',estimated:false,location:'104',unit:'ea'},
+  {id:135,category:'NURSERY STOCK',name:'Donald Wyman Lilac',qty:10,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:136,category:'NURSERY STOCK',name:'James MacFarlane Lilac',qty:18,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:137,category:'NURSERY STOCK',name:'Miss Canada Lilac',qty:9,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:138,category:'NURSERY STOCK',name:'Miss Kim Lilac',qty:3,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:139,category:'NURSERY STOCK',name:'Villosa Late Lilac',qty:1,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
   {id:140,category:'NURSERY STOCK',name:'Fox Pavement Rose',qty:8,specs:'5 gal, container',estimated:false,location:'104'},
   {id:141,category:'NURSERY STOCK',name:'Hansa Rose',qty:27,specs:'5 gal, container',estimated:false,location:'104'},
   {id:142,category:'NURSERY STOCK',name:'Purple Pavement Rose',qty:17,specs:'5 gal, container',estimated:false,location:'104'},
   {id:143,category:'NURSERY STOCK',name:'Snow Pavement Rose',qty:2,specs:'5 gal, container',estimated:false,location:'104'},
   {id:144,category:'NURSERY STOCK',name:'Theresa Bugnet Rose',qty:4,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:145,category:'NURSERY STOCK',name:'Andorra Compact Juniper',qty:8,specs:'5 gal, container',estimated:false,location:'104'},
+  {id:145,category:'NURSERY STOCK',name:'Andorra Compact Juniper',qty:13,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
   {id:146,category:'NURSERY STOCK',name:'Blue Chip Juniper',qty:14,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:147,category:'NURSERY STOCK',name:'Blue Rug / Wilton Juniper',qty:22,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:148,category:'NURSERY STOCK',name:'Prince of Wales Juniper',qty:14,specs:'5 gal, container',estimated:false,location:'104'},
-  {id:149,category:'NURSERY STOCK',name:'Arctic Iris',qty:36,specs:'1 gal, container',estimated:false,location:'104'},
-  {id:150,category:'NURSERY STOCK',name:'Avalanche Reed Grass',qty:35,specs:'1 gal, container, weed risk',estimated:false,location:'104'},
-  {id:151,category:'NURSERY STOCK',name:'Karl Foerster Feather Reed Grass',qty:91,specs:'1 gal, container, weed risk',estimated:false,location:'104'},
-  {id:152,category:'NURSERY STOCK',name:'Old Fashioned Pink Bleeding Heart',qty:7,specs:'1 gal, container',estimated:false,location:'104'},
-  {id:153,category:'NURSERY STOCK',name:'Ostrich Fern',qty:5,specs:'1 gal, container',estimated:false,location:'104'},
-  {id:154,category:'NURSERY STOCK',name:'Overdam Reed Grass',qty:70,specs:'1 gal, container, weed risk',estimated:false,location:'104'},
+  {id:147,category:'NURSERY STOCK',name:'Blue Rug / Wilton Juniper',qty:50,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:148,category:'NURSERY STOCK',name:'Prince of Wales Juniper',qty:13,specs:'5 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:149,category:'NURSERY STOCK',name:'Arctic Iris',qty:2,specs:'1 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:150,category:'NURSERY STOCK',name:'Avalanche Reed Grass',qty:9,specs:'1 gal, container, weed risk',estimated:false,location:'104',unit:'ea'},
+  {id:151,category:'NURSERY STOCK',name:'Karl Foerster Feather Reed Grass',qty:67,specs:'1 gal, container, weed risk',estimated:false,location:'104',unit:'ea'},
+  {id:152,category:'NURSERY STOCK',name:'Old Fashioned Pink Bleeding Heart',qty:1,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:153,category:'NURSERY STOCK',name:'Ostrich Fern',qty:1,specs:'1 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:154,category:'NURSERY STOCK',name:'Overdam Reed Grass',qty:15,specs:'1 gal, container, weed risk',estimated:false,location:'104',unit:'ea'},
   {id:155,category:'NURSERY STOCK',name:'Smooth Aster',qty:1,specs:'1 gal, container',estimated:false,location:'104'},
-  {id:156,category:'NURSERY STOCK',name:'Snowdrop Anemone',qty:6,specs:'1 gal, container',estimated:false,location:'104'},
-  {id:157,category:'NURSERY STOCK',name:'Stella de Oro Daylily',qty:11,specs:'1 gal, container',estimated:false,location:'104'},
+  {id:156,category:'NURSERY STOCK',name:'Snowdrop Anemone',qty:0,specs:'1 gal, container',estimated:false,location:'104',unit:'ea'},
+  {id:157,category:'NURSERY STOCK',name:'Stella de Oro Daylily',qty:2,specs:'1 gal, container',estimated:false,location:'104'},
   {id:158,category:'NURSERY STOCK',name:'Wildflower (variety unknown)',qty:2,specs:'1 gal, container',estimated:false,location:'104'},
   {id:159,category:'NURSERY STOCK',name:'Winky Mix Columbine',qty:1,specs:'1 gal, container',estimated:false,location:'104'},
-  {id:160,category:'PIT & AGGREGATE MATERIALS',name:'D-1 Base Material',qty:17,unit:'yards',specs:'Estimated',estimated:true,location:'Material Bins'},
-  {id:161,category:'PIT & AGGREGATE MATERIALS',name:'3/4 Crushed Rock',qty:28,unit:'yards',specs:'Estimated',estimated:true,location:'Material Bins'},
-  {id:162,category:'PIT & AGGREGATE MATERIALS',name:'Class II Boulders',qty:25,unit:'tons',specs:'Estimated',estimated:true,location:'Material Bins'},
-  {id:163,category:'PIT & AGGREGATE MATERIALS',name:'Class I Boulders',qty:3,unit:'tons',specs:'Estimated',estimated:true,location:'Material Bins'},
-  {id:168,category:'PIT & AGGREGATE MATERIALS',name:'Class III Boulders',qty:0,unit:'tons',specs:'Estimated — needs qty confirmed',estimated:true,location:'Material Bins'},
-  {id:169,category:'PIT & AGGREGATE MATERIALS',name:'Topsoil (Screened)',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:170,category:'PIT & AGGREGATE MATERIALS',name:'Topsoil (Pit Run / Unscreened)',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:171,category:'PIT & AGGREGATE MATERIALS',name:'Fill Sand',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:172,category:'PIT & AGGREGATE MATERIALS',name:'Concrete Sand',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:173,category:'PIT & AGGREGATE MATERIALS',name:'Pit Run Gravel',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:174,category:'PIT & AGGREGATE MATERIALS',name:'D-2 Base Material',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:175,category:'PIT & AGGREGATE MATERIALS',name:'Structural Fill',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:176,category:'PIT & AGGREGATE MATERIALS',name:'1.5" Crushed Rock',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:177,category:'PIT & AGGREGATE MATERIALS',name:'3" Minus Rock',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:178,category:'PIT & AGGREGATE MATERIALS',name:'3/4" Drain Rock',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:179,category:'PIT & AGGREGATE MATERIALS',name:'1.5" Drain Rock',qty:0,unit:'yards',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:164,category:'MASONRY & RETAINING WALL',name:'Concrete Reinforcement Fence Roll',qty:1,specs:'20ft',estimated:false,location:'104'},
-  {id:165,category:'LANDSCAPE HARDWARE',name:'Black Aluminum Edging',qty:5,specs:'20ft sections',estimated:false,location:'104'},
-  {id:180,category:'LANDSCAPE HARDWARE',name:'Landscape Fabric Staples / Pins',qty:0,unit:'ea',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:181,category:'LANDSCAPE HARDWARE',name:'Landscape Fabric Nails',qty:0,unit:'ea',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:182,category:'MASONRY & RETAINING WALL',name:'Retaining Wall Mesh / Geogrid',qty:0,unit:'ft',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:183,category:'MASONRY & RETAINING WALL',name:'Retaining Wall Block',qty:0,unit:'ea',specs:'Add actual quantity on hand',estimated:true,location:'Material Bins'},
-  {id:166,category:'FENCE HARDWARE',name:'Versalock 10"',qty:4,specs:'50 per box',estimated:false,location:'Conex 5'},
-  {id:167,category:'LANDSCAPE HARDWARE',name:'6 mil Poly Sheeting 20x100',qty:1,specs:'20x100ft',estimated:false,location:'Conex 5'},
+  {id:160,category:'MASONRY & RETAINING WALL',name:'QPR Quality Pavement Repair - Permanent Pothole Repair',qty:43,specs:'Item: 13491, Brand: QPR, Works in water-filled holes, Workable from 15°C to 40.5°C (105°F), No mixing or tacking required, Open to traffic immediately, Approved by Street Departments & Utility Companies',estimated:false,location:'104'},
+  {id:161,category:'LUMBER & POSTS',name:'Pressure Treated Timber',qty:13,specs:'8x8, 18ft length, HFR #2BTR S4S INC CAC CD.31 IGS, SKU 704001555758, 1.152 BF board feet, dated 04/14/2025',estimated:false,location:'104'},
+  {id:162,category:'LUMBER & POSTS',name:'Pressure Treated Timber Post',qty:2,specs:'4x6x8 ft, Actual Size: 3.56-in x 5.62-in x 8-ft, #2 Grade, Ground Contact General Use, Severe Weather, AWPA UC4A, CA-C 0.15 PCF, UPC: 0984110903512, CAC CD.31',estimated:false,location:'104'},
+  {id:163,category:'LUMBER & POSTS',name:'Pressure Treated Timber Post',qty:8,specs:'6x6x8, Actual Size: 5.5-IN x 5.5-IN x 8-FT, #2 S4S, AWPA U1 UC4B, CA-C 31 PCF, Ground Contact, Heavy Duty, Allweather Wood LLC, Washougal WA 98671, Barcode: 98411 09044',estimated:false,location:'104'},
+  {id:164,category:'LUMBER & POSTS',name:'Pressure Treated Post',qty:1,specs:'4x4x10, Actual Size: 3.56-in x 3.56-in x 10-ft, STD&BTR, AWPA U1 UC4A (CA-C) 0.15 PCF, Ground Contact General Use, Severe Weather brand, Severe Weather Wood LLC, Snoqalmie WA 98671, Barcode: 98411 09032',estimated:false,location:'104'},
+  {id:165,category:'LUMBER & POSTS',name:'Pressure Treated Post',qty:61,specs:'4x4 x 8-FT, Actual Size: 3.56-IN x 3.56-IN, Grade: STD&BTR, Treatment: AWPA U1 UC4A (C+CI) 0.15 PCF Ground Contact, Brand: Severe Weather by Allweather Wood LLC, UPC: 0 98411 09203 5',estimated:false,location:'Unknown'},
+  {id:166,category:'LUMBER & POSTS',name:'Pressure Treated Post',qty:61,specs:'4x4 x 8-FT, Actual Size: 3.56-IN x 3.56-IN, Grade: STD&BTR, Treatment: AWPA U1 UC4A (C+CI) 0.15 PCF Ground Contact, Brand: Severe Weather by Allweather Wood LLC, UPC: 0 98411 09203 5',estimated:false,location:'Unknown'},
+  {id:167,category:'LUMBER & POSTS',name:'Pressure Treated Post',qty:0,specs:'4x4x8 ft, Actual Size 3.56-in x 3.56-in x 8-ft, STD&BTR, Severe Weather brand, Allweather Wood LLC Washougal WA 98671, AWPA U1 UC4A (CA-C) 0.15 PCF Ground Contact General Use, Quality Inspected, UPC 098411092035',estimated:false,location:'104'},
+  {id:168,category:'MASONRY & RETAINING WALL',name:'Concrete Masonry Unit (CMU) / Cinder Block',qty:8,specs:'Standard 8x8x16 inch hollow core concrete block, two-cell design, gray Portland cement construction, no visible brand markings',estimated:false,location:'104'},
+  {id:169,category:'MASONRY & RETAINING WALL',name:'Red Trapazoid wall topper',qty:5,specs:'',estimated:false,location:'104'},
+  {id:170,category:'MASONRY & RETAINING WALL',name:'Red Trapazoid wall topper',qty:5,specs:'',estimated:false,location:'104'},
+  {id:171,category:'MASONRY & RETAINING WALL',name:'Red Concrete Masonry Unit (CMU) / Concrete Block',qty:6,specs:'Appears to be a standard 8x8x16 inch hollow core concrete block, tan/buff colored, broken/damaged condition, hollow core design with cross-webbing, no visible brand markings',estimated:false,location:'104'},
+  {id:172,category:'MASONRY & RETAINING WALL',name:'Interlocking Hollow Block - Buff/Tan',qty:9,specs:'The Core Style: Unlike standard dense garden stones, this features a single large Hollow Core (or open cell). This cavity is engineered to save weight during handling and is intended to be field-filled with coarse gravel for drainage and weight locking',estimated:false,location:'104'},
+  {id:173,category:'MASONRY & RETAINING WALL',name:'Interlocking Hollow Block grey',qty:5,specs:'',estimated:false,location:'104'},
+  {id:174,category:'MASONRY & RETAINING WALL',name:'Concrete Paver Blocks',qty:300,specs:'Approximately 4x8 inch tumbled concrete pavers, charcoal/gray color, weathered/aged finish, standard thickness approximately 2-3/8 inch, sold by pallet',estimated:true,location:'104'},
+  {id:175,category:'MASONRY & RETAINING WALL',name:'Cascade Blue Print Pervious Paver / Paving Stone',qty:240,specs:'Part No: PV0600ODCRCAM, 240/Pallet, Brand: Old Dominion, Cascade Blue Print series, permeable/pervious concrete paver',estimated:false,location:'Unknown'},
+  {id:176,category:'MASONRY & RETAINING WALL',name:'Summit Blend Pavers/Stones - Old Dominion Circle',qty:240,specs:'Part Number: PV060ODCRSBM, Batch: P210906, Summit Blend colorway, likely 6-inch paver units',estimated:false,location:'104'},
+  {id:177,category:'MASONRY & RETAINING WALL',name:'Concrete Paver / Tumbled Cobblestone',qty:19,specs:'Approximately 4x4x2 inch tumbled concrete cobblestone paver, gray/charcoal color, tumbled/aged finish, no visible brand markings',estimated:false,location:'104'},
+  {id:178,category:'MASONRY & RETAINING WALL',name:'Old Dominion Circle Summit Blend Pavers',qty:720,specs:'Summit Blend color, Circle/Radius paver kit, Old Dominion brand, Part: P2149808, Qty: 240 pieces, wrapped pallet',estimated:true,location:'104'},
+  {id:179,category:'MASONRY & RETAINING WALL',name:'Concrete Patio Pavers / Stepping Stones',qty:10,specs:'Approximately 24x24 inches, ~2 inch thickness, standard grey concrete finish, smooth top surface, precast concrete slabs, stacked on wooden pallets',estimated:false,location:'104'},
+  {id:180,category:'MASONRY & RETAINING WALL',name:'Interlocking Concrete Paver - Dogbone/Dumbbell Shape',qty:270,specs:'Approximately 8x8 inch, H-block/dogbone profile, standard gray concrete, 60mm thickness, interlocking design for permeable or standard paving applications, no visible brand markings',estimated:true,location:'104'},
+  {id:184,category:'PIT & AGGREGATE MATERIALS',name:'Topsoil (Ton)',qty:0,specs:'',estimated:false,location:'Unknown',unit:'yards'},
+  {id:185,category:'PIT & AGGREGATE MATERIALS',name:'Fines (Ton)',qty:0,specs:'',estimated:false,location:'Unknown',unit:'ea'},
+  {id:186,category:'PIT & AGGREGATE MATERIALS',name:'Mids (Ton)',qty:0,specs:'',estimated:false,location:'Unknown',unit:'ea'},
+  {id:187,category:'PIT & AGGREGATE MATERIALS',name:'Overs (Ton)',qty:0,specs:'',estimated:false,location:'Unknown',unit:'ea'},
+  {id:188,category:'PIT & AGGREGATE MATERIALS',name:'Bark/Wood Mulch (Yard)',qty:0,specs:'',estimated:false,location:'Unknown',unit:'ea'},
+  {id:189,category:'NURSERY STOCK',name:'Lilac (variety TBD)',qty:1,specs:'container, variety to be confirmed',estimated:false,location:'104',unit:'ea'},
+  {id:190,category:'NURSERY STOCK',name:'Cotoneaster (Bailey\'s)',qty:55,specs:'5 gal, Bailey shipment count, separate from Cotoneaster Hedge',estimated:false,location:'104',unit:'ea'},
+  {id:191,category:'NURSERY STOCK',name:'Regent Serviceberry (Amelanchier alnifolia)',qty:10,specs:'confirmed via tag, McKay Nursery',estimated:false,location:'104',unit:'ea'},
+  {id:192,category:'NURSERY STOCK',name:'Alder',qty:2,specs:'container, found during Jul 2026 audit',estimated:false,location:'104',unit:'ea'},
+  {id:193,category:'NURSERY STOCK',name:'Bronze Tufted Hair Grass',qty:33,specs:'container, found during Jul 2026 audit',estimated:false,location:'104',unit:'ea'},
+  {id:194,category:'NURSERY STOCK',name:'Tufted Hair Grass',qty:35,specs:'container, found during Jul 2026 audit',estimated:false,location:'104',unit:'ea'},
+  {id:195,category:'NURSERY STOCK',name:'Pink Spirea (First Edition)',qty:3,specs:'container, found during Jul 2026 audit',estimated:false,location:'104',unit:'ea'},
+  {id:196,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:9,specs:'1.5" cal, B&B',estimated:false,location:'104',unit:'ea'},
+  {id:197,category:'NURSERY STOCK',name:'Swedish Columnar Aspen',qty:3,specs:'2" cal, B&B',estimated:false,location:'104',unit:'ea'},
+  {id:198,category:'FENCE HARDWARE',name:'versalock 10"',qty:4,specs:'50',estimated:false,location:'Conex 5',unit:'ea'},
+  {id:199,category:'FENCE HARDWARE',name:'6 mil 20x100 plastic',qty:0,specs:'20x100',estimated:false,location:'Conex 5',unit:'ea'},
+  {id:200,category:'NURSERY STOCK',name:'Common Purple Lilac (Bailey)',qty:47,specs:'#2 container, Bailey 2026 (May order)',estimated:false,location:'104',unit:'ea'},
+  {id:201,category:'MISC/EQUIPMENT',name:'Kraft Faced Fiberglass Insulation Batts',qty:5,specs:'K-1241, 2x4 Walls, 11 pieces, R-15, 3.5" x 15" x 93", Berkshire Hathaway Company',estimated:false,location:'Gray Building',unit:'roll'},
+  {id:202,category:'HYDROSEEDING MATERIALS',name:'Straw Hay Bales',qty:0,specs:'Standard agricultural straw bales, compressed and wrapped in netting, typically 40-50 lbs per bale, used for erosion control and hydroseeding applications',estimated:false,location:'104',unit:'ea'},
+  {id:203,category:'MASONRY & RETAINING WALL',name:'Fiber cement board. 3x5',qty:19,specs:'1/4 in 3x5ft',estimated:false,location:'104',unit:'ea'},
+  {id:204,category:'MASONRY & RETAINING WALL',name:'Fiber cement board. 3x5',qty:19,specs:'1/4 in 3x5ft',estimated:false,location:'104',unit:'ea'},
+  {id:205,category:'DRAINAGE',name:'Coir Logs (straw Fiber Logs)',qty:2,specs:'Large diameter erosion control logs, natural straw fiber material, biodegradable, suitable for slope stabilization and erosion prevention',estimated:false,location:'104',unit:'roll'},
+  {id:206,category:'MASONRY & RETAINING WALL',name:'Expansion Joint Strips',qty:21,specs:'Quikrete brand, expansion joint strips for concrete, yellow polyethylene material, used for concrete control joints and expansion gaps',estimated:false,location:'104',unit:'box'},
+  {id:207,category:'LUMBER & POSTS',name:'Trex Enhance G2 Composite Decking Board',qty:4,specs:'94 in x 5.5 in x 1 in, 24 mm x 140 mm, Trex brand, composite decking material',estimated:false,location:'104',unit:'ea'},
+  {id:208,category:'FENCE HARDWARE',name:'Chain Link Fence Fabric',qty:3,specs:'Galvanized steel, diamond mesh pattern, residential grade, rolls of fabric fencing material',estimated:false,location:'104',unit:'roll'},
+  {id:209,category:'FENCE HARDWARE',name:'Galvanized Gate Template',qty:10,specs:'Galvanized steel frame, approximately 5-6 feet tall, standard construction site temporary fencing panel, welded tube construction',estimated:false,location:'104',unit:'ea'},
+  {id:210,category:'NURSERY STOCK',name:'Gold Mound Spirea (Bailey)',qty:73,specs:'#5, Bailey May 2026 shipment - mostly Wolf job',estimated:false,location:'104',unit:'ea'},
+  {id:211,category:'NURSERY STOCK',name:'Abbotswood Potentilla (Bailey)',qty:26,specs:'#5, Bailey May 2026 shipment - mostly Wolf job',estimated:false,location:'104',unit:'ea'},
 ];
 
 
@@ -1857,6 +1895,10 @@ function addToPull(id, qty) {
 async function commitPull() {
   const ids = Object.keys(pullList);
   if (!ids.length) return;
+  // Every write here is "on-hand minus what we took", so committing against the
+  // baked-in snapshot would push a months-old number into the Sheet as if it were
+  // a fresh count. The staged list survives in localStorage, so waiting costs nothing.
+  if (!liveData) { showToast(t('pullNeedsLive'), 'error'); return; }
   const job = document.getElementById('pullJobInput').value.trim();
   if (!job) { showToast(t('jobReq'), 'error'); document.getElementById('pullJobInput').focus(); return; }
 
@@ -2473,12 +2515,26 @@ window.onload = () => {
   });
 };
 
+// Whether what is on screen came from the Sheet or from the baked-in snapshot.
+// Anything that writes a quantity back has to know the difference.
+let liveData = false;
+
+function updateStaleBanner() {
+  const el = document.getElementById('staleBanner');
+  if (!el) return;
+  el.style.display = liveData ? 'none' : 'flex';
+  if (!liveData) el.innerHTML = `<span>${t('staleWarn').replace('D', EMBEDDED_DATE)}</span>
+    <button class="stale-retry" onclick="loadItems()">${t('retry')}</button>`;
+}
+
 async function loadItems() {
   const btn = document.getElementById('syncBtn');
   btn.classList.add('syncing'); btn.textContent = t('syncing');
   // Always load embedded data first so app is never blank
   EMBEDDED.forEach(i => { i.unit = normalizeUnit(i.unit); });
   items = [...EMBEDDED];
+  liveData = false;
+  updateStaleBanner();
   renderItems();
   if (APPS_SCRIPT_URL) {
     try {
@@ -2498,11 +2554,13 @@ async function loadItems() {
           if (LOCATION_ALIASES[i.location]) i.location = LOCATION_ALIASES[i.location];
           i.unit = normalizeUnit(i.unit);
         });
-        // Merge sheet data with any embedded seed items the sheet doesn't have yet
-        // (e.g. nursery stock, or newer categories like Pit & Aggregate that haven't been synced to the sheet)
-        const sheetIds = new Set(data.items.map(i => i.id));
-        const embeddedOnly = EMBEDDED.filter(i => !sheetIds.has(i.id));
-        items = [...data.items, ...embeddedOnly];
+        // The Sheet replaces the seed outright. It used to keep any embedded row the
+        // Sheet lacked, which quietly undid deletions -- #84/#85 Swedish Columnar
+        // Aspen came back on every sync long after they were gone, and their July
+        // counts read as current.
+        items = data.items;
+        liveData = true;
+        updateStaleBanner();
         showToast(t('synced'), 'success'); renderItems();
       } else {
         throw new Error(data && data.error ? data.error : 'No items in response');
