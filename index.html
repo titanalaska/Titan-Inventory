@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TITAN ALASKA — Inventory</title>
-<link rel="stylesheet" href="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css">
-<script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"></script>
 <style>
   :root {
     --black: #0a0a0a; --steel: #111111; --iron: #1a1a1a;
@@ -299,28 +297,47 @@
   .disposal-entry .d-cause { color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
   .disposal-entry .d-time { color: #555; font-size: 10px; }
 
-  /* LOCATIONS MAP */
-  #locationsMapCanvas { width: 100%; height: 320px; border-radius: var(--radius); background: var(--iron); overflow: hidden; }
-  .map-location-marker {
-    width: 26px; height: 26px; border-radius: 50%; background: var(--rust); color: var(--snow);
-    border: 2px solid var(--snow); box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center; font-size: 13px;
-  }
-  .map-set-mode { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-  .map-set-mode select { flex: 1; min-width: 140px; }
-  .map-set-active { border: 2px solid var(--gold) !important; }
-  .map-unmapped-label { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin: 12px 0 4px; }
-  .map-unmapped-list { font-size: 12px; color: var(--fog); line-height: 1.6; }
-  /* TomTom's default light popup clashes with the dark theme */
-  .tt-popup-content, .mapboxgl-popup-content { background: var(--steel) !important; color: var(--snow) !important; border-radius: var(--radius) !important; font-family: var(--font) !important; }
-  .tt-popup-tip, .mapboxgl-popup-tip { border-top-color: var(--steel) !important; }
-  .map-popup-title { font-weight: 700; color: var(--gold); margin-bottom: 2px; }
-  .map-popup-sub { font-size: 12px; color: var(--fog); }
-
   /* LATEST AERIAL */
   .aerial-date { font-size: 12px; color: var(--mid); margin-bottom: 12px; line-height: 1.5; }
   .aerial-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .aerial-grid img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius); cursor: zoom-in; background: var(--iron); }
+
+  /* WHERE IS IT — zone drill-down */
+  .zone-modal { max-width: 720px; }
+  .zone-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 10px; }
+  .zone-crumb { background: none; border: none; color: var(--gold); font-family: var(--font); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; padding: 2px 0; }
+  .zone-crumb.current { color: var(--fog); cursor: default; }
+  .zone-crumb-sep { color: var(--mid); }
+  /* The photo and its hotspot overlay must share one box exactly, or the polygons drift. */
+  .zone-stage { position: relative; width: 100%; border-radius: var(--radius); overflow: hidden; background: var(--iron); line-height: 0; }
+  .zone-stage img { width: 100%; height: auto; display: block; }
+  .zone-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .zone-hotspot { fill: rgba(212,160,23,0.16); stroke: var(--gold); stroke-width: 0.004; cursor: pointer; }
+  .zone-hotspot:hover { fill: rgba(212,160,23,0.34); }
+  .zone-hotspot-label { position: absolute; transform: translate(-50%,-50%); color: var(--snow); font-size: 12px; font-weight: 700; line-height: 1.2; text-align: center; text-shadow: 0 0 4px #000, 0 1px 3px #000; pointer-events: auto; cursor: pointer; white-space: nowrap; }
+  .zone-draft { fill: rgba(224,112,48,0.25); stroke: var(--rust); stroke-width: 0.004; stroke-dasharray: 0.01 0.008; }
+  .zone-draft-pt { fill: var(--rust); stroke: var(--snow); stroke-width: 0.002; }
+  .zone-nophoto { padding: 26px 14px; text-align: center; color: var(--mid); font-size: 12px; line-height: 1.6; border: 1px dashed #3a3a3a; border-radius: var(--radius); }
+  .zone-strip { display: flex; gap: 6px; overflow-x: auto; margin-top: 8px; padding-bottom: 2px; }
+  .zone-strip img { width: 72px; height: 54px; object-fit: cover; border-radius: 4px; cursor: pointer; opacity: 0.5; border: 2px solid transparent; flex: none; }
+  .zone-strip img.active { opacity: 1; border-color: var(--gold); }
+  .zone-children { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .zone-child-btn { background: var(--steel); border: 1px solid #3a3a3a; color: var(--snow); border-radius: var(--radius); padding: 9px 12px; font-family: var(--font); font-size: 12px; font-weight: 700; cursor: pointer; text-align: left; }
+  .zone-child-btn:active { transform: scale(0.97); }
+  .zone-child-btn .zc-count { display: block; font-size: 10px; font-weight: 400; color: var(--mid); margin-top: 2px; letter-spacing: 0.04em; }
+  .zone-child-btn.zc-empty { opacity: 0.55; }
+  .zone-section-label { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin: 16px 0 6px; }
+  .zone-items { max-height: 230px; overflow-y: auto; }
+  .zone-item-row { display: flex; align-items: center; gap: 8px; padding: 7px 2px; border-bottom: 1px solid #262626; font-size: 13px; }
+  .zone-item-row .zi-name { flex: 1; min-width: 0; }
+  .zone-item-row .zi-qty { color: var(--gold); font-weight: 700; white-space: nowrap; }
+  .zone-empty { color: var(--mid); font-size: 12px; padding: 10px 2px; }
+  .zone-admin { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; padding: 8px; background: #14140e; border: 1px solid #3a3a1a; border-radius: var(--radius); }
+  .zone-admin-hint { flex-basis: 100%; font-size: 11px; color: var(--gold); line-height: 1.5; }
+  .zone-mini-btn { background: var(--steel); border: 1px solid #3a3a3a; color: var(--snow); border-radius: 4px; padding: 5px 10px; font-family: var(--font); font-size: 11px; font-weight: 700; cursor: pointer; }
+  .zone-mini-btn.danger { border-color: #6a2a2a; color: #e07070; }
+  .zone-mini-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
+  .zone-where-btn { background: none; border: 1px solid #2a5a8a; color: #5a9fd4; border-radius: 4px; padding: 4px 9px; font-family: var(--font); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -381,7 +398,7 @@
   <button class="job-btn" style="border-color:#5a2000;color:#e07030" onclick="openDisposalLog()">🗑 Disposal Log</button>
   <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull Material</button>
   <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 Pull From List</button>
-  <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openLocationsMap()">🗺 Map</button>
+  <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where Is It</button>
   <button class="job-btn" style="border-color:#5a2a8a;color:#b389d9" onclick="openAerialPhotos()">🚁 Latest Aerial</button>
 </div>
 
@@ -571,25 +588,6 @@
   </div>
 </div>
 
-<!-- LOCATIONS MAP MODAL -->
-<div class="modal-overlay" id="mapModal">
-  <div class="modal" style="max-width:640px">
-    <h2 style="color:#5a9fd4">🗺 Storage Locations</h2>
-    <div id="mapAdminControls" style="display:none">
-      <div class="map-set-mode">
-        <select id="mapSetLocSelect"></select>
-        <button class="btn-save" id="mapSetLocBtn" onclick="toggleSetLocationMode()">📍 Tap Map To Place</button>
-      </div>
-    </div>
-    <div id="locationsMapCanvas"></div>
-    <div class="map-unmapped-label" id="mapUnmappedLabel" style="display:none">Not yet on the map:</div>
-    <div class="map-unmapped-list" id="mapUnmappedList"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeLocationsMap()">Close</button>
-    </div>
-  </div>
-</div>
-
 <!-- LATEST AERIAL MODAL -->
 <div class="modal-overlay" id="aerialModal">
   <div class="modal" style="max-width:640px">
@@ -621,6 +619,39 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closePullModal()">Close</button>
       <button class="btn-delete" onclick="clearPull()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- WHERE IS IT — ZONE DRILL-DOWN MODAL -->
+<div class="modal-overlay" id="zoneModal">
+  <div class="modal zone-modal">
+    <h2 id="zoneTitle">📍 Where Is It</h2>
+    <div class="zone-crumbs" id="zoneCrumbs"></div>
+    <div id="zoneAdminBar" class="zone-admin" style="display:none"></div>
+    <div id="zoneStageWrap"></div>
+    <div id="zoneBody"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeZones()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAME A NEW ZONE (admin draw mode) -->
+<div class="modal-overlay" id="zoneNameModal">
+  <div class="modal name-modal">
+    <h2>Name This Area</h2>
+    <div class="modal-field full">
+      <label>What is this area called?</label>
+      <input type="text" id="zoneNameInput" placeholder="e.g. Conex 3">
+    </div>
+    <div class="modal-field full">
+      <label>Which inventory location does it hold? (optional)</label>
+      <select id="zoneLocSelect"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cancelZoneDraft()">Cancel</button>
+      <button class="btn-save" onclick="saveZoneDraft()">Save Area</button>
     </div>
   </div>
 </div>
@@ -709,6 +740,15 @@ const T = {
     otherSizes:'N other size(s)',
     staleWarn:'⚠ OFFLINE — counts below are a saved copy from D, not live',
     retry:'Retry', pullNeedsLive:'Cannot pull while offline — sync first, your list is saved',
+    whereBtn:'📍 Where?', zoneGoDeeper:'Go deeper', zoneWhatsHere:"What's here",
+    zoneItemsWord:'items', zoneNothingHere:'Nothing logged here',
+    zoneDrawArea:'Draw area', zoneCancelDraw:'Cancel', zoneFinishArea:'Finish',
+    zoneUndoPoint:'Undo point', zoneClearAreas:'Clear areas', zoneExport:'Export zones',
+    zoneDrawHint:'Tap each corner of the area on the photo, then Finish. Double-tap the photo to view it full size.',
+    zoneNeed3:'Tap at least 3 corners', zoneNoLoc:'— no inventory location —',
+    zoneSaved:'Area "N" saved ✓', zoneExported:'Zones exported — send the file to Claude to commit',
+    zoneConfirmClear:'Remove every drawn area on this photo?',
+    zoneNoMatch:'No zone covers "L" yet — draw one on the yard photo',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
     pullAllMatched:'ADD ALL MATCHED TO PULL LIST',
     onHand:'On hand', staging:'Staging', takeAll:'All',
@@ -759,6 +799,15 @@ const T = {
     otherSizes:'N otro(s) tamaño(s)',
     staleWarn:'⚠ SIN CONEXIÓN — las cantidades son una copia del D, no están al día',
     retry:'Reintentar', pullNeedsLive:'No se puede retirar sin conexión — sincroniza, tu lista está guardada',
+    whereBtn:'📍 ¿Dónde?', zoneGoDeeper:'Ver más de cerca', zoneWhatsHere:'Qué hay aquí',
+    zoneItemsWord:'artículos', zoneNothingHere:'Nada registrado aquí',
+    zoneDrawArea:'Dibujar área', zoneCancelDraw:'Cancelar', zoneFinishArea:'Terminar',
+    zoneUndoPoint:'Deshacer punto', zoneClearAreas:'Borrar áreas', zoneExport:'Exportar zonas',
+    zoneDrawHint:'Toca cada esquina del área en la foto y luego Terminar. Doble toque para ver la foto completa.',
+    zoneNeed3:'Toca al menos 3 esquinas', zoneNoLoc:'— sin ubicación de inventario —',
+    zoneSaved:'Área "N" guardada ✓', zoneExported:'Zonas exportadas — envía el archivo a Claude',
+    zoneConfirmClear:'¿Borrar todas las áreas dibujadas en esta foto?',
+    zoneNoMatch:'Ninguna zona cubre "L" todavía — dibuja una en la foto del patio',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
     pullAllMatched:'AGREGAR TODO A LA LISTA',
     onHand:'Disponible', staging:'Retirando', takeAll:'Todo',
@@ -2347,137 +2396,6 @@ async function openDisposalLog() {
     </div>`).join('');
 }
 
-// ── STORAGE LOCATIONS MAP ────────────────────────────
-// Named location strings (Gray Building, Conex 3, Material Bins, etc.) plotted
-// on a real map for the first time — coordinates live in their own "Locations"
-// sheet tab since a bin's name alone doesn't say where it physically sits.
-const TOMTOM_API_KEY = 'Uj3etMIVUsO9ZO7Z1TeklWioWSkLs5tY';
-let locationsMap = null;
-let locationsMapReady = false;
-let savedLocations = []; // [{name, lat, lng}]
-let locationMarkers = [];
-let settingLocationMode = false;
-
-async function fetchLocations() {
-  if (!APPS_SCRIPT_URL) return;
-  try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getLocations`);
-    const data = await res.json();
-    savedLocations = data.locations || [];
-  } catch (e) { /* map just shows nothing plotted yet */ }
-}
-
-function openLocationsMap() {
-  document.getElementById('mapModal').classList.add('open');
-  const adminControls = document.getElementById('mapAdminControls');
-  const isAdminUser = !!(myProfile && myProfile.isAdmin && myProfile.status === 'approved');
-  adminControls.style.display = isAdminUser ? 'block' : 'none';
-  if (isAdminUser) populateLocationSelect();
-  // TomTom needs a visible, sized container — the modal must already be open
-  // before the map initializes, or it renders at zero height.
-  if (!locationsMap) {
-    setTimeout(initLocationsMap, 50);
-  } else {
-    setTimeout(() => { try { locationsMap.resize(); } catch (e) {} }, 50);
-    fetchLocations().then(renderLocationMarkers);
-  }
-}
-
-function closeLocationsMap() {
-  document.getElementById('mapModal').classList.remove('open');
-  if (settingLocationMode) toggleSetLocationMode();
-}
-
-function populateLocationSelect() {
-  const sel = document.getElementById('mapSetLocSelect');
-  sel.innerHTML = LOCATIONS.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
-}
-
-function initLocationsMap() {
-  try {
-    tt.setProductInfo('Titan Alaska Inventory', '1.0');
-    locationsMap = tt.map({
-      key: TOMTOM_API_KEY,
-      container: 'locationsMapCanvas',
-      center: [-149.9003, 61.2181],
-      zoom: 16,
-      style: 'https://api.tomtom.com/style/1/style/*?map=2/basic_street-satellite&poi=2/poi_dynamic-satellite&key=' + TOMTOM_API_KEY,
-    });
-    locationsMap.addControl(new tt.NavigationControl(), 'top-right');
-    locationsMap.on('load', () => {
-      locationsMapReady = true;
-      fetchLocations().then(renderLocationMarkers);
-    });
-    locationsMap.on('click', (e) => {
-      if (!settingLocationMode) return;
-      placeSelectedLocation(e.lngLat.lat, e.lngLat.lng);
-    });
-  } catch (e) {
-    const canvas = document.getElementById('locationsMapCanvas');
-    if (canvas) canvas.outerHTML = '<div style="padding:20px;text-align:center;color:var(--mid);font-size:12px">Map unavailable — check connection</div>';
-  }
-}
-
-function renderLocationMarkers() {
-  if (!locationsMapReady) return;
-  locationMarkers.forEach(m => m.remove());
-  locationMarkers = savedLocations.map(loc => {
-    const el = document.createElement('div');
-    el.className = 'map-location-marker';
-    el.textContent = '📦';
-    const atLoc = items.filter(i => i.location === loc.name);
-    const totalQty = atLoc.reduce((s, i) => s + (Number(i.qty) || 0), 0);
-    const popup = new tt.Popup({ offset: 20 }).setHTML(
-      `<div class="map-popup-title">${escapeHtml(loc.name)}</div><div class="map-popup-sub">${atLoc.length} item${atLoc.length !== 1 ? 's' : ''} · ${totalQty.toLocaleString()} total qty</div>`
-    );
-    return new tt.Marker({ element: el, anchor: 'center' }).setLngLat([loc.lng, loc.lat]).setPopup(popup).addTo(locationsMap);
-  });
-
-  if (savedLocations.length === 1) {
-    locationsMap.setCenter([savedLocations[0].lng, savedLocations[0].lat]);
-  } else if (savedLocations.length > 1) {
-    const lats = savedLocations.map(l => l.lat), lngs = savedLocations.map(l => l.lng);
-    const bounds = new tt.LngLatBounds([Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]);
-    locationsMap.fitBounds(bounds, { padding: 60, maxZoom: 19 });
-  }
-
-  const mappedNames = new Set(savedLocations.map(l => l.name));
-  const unmapped = LOCATIONS.filter(l => !mappedNames.has(l));
-  const label = document.getElementById('mapUnmappedLabel');
-  const list = document.getElementById('mapUnmappedList');
-  if (unmapped.length) {
-    label.style.display = 'block';
-    list.textContent = unmapped.join(', ');
-  } else {
-    label.style.display = 'none';
-    list.textContent = '';
-  }
-}
-
-function toggleSetLocationMode() {
-  settingLocationMode = !settingLocationMode;
-  const btn = document.getElementById('mapSetLocBtn');
-  btn.textContent = settingLocationMode ? '❌ Cancel (tap the map)' : '📍 Tap Map To Place';
-  btn.classList.toggle('map-set-active', settingLocationMode);
-}
-
-async function placeSelectedLocation(lat, lng) {
-  const name = document.getElementById('mapSetLocSelect').value;
-  if (name) {
-    try {
-      const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: 'setLocation', name, lat, lng })}`);
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'not saved');
-      showToast(`${name} pinned ✓`, 'success');
-      await fetchLocations();
-      renderLocationMarkers();
-    } catch (e) {
-      showToast('Could not save location — check connection', 'error');
-    }
-  }
-  toggleSetLocationMode();
-}
-
 // ── LATEST AERIAL PHOTOS ──────────────────────────────
 // Satellite imagery (even TomTom's) lags too far behind for a yard that
 // reshuffles constantly — drone photos pulled from BuilderTrend's daily
@@ -2499,6 +2417,388 @@ function openAerialPhotos() {
 function openAerialImage(src) {
   document.getElementById('photoViewerImg').src = src;
   document.getElementById('photoViewer').classList.add('open');
+}
+
+// ── WHERE IS IT — ZONE DRILL-DOWN ─────────────────────
+// Two excuses this exists to kill: "I don't know where it is" and "I don't know
+// where it goes". Both are the same missing fact -- which patch of ground or which
+// shelf a thing belongs to -- so both directions run off one tree of photos.
+// Tap a zone to go deeper; every node lists the inventory that lives there, and
+// every item card can jump straight to its node.
+//
+// A node's `locs` are the inventory `location` strings it covers. Counts roll up
+// from descendants, so the yard overview can say how much is in the Blue Conexes
+// without anyone maintaining a second tally.
+//
+// `regions` are tap targets drawn ON the node's photo, in 0..1 coordinates so they
+// survive any image size or a whole new drone flight at a different altitude. They
+// are drawn in the app by an admin, never hand-authored here -- see beginZoneDraw.
+const ZONE_SEED = {
+  root: { label: 'Titan Yard', photos: ['aerial/yard-1.jpg','aerial/yard-2.jpg','aerial/yard-3.jpg','aerial/yard-4.jpg','aerial/yard-5.jpg','aerial/yard-6.jpg'],
+          note: 'Tap an area, or use the buttons below.', children: ['nursery104','bins','gray','red','conexes','maui','pit','civil','cstreet','yardgen','unknown'], regions: [] },
+
+  nursery104: { label: '104 — Nursery & Storage', photos: ['zones/nursery-104.jpg'], locs: ['104'], children: [], regions: [] },
+  bins:       { label: 'Material Bins', photos: ['aerial/yard-1.jpg'], locs: ['Material Bins'], children: [], regions: [] },
+
+  // An interior node subdivides a photo; it does NOT re-claim its parent's location.
+  // Two nodes owning "Gray Building" made "Where is it?" land on the deeper one,
+  // which has no photo yet — an empty placeholder instead of the picture that exists.
+  // Give an interior node its own `locs` only once the yard has a finer label for it.
+  gray:       { label: 'Gray Building', photos: ['zones/gray-building.jpg'], locs: ['Gray Building'], children: ['grayIn'], regions: [] },
+  grayIn:     { label: 'Gray Building — Inside', photos: [], locs: [], children: [], regions: [] },
+
+  red:        { label: 'Red Building', photos: [], locs: ['Red Building'], children: ['redt1','redt2','redt3'], regions: [] },
+  redt1:      { label: 'Red Tool 1', photos: [], locs: ['Red Tool 1'], children: [], regions: [] },
+  redt2:      { label: 'Red Tool 2', photos: [], locs: ['Red Tool 2'], children: [], regions: [] },
+  redt3:      { label: 'Red Tool 3', photos: [], locs: ['Red Tool 3'], children: [], regions: [] },
+
+  conexes:    { label: 'Blue Conexes', photos: ['zones/blue-conexes.jpg','zones/office-to-conexes.jpg'], locs: [],
+                children: ['cx1','cx2','cx3','cx4','cx5','cx6','cx7'], regions: [] },
+  cx1: { label: 'Conex 1', photos: [], locs: ['Conex 1'], children: [], regions: [] },
+  cx2: { label: 'Conex 2', photos: [], locs: ['Conex 2'], children: [], regions: [] },
+  cx3: { label: 'Conex 3', photos: [], locs: ['Conex 3'], children: [], regions: [] },
+  cx4: { label: 'Conex 4', photos: [], locs: ['Conex 4'], children: [], regions: [] },
+  cx5: { label: 'Conex 5', photos: [], locs: ['Conex 5'], children: [], regions: [] },
+  cx6: { label: 'Conex 6', photos: [], locs: ['Conex 6'], children: [], regions: [] },
+  cx7: { label: 'Conex 7', photos: [], locs: ['Conex 7'], children: [], regions: [] },
+
+  maui:    { label: 'Maui Lot', photos: ['zones/maui-lot.jpg','zones/maui-lot-2.jpg'], locs: ['Maui Lot'], children: [], regions: [] },
+  pit:     { label: 'Pit & Aggregate', photos: ['zones/pit-topsoil.jpg'], locs: [], children: [], regions: [] },
+  civil:   { label: 'Civil', photos: [], locs: [], children: ['civA','civB'], regions: [] },
+  civA:    { label: 'Civil A', photos: [], locs: ['Civil A'], children: [], regions: [] },
+  civB:    { label: 'Civil B', photos: [], locs: ['Civil B'], children: [], regions: [] },
+  cstreet: { label: 'C Street', photos: [], locs: [], children: ['cN','cS'], regions: [] },
+  cN:      { label: 'North C Street', photos: [], locs: ['North C Street'], children: [], regions: [] },
+  cS:      { label: 'South C Street', photos: [], locs: ['South C Street'], children: [], regions: [] },
+  yardgen: { label: 'Yard (general)', photos: [], locs: ['Yard'], children: [], regions: [] },
+  unknown: { label: 'No Location Set', photos: [], locs: ['Unknown'], children: [], regions: [] },
+};
+
+let ZONES = JSON.parse(JSON.stringify(ZONE_SEED));
+try {
+  const saved = JSON.parse(localStorage.getItem('titanZones') || 'null');
+  // Merge rather than replace: a saved copy from before a new node existed should
+  // not hide that node, and seed photo paths should win after an imagery refresh.
+  if (saved) Object.keys(saved).forEach(id => {
+    ZONES[id] = Object.assign({}, ZONES[id] || {}, saved[id]);
+    if (ZONE_SEED[id] && ZONE_SEED[id].photos && ZONE_SEED[id].photos.length) ZONES[id].photos = ZONE_SEED[id].photos;
+  });
+} catch(e) {}
+function saveZones() { try { localStorage.setItem('titanZones', JSON.stringify(ZONES)); } catch(e) {} }
+
+let zonePath = ['root'];        // breadcrumb trail of node ids
+let zonePhotoIdx = 0;
+let zoneDrawing = false;
+let zoneDraft = [];             // [[x,y], …] in 0..1 while drawing
+
+function zoneNode(id) { return ZONES[id] || null; }
+function zoneCurrentId() { return zonePath[zonePath.length - 1]; }
+function zoneIsAdmin() { return !!(myProfile && myProfile.isAdmin && myProfile.status === 'approved'); }
+
+// Every location string at or beneath a node, so a parent can count what its
+// children hold without duplicating the mapping.
+function zoneLocsDeep(id, seen) {
+  seen = seen || new Set();
+  if (seen.has(id)) return [];   // a mis-drawn tree must not hang the app
+  seen.add(id);
+  const n = zoneNode(id);
+  if (!n) return [];
+  let out = (n.locs || []).slice();
+  (n.children || []).forEach(c => { out = out.concat(zoneLocsDeep(c, seen)); });
+  return out;
+}
+
+function zoneItems(id) {
+  const locs = new Set(zoneLocsDeep(id).map(l => normKey(l)));
+  if (!locs.size) return [];
+  return items.filter(i => locs.has(normKey(i.location)));
+}
+
+function zoneStats(id) {
+  const list = zoneItems(id);
+  return { count: list.length, qty: list.reduce((s, i) => s + (Number(i.qty) || 0), 0) };
+}
+
+function openZones(id) {
+  zonePath = ['root'];
+  if (id && id !== 'root') {
+    const trail = zoneTrailTo(id);
+    if (trail) zonePath = trail;
+  }
+  zonePhotoIdx = 0;
+  document.getElementById('zoneModal').classList.add('open');
+  renderZones();
+}
+
+function closeZones() {
+  cancelZoneDraw();
+  document.getElementById('zoneModal').classList.remove('open');
+}
+
+// Breadcrumb path from root down to a node, so deep links land with history intact.
+function zoneTrailTo(target, id, seen) {
+  id = id || 'root';
+  seen = seen || new Set();
+  if (seen.has(id)) return null;
+  seen.add(id);
+  if (id === target) return [id];
+  const n = zoneNode(id);
+  if (!n) return null;
+  for (const c of (n.children || [])) {
+    const sub = zoneTrailTo(target, c, seen);
+    if (sub) return [id].concat(sub);
+  }
+  return null;
+}
+
+// The node that owns a given inventory location string — what "Where is it?" needs.
+function zoneForLocation(loc) {
+  const key = normKey(loc);
+  if (!key) return null;
+  let best = null;
+  Object.keys(ZONES).forEach(id => {
+    if ((ZONES[id].locs || []).some(l => normKey(l) === key)) {
+      // Prefer the deepest match: Conex 3 beats a parent that also claims it.
+      const depth = (zoneTrailTo(id) || []).length;
+      if (!best || depth > best.depth) best = { id, depth };
+    }
+  });
+  return best ? best.id : null;
+}
+
+function goZone(id) {
+  cancelZoneDraw();
+  if (!zoneNode(id)) return;
+  zonePath.push(id);
+  zonePhotoIdx = 0;
+  renderZones();
+}
+
+function zoneCrumbTo(idx) {
+  cancelZoneDraw();
+  zonePath = zonePath.slice(0, idx + 1);
+  zonePhotoIdx = 0;
+  renderZones();
+}
+
+function setZonePhoto(i) { zonePhotoIdx = i; renderZones(); }
+
+function renderZones() {
+  const id = zoneCurrentId();
+  const node = zoneNode(id);
+  if (!node) return;
+
+  document.getElementById('zoneTitle').textContent = '📍 ' + node.label;
+
+  // Breadcrumbs
+  document.getElementById('zoneCrumbs').innerHTML = zonePath.map((pid, i) => {
+    const last = i === zonePath.length - 1;
+    const lbl = escapeHtml((zoneNode(pid) || {}).label || pid);
+    return (i ? '<span class="zone-crumb-sep">›</span>' : '') +
+      `<button class="zone-crumb ${last ? 'current' : ''}" ${last ? 'disabled' : `onclick="zoneCrumbTo(${i})"`}>${lbl}</button>`;
+  }).join('');
+
+  renderZoneAdminBar();
+  renderZoneStage(node);
+  renderZoneBody(node, id);
+}
+
+function renderZoneStage(node) {
+  const wrap = document.getElementById('zoneStageWrap');
+  const photos = node.photos || [];
+  if (!photos.length) {
+    wrap.innerHTML = `<div class="zone-nophoto">No photo here yet.<br>
+      ${zoneIsAdmin() ? 'Shoot one on your phone and drop it in <code>zones/</code>, then tell Claude.' : 'Ask Matt to add one.'}</div>`;
+    return;
+  }
+  if (zonePhotoIdx >= photos.length) zonePhotoIdx = 0;
+  const src = photos[zonePhotoIdx];
+  const regions = node.regions || [];
+
+  const polys = regions.map((r, i) => {
+    const pts = (r.points || []).map(p => p[0].toFixed(4) + ',' + p[1].toFixed(4)).join(' ');
+    return `<polygon class="zone-hotspot" points="${pts}" onclick="onZoneRegionTap(${i})"></polygon>`;
+  }).join('');
+
+  // Labels are HTML, not SVG <text>. The overlay deliberately stretches to the photo
+  // (preserveAspectRatio="none") so polygons track the image at any aspect ratio, but
+  // that same stretch would squash lettering.
+  const labels = regions.map((r, i) => {
+    const c = polyCentroid(r.points || []);
+    return `<div class="zone-hotspot-label" style="left:${(c[0]*100).toFixed(2)}%;top:${(c[1]*100).toFixed(2)}%"
+                 onclick="onZoneRegionTap(${i})">${escapeHtml(r.label || '')}</div>`;
+  }).join('');
+
+  const draftPoly = zoneDraft.length > 1
+    ? `<polygon class="zone-draft" points="${zoneDraft.map(p => p[0].toFixed(4) + ',' + p[1].toFixed(4)).join(' ')}"></polygon>` : '';
+  const draftPts = zoneDraft.map(p => `<circle class="zone-draft-pt" cx="${p[0].toFixed(4)}" cy="${p[1].toFixed(4)}" r="0.008"></circle>`).join('');
+
+  wrap.innerHTML = `
+    <div class="zone-stage" id="zoneStage">
+      <img src="${escapeHtml(src)}" alt="${escapeHtml(node.label)}"
+           ondblclick="openAerialImage('${escapeHtml(src)}')">
+      <svg viewBox="0 0 1 1" preserveAspectRatio="none" id="zoneSvg"
+           ${zoneDrawing ? 'onclick="onZoneStageTap(event)" style="cursor:crosshair"' : ''}>
+        ${polys}${draftPoly}${draftPts}
+      </svg>
+      ${zoneDrawing ? '' : labels}
+    </div>
+    ${photos.length > 1 ? `<div class="zone-strip">${photos.map((p, i) =>
+      `<img src="${escapeHtml(p)}" class="${i === zonePhotoIdx ? 'active' : ''}" onclick="setZonePhoto(${i})">`).join('')}</div>` : ''}`;
+}
+
+function polyCentroid(pts) {
+  if (!pts.length) return [0.5, 0.5];
+  const sx = pts.reduce((s, p) => s + p[0], 0), sy = pts.reduce((s, p) => s + p[1], 0);
+  return [sx / pts.length, sy / pts.length];
+}
+
+function renderZoneBody(node, id) {
+  const body = document.getElementById('zoneBody');
+  let html = '';
+
+  if (node.note) html += `<div class="zone-empty">${escapeHtml(node.note)}</div>`;
+
+  const kids = (node.children || []).filter(c => zoneNode(c));
+  if (kids.length) {
+    html += `<div class="zone-section-label">${t('zoneGoDeeper')}</div><div class="zone-children">`;
+    kids.forEach(c => {
+      const s = zoneStats(c);
+      const kn = zoneNode(c);
+      html += `<button class="zone-child-btn ${s.count ? '' : 'zc-empty'}" onclick="goZone('${c}')">
+        ${escapeHtml(kn.label)}
+        <span class="zc-count">${s.count ? s.count + ' ' + t('zoneItemsWord') + ' · ' + s.qty.toLocaleString() : t('zoneNothingHere')}</span>
+      </button>`;
+    });
+    html += `</div>`;
+  }
+
+  // Items whose location maps to this node itself, not to a child — otherwise a
+  // parent would repeat everything its children already list.
+  const own = new Set((node.locs || []).map(l => normKey(l)));
+  const here = items.filter(i => own.has(normKey(i.location)));
+  html += `<div class="zone-section-label">${t('zoneWhatsHere')} (${here.length})</div>`;
+  if (!here.length) {
+    html += `<div class="zone-empty">${t('zoneNothingHere')}</div>`;
+  } else {
+    html += `<div class="zone-items">` + here
+      .slice()
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+      .map(i => `<div class="zone-item-row">
+        <span class="zi-name">${escapeHtml(itemName(i))}${i.specs ? ' <span style="color:var(--mid);font-size:11px">' + escapeHtml(i.specs) + '</span>' : ''}</span>
+        <span class="zi-qty">${i.qty}${normalizeUnit(i.unit) ? ' ' + escapeHtml(unitAbbr(i.unit)) : ''}</span>
+      </div>`).join('') + `</div>`;
+  }
+  body.innerHTML = html;
+}
+
+// ---- ADMIN: DRAW THE TAP TARGETS ----
+// Hand-authoring polygon coordinates from a photo is guesswork; whoever knows the
+// yard should trace them, and re-trace them after a new drone flight. Zones live in
+// localStorage while being edited, then get exported and committed to the repo so
+// every phone gets them.
+function renderZoneAdminBar() {
+  const bar = document.getElementById('zoneAdminBar');
+  if (!zoneIsAdmin()) { bar.style.display = 'none'; return; }
+  const node = zoneNode(zoneCurrentId());
+  const hasPhoto = (node.photos || []).length > 0;
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    ${hasPhoto ? `<button class="zone-mini-btn ${zoneDrawing ? 'active' : ''}" onclick="${zoneDrawing ? 'cancelZoneDraw()' : 'beginZoneDraw()'}">
+      ${zoneDrawing ? '✕ ' + t('zoneCancelDraw') : '✏ ' + t('zoneDrawArea')}</button>` : ''}
+    ${zoneDrawing && zoneDraft.length >= 3 ? `<button class="zone-mini-btn active" onclick="finishZoneDraw()">✓ ${t('zoneFinishArea')}</button>` : ''}
+    ${zoneDrawing && zoneDraft.length ? `<button class="zone-mini-btn" onclick="undoZonePoint()">↶ ${t('zoneUndoPoint')}</button>` : ''}
+    ${(node.regions || []).length && !zoneDrawing ? `<button class="zone-mini-btn danger" onclick="clearZoneRegions()">${t('zoneClearAreas')}</button>` : ''}
+    ${!zoneDrawing ? `<button class="zone-mini-btn" onclick="exportZones()">⬇ ${t('zoneExport')}</button>` : ''}
+    ${zoneDrawing ? `<div class="zone-admin-hint">${t('zoneDrawHint')}</div>` : ''}`;
+}
+
+function beginZoneDraw() { zoneDrawing = true; zoneDraft = []; renderZones(); }
+function cancelZoneDraw() { if (!zoneDrawing && !zoneDraft.length) return; zoneDrawing = false; zoneDraft = []; }
+function undoZonePoint() { zoneDraft.pop(); renderZones(); }
+
+function onZoneStageTap(ev) {
+  const svg = document.getElementById('zoneSvg');
+  const r = svg.getBoundingClientRect();
+  const x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+  const y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+  zoneDraft.push([x, y]);
+  renderZones();
+}
+
+function finishZoneDraw() {
+  if (zoneDraft.length < 3) { showToast(t('zoneNeed3'), 'error'); return; }
+  const sel = document.getElementById('zoneLocSelect');
+  sel.innerHTML = `<option value="">${t('zoneNoLoc')}</option>` +
+    LOCATIONS.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+  document.getElementById('zoneNameInput').value = '';
+  document.getElementById('zoneNameModal').classList.add('open');
+  setTimeout(() => document.getElementById('zoneNameInput').focus(), 60);
+}
+
+function cancelZoneDraft() { document.getElementById('zoneNameModal').classList.remove('open'); }
+
+function saveZoneDraft() {
+  const label = document.getElementById('zoneNameInput').value.trim();
+  if (!label) { showToast(t('valueReq'), 'error'); return; }
+  const loc = document.getElementById('zoneLocSelect').value;
+  const parentId = zoneCurrentId();
+  const parent = zoneNode(parentId);
+
+  // A drawn area always becomes a real node, so it can hold its own photo and
+  // sub-areas later. If it maps to an existing node for that location, link to
+  // that instead of creating a duplicate.
+  let childId = loc ? zoneForLocation(loc) : null;
+  if (!childId) {
+    childId = 'z' + Date.now().toString(36);
+    ZONES[childId] = { label: label, photos: [], locs: loc ? [loc] : [], children: [], regions: [] };
+  }
+  if (!parent.children) parent.children = [];
+  if (parent.children.indexOf(childId) === -1) parent.children.push(childId);
+  if (!parent.regions) parent.regions = [];
+  parent.regions.push({ label: label, points: zoneDraft.slice(), child: childId, photo: zonePhotoIdx });
+
+  saveZones();
+  zoneDrawing = false; zoneDraft = [];
+  document.getElementById('zoneNameModal').classList.remove('open');
+  showToast(t('zoneSaved').replace('N', label), 'success');
+  renderZones();
+}
+
+function onZoneRegionTap(idx) {
+  if (zoneDrawing) return;
+  const node = zoneNode(zoneCurrentId());
+  const r = (node.regions || [])[idx];
+  if (r && r.child && zoneNode(r.child)) goZone(r.child);
+}
+
+function clearZoneRegions() {
+  const node = zoneNode(zoneCurrentId());
+  if (!confirm(t('zoneConfirmClear'))) return;
+  node.regions = [];
+  saveZones();
+  renderZones();
+}
+
+// Zones belong in the repo, not one phone's localStorage. This hands back a file
+// to commit — same pattern as the Wolf checklist's export.
+function exportZones() {
+  const blob = new Blob([JSON.stringify(ZONES, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'titan-zones.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  showToast(t('zoneExported'), 'success');
+}
+
+// From an item straight to the picture of where it lives.
+function whereIsItem(id) {
+  const item = items.find(i => String(i.id) === String(id));
+  if (!item) return;
+  const target = zoneForLocation(item.location);
+  if (!target) { showToast(t('zoneNoMatch').replace('L', item.location || '—'), 'error'); return; }
+  openZones(target);
 }
 
 window.onload = () => {
@@ -2661,6 +2961,9 @@ function renderItems() {
               </div>
             </div>` : `
             ${item.specs ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${escapeHtml(item.specs)}</div>` : ''}
+            <div style="margin-top:8px">
+              <button class="zone-where-btn" onclick="event.stopPropagation(); whereIsItem(${item.id})">${t('whereBtn')}</button>
+            </div>
             <div class="detail-grid">
               <div class="detail-field">
                 <label>${t('labelLoc')}</label>
