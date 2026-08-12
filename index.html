@@ -110,7 +110,8 @@
   .add-bar { padding: 12px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   @media (max-width: 560px) {
     .add-bar { gap: 6px; padding: 10px 12px; align-items: stretch; }
-    .add-bar > button { flex: 1 1 calc(25% - 5px); min-width: 0; padding-left: 4px; padding-right: 4px; text-align: center; white-space: nowrap; }
+    /* Nine buttons: three across gives three full rows rather than two and a stray. */
+    .add-bar > button { flex: 1 1 calc(33.333% - 4px); min-width: 0; padding-left: 4px; padding-right: 4px; text-align: center; white-space: nowrap; }
     .add-bar .btn-long { display: none; }
     .job-btn, .log-btn { font-size: 10px; letter-spacing: 0.02em; }
     .add-btn { font-size: 11px; letter-spacing: 0.04em; }
@@ -331,6 +332,27 @@
   .zone-mini-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
   .zone-where-btn { background: none; border: 1px solid #2a5a8a; color: #5a9fd4; border-radius: 4px; padding: 4px 9px; font-family: var(--font); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 
+  /* Material by job */
+  .jobs-total { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+  .jobs-warn { font-size: 11px; color: #ffb0b0; background: #3a1a1a; border: 1px solid #6a2a2a; border-radius: var(--radius); padding: 8px 10px; margin-bottom: 10px; line-height: 1.5; }
+  .job-card { border: 1px solid #2a2a2a; border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
+  .job-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; background: var(--steel); }
+  .job-head:hover { background: #232323; }
+  .job-chevron { color: var(--gold); font-size: 12px; }
+  .job-head-main { flex: 1; min-width: 0; }
+  .job-name { font-size: 14px; font-weight: 700; color: var(--snow); }
+  .job-sub { font-size: 11px; color: var(--mid); margin-top: 2px; }
+  .job-swap { color: #e08a4a; }
+  .job-lines { padding: 4px 12px 10px; }
+  .job-line { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #232323; font-size: 13px; }
+  .job-line:last-child { border-bottom: none; }
+  .job-line .jl-name { flex: 1; min-width: 0; }
+  .job-line .jl-swap { font-size: 11px; color: #e08a4a; white-space: nowrap; }
+  .job-line .jl-net { font-weight: 700; color: var(--gold); min-width: 34px; text-align: right; }
+  /* Fully returned lines stay visible but recede — the fact that it happened matters. */
+  .job-line-closed { opacity: 0.5; }
+  .job-line-closed .jl-net { color: var(--mid); }
+
   /* Return to yard */
   .return-item { font-size: 14px; font-weight: 700; color: var(--snow); margin-bottom: 12px; }
   .return-item span { display: block; font-size: 12px; font-weight: 400; color: var(--mid); margin-top: 2px; }
@@ -386,6 +408,7 @@
   <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 <span class="btn-long">Pull From </span>List</button>
   <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where<span class="btn-long"> Is It</span></button>
   <button class="job-btn" style="border-color:#5a2a8a;color:#b389d9" onclick="openAerialPhotos()">🚁 Aerial<span class="btn-long"> Photos</span></button>
+  <button class="job-btn" style="border-color:#7a5a00;color:#c9a227" onclick="openJobsView()">📁 <span class="btn-long">Material By </span>Jobs</button>
 </div>
 
 <div class="stale-banner" id="staleBanner" style="display:none"></div>
@@ -582,6 +605,18 @@
     <div class="aerial-grid" id="aerialGrid"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="document.getElementById('aerialModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- JOBS MODAL -->
+<div class="modal-overlay" id="jobsModal">
+  <div class="modal zone-modal">
+    <h2 style="color:#c9a227">📁 Material By Job</h2>
+    <div id="jobsBody"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeJobsView()">Close</button>
+      <button class="zone-mini-btn" onclick="exportJobs()">⬇ Export</button>
     </div>
   </div>
 </div>
@@ -790,6 +825,10 @@ const T = {
     returnHintOther:'This will be logged as a return, but no job gets credited.',
     returnQtyReq:'Enter how many are coming back',
     returnDone:'N returned to the yard from J ✓',
+    jobsLoading:'Adding up every job…', jobsEmpty:'No material has been pulled for a job yet.',
+    jobsTotal:'J jobs · U units still out', jobsUnitsOut:'units out', jobsSwaps:'swapped',
+    jobsOut:'out', jobsBack:'back', jobsExported:'Job report downloaded ✓',
+    jobsTruncated:'⚠ More history exists than could be loaded — totals may be short.',
     returnTitle:'↩ Return To Yard', returnQtyLabel:'How many are coming back?',
     returnJobLabel:'Back from which job?',
     outTitle:'📤 Out To A Job', outQtyLabel:'How many went out?',
@@ -867,6 +906,10 @@ const T = {
     returnHintOther:'Se registrará la devolución, pero ningún trabajo recibe crédito.',
     returnQtyReq:'Escribe cuántos regresan',
     returnDone:'N devueltos al patio de J ✓',
+    jobsLoading:'Sumando cada trabajo…', jobsEmpty:'Aún no se ha retirado material para un trabajo.',
+    jobsTotal:'J trabajos · U unidades afuera', jobsUnitsOut:'unidades afuera', jobsSwaps:'cambiados',
+    jobsOut:'salieron', jobsBack:'volvieron', jobsExported:'Reporte de trabajos descargado ✓',
+    jobsTruncated:'⚠ Hay más historial del que se pudo cargar — los totales pueden quedar cortos.',
     returnTitle:'↩ Devolver Al Patio', returnQtyLabel:'¿Cuántos regresan?',
     returnJobLabel:'¿De cuál trabajo regresan?',
     outTitle:'📤 Salida A Un Trabajo', outQtyLabel:'¿Cuántos salieron?',
@@ -2544,6 +2587,116 @@ function suggestUnit() {
 let disposalLog = [];
 let disposalItemId = null;
 
+// ---- JOBS ----
+// Every PULL and RETURN already names a job; nothing until now added them up. This
+// is the read side of that — what each job took, what came back, and what it is
+// still carrying — and it derives from the Change Log rather than keeping a second
+// tally that could disagree with it.
+let openJobs = new Set();
+
+function jobReport() {
+  const jobs = Object.keys(jobMoves || {}).map(job => {
+    const J = jobMoves[job];
+    const lines = Object.keys(J.items).map(name => {
+      const it = J.items[name];
+      return { name: name, out: it.out, back: it.back, net: it.out - it.back };
+    }).sort((a, b) => b.net - a.net || String(a.name).localeCompare(String(b.name)));
+    return {
+      job: job, lines: lines, first: J.first, last: J.last,
+      netUnits: lines.reduce((s, l) => s + l.net, 0),
+      outUnits: lines.reduce((s, l) => s + l.out, 0),
+      backUnits: lines.reduce((s, l) => s + l.back, 0),
+      species: lines.filter(l => l.net > 0).length,
+      swaps: lines.filter(l => l.back > 0).length,
+    };
+  });
+  // Most recently touched first — that is the one someone is asking about.
+  return jobs.sort((a, b) => (b.last || 0) - (a.last || 0));
+}
+
+function fmtJobDate(d) {
+  if (!d || isNaN(d)) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function openJobsView() {
+  document.getElementById('jobsModal').classList.add('open');
+  document.getElementById('jobsBody').innerHTML =
+    `<div class="loading-state" style="color:var(--gold)"><div class="spinner"></div>${t('jobsLoading')}</div>`;
+  await loadJobLedger(true);
+  renderJobsView();
+}
+
+function closeJobsView() { document.getElementById('jobsModal').classList.remove('open'); }
+function toggleJob(job) {
+  if (openJobs.has(job)) openJobs.delete(job); else openJobs.add(job);
+  renderJobsView();
+}
+
+function renderJobsView() {
+  const body = document.getElementById('jobsBody');
+  const report = jobReport();
+  if (!report.length) {
+    body.innerHTML = `<div class="zone-empty">${t('jobsEmpty')}</div>`;
+    return;
+  }
+  let html = '';
+  if (jobLogTruncated) html += `<div class="jobs-warn">${t('jobsTruncated')}</div>`;
+  html += `<div class="jobs-total">${t('jobsTotal').replace('J', report.length)
+    .replace('U', report.reduce((s, j) => s + j.netUnits, 0).toLocaleString())}</div>`;
+
+  report.forEach(j => {
+    const open = openJobs.has(j.job);
+    html += `<div class="job-card">
+      <div class="job-head" onclick="toggleJob(${JSON.stringify(j.job).replace(/"/g, '&quot;')})">
+        <span class="job-chevron">${open ? '▾' : '▸'}</span>
+        <div class="job-head-main">
+          <div class="job-name">${escapeHtml(j.job)}</div>
+          <div class="job-sub">${j.netUnits} ${t('jobsUnitsOut')} · ${j.species} ${t('zoneItemsWord')}${
+            j.swaps ? ' · <span class="job-swap">' + j.swaps + ' ' + t('jobsSwaps') + '</span>' : ''
+          }${j.last ? ' · ' + fmtJobDate(j.first) + (fmtJobDate(j.first) !== fmtJobDate(j.last) ? '–' + fmtJobDate(j.last) : '') : ''}</div>
+        </div>
+      </div>`;
+    if (open) {
+      html += `<div class="job-lines">` + j.lines.map(l => `
+        <div class="job-line ${l.net === 0 ? 'job-line-closed' : ''}">
+          <span class="jl-name">${escapeHtml(l.name)}</span>
+          ${l.back > 0
+            ? `<span class="jl-swap">${l.out} ${t('jobsOut')}, ${l.back} ${t('jobsBack')}</span>`
+            : ''}
+          <span class="jl-net">${l.net}</span>
+        </div>`).join('') + `</div>`;
+    }
+    html += `</div>`;
+  });
+  body.innerHTML = html;
+}
+
+// Plain text, because it has to paste into an email or a bid without fighting it.
+function exportJobs() {
+  const report = jobReport();
+  const lines = ['TITAN ALASKA — MATERIAL BY JOB', 'Generated ' + new Date().toLocaleString(), ''];
+  report.forEach(j => {
+    lines.push('=== ' + j.job + ' ===');
+    lines.push('  still out: ' + j.netUnits + ' units across ' + j.species + ' species'
+      + '   (pulled ' + j.outUnits + ', returned ' + j.backUnits + ')');
+    if (j.first) lines.push('  activity: ' + fmtJobDate(j.first) + ' – ' + fmtJobDate(j.last));
+    lines.push('');
+    j.lines.forEach(l => {
+      lines.push('  ' + String(l.net).padStart(5) + '   ' + l.name
+        + (l.back > 0 ? '   (' + l.out + ' out, ' + l.back + ' returned)' : ''));
+    });
+    lines.push('');
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'titan-material-by-job.txt';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  showToast(t('jobsExported'), 'success');
+}
+
 // ---- RETURN TO YARD ----
 // Material that comes back has to come back *against the job it left on*, or the
 // job keeps carrying stock it never used. A plain + on the card was the whole
@@ -2555,8 +2708,12 @@ let jobLedger = null;   // { itemName: { job: net units still out } }
 // Reads the Change Log back into "what is still out, and on which job".
 // PULL reads "2 ea for tallia — 51 → 49"; RETURN reads "2 ea back from tallia — 49 → 51".
 // The unit is optional, hence the optional word between the count and "for"/"back".
-function parseJobLedger(entries) {
-  const out = {};
+// One parser feeds both the return picker and the Jobs view. Out and back are kept
+// apart rather than netted on the way in, because "2 went, 2 came home" and "nothing
+// ever happened" are the same number and very different facts — the first is a
+// substitution somebody should be able to see a year from now.
+function parseJobMoves(entries) {
+  const jobs = {};
   (entries || []).forEach(e => {
     const name = String(e.itemName || '');
     const detail = String(e.detail || '');
@@ -2569,19 +2726,51 @@ function parseJobLedger(entries) {
     else if (type === 'RETURN' && (m = detail.match(/^(\d+)(?:\s+\S+)?\s+back from\s+(.+)\s+—\s*\d+\s*→\s*\d+\s*$/))) dir = -1;
     if (!dir || !m) return;
     const job = m[2].trim();
-    if (!out[name]) out[name] = {};
-    out[name][job] = (out[name][job] || 0) + dir * (Number(m[1]) || 0);
+    const qty = Number(m[1]) || 0;
+    const when = e.time ? new Date(e.time) : null;
+    if (!jobs[job]) jobs[job] = { job: job, items: {}, first: null, last: null };
+    const J = jobs[job];
+    if (!J.items[name]) J.items[name] = { out: 0, back: 0 };
+    if (dir > 0) J.items[name].out += qty; else J.items[name].back += qty;
+    if (when && !isNaN(when)) {
+      if (!J.first || when < J.first) J.first = when;
+      if (!J.last || when > J.last) J.last = when;
+    }
+  });
+  return jobs;
+}
+
+// The return picker only needs "how many of this item are still out where".
+function parseJobLedger(entries) {
+  const jobs = parseJobMoves(entries);
+  const out = {};
+  Object.keys(jobs).forEach(job => {
+    Object.keys(jobs[job].items).forEach(name => {
+      const it = jobs[job].items[name];
+      if (!out[name]) out[name] = {};
+      out[name][job] = (out[name][job] || 0) + it.out - it.back;
+    });
   });
   return out;
 }
 
-async function loadJobLedger() {
-  if (!APPS_SCRIPT_URL) { jobLedger = {}; return; }
+let jobMoves = null;      // { job: {items, first, last} } — the Jobs view's source
+let jobLogTruncated = false;
+
+// Ask only for the rows that carry a job, and ask deep. The server's default 100-row
+// window had already rolled past the start of the log, so totals built on it would
+// have been short without ever looking wrong.
+async function loadJobLedger(force) {
+  if (!APPS_SCRIPT_URL) { jobLedger = {}; jobMoves = {}; return; }
+  if (jobMoves && !force) return;
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getLog`);
+    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action:'getLog', limit: 5000, types: 'PULL,RETURN' })}`);
     const data = await res.json();
-    jobLedger = parseJobLedger(data.entries);
-  } catch(e) { jobLedger = {}; }
+    const entries = data.entries || [];
+    jobMoves = parseJobMoves(entries);
+    jobLedger = parseJobLedger(entries);
+    jobLogTruncated = !!data.truncated;
+  } catch(e) { jobLedger = jobLedger || {}; jobMoves = jobMoves || {}; }
 }
 
 function jobsOutFor(itemNameStr) {
