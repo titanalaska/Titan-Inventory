@@ -3360,7 +3360,13 @@ async function changeQty(id, delta) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   const oldQty = item.qty;
-  item.qty = Math.max(0, item.qty + delta);
+  // Both ends of the change are captured up front. Reading item.qty back after the
+  // await let a second fast tap mutate it first, so two +1s logged "49 → 51" and
+  // "50 → 51" instead of 49 → 50 and 50 → 51. The stored counts were right; the
+  // history read as nonsense, which is worse in the one place people go to argue
+  // about what happened.
+  const newQty = Math.max(0, oldQty + delta);
+  item.qty = newQty;
   const paint = () => {
     const qtyEl = document.querySelector(`#card-${id} .qty-num`);
     if (qtyEl) {
@@ -3373,8 +3379,13 @@ async function changeQty(id, delta) {
   // a phone on yard signal — but only if a refusal puts it back. Otherwise the
   // count silently drifts away from the Sheet and looks saved.
   const ok = await pushUpdate(item);
-  if (!ok) { item.qty = oldQty; paint(); return; }
-  logChange(delta > 0 ? '＋' : '－', item.name, `${oldQty} → ${item.qty}`);
+  if (!ok) {
+    // Only undo if nothing else moved it meanwhile, or a rollback would wipe out
+    // a later tap that did succeed.
+    if (item.qty === newQty) { item.qty = oldQty; paint(); }
+    return;
+  }
+  logChange(delta > 0 ? '＋' : '－', item.name, `${oldQty} → ${newQty}`);
 }
 
 async function saveItem(id) {
