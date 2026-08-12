@@ -104,7 +104,17 @@
   .cat-chip { flex-shrink: 0; background: var(--iron); border: 1px solid #2a2a2a; color: var(--fog); font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 6px 12px; border-radius: 14px; cursor: pointer; white-space: nowrap; font-family: var(--font); }
   .cat-chip:hover, .cat-chip:active { border-color: var(--gold); color: var(--gold); }
 
-  .add-bar { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  /* Eight buttons on one non-wrapping line ran off the side of a phone. They wrap
+     now, and on a narrow screen they go four across in two tidy rows — each button
+     drops its second word so the row stays readable instead of shrinking to nothing. */
+  .add-bar { padding: 12px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  @media (max-width: 560px) {
+    .add-bar { gap: 6px; padding: 10px 12px; align-items: stretch; }
+    .add-bar > button { flex: 1 1 calc(25% - 5px); min-width: 0; padding-left: 4px; padding-right: 4px; text-align: center; white-space: nowrap; }
+    .add-bar .btn-long { display: none; }
+    .job-btn, .log-btn { font-size: 10px; letter-spacing: 0.02em; }
+    .add-btn { font-size: 11px; letter-spacing: 0.04em; }
+  }
   .add-btn { background: var(--rust); color: var(--snow); border: none; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; padding: 9px 20px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); transition: background 0.15s; text-transform: uppercase; }
   .add-btn:hover { background: var(--rust-light); }
   .log-btn { background: transparent; border: 1px solid #2a2a2a; color: var(--mid); font-size: 11px; padding: 8px 14px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); letter-spacing: 0.06em; }
@@ -218,24 +228,6 @@
   .admin-btn { background: #1a1500; border: 1px solid var(--gold); color: var(--gold); font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); }
   .admin-btn:hover { background: #2a2000; }
 
-  .topsoil-widget { background: #1a1a00; border: 1px solid #4a4000; border-left: 4px solid var(--gold); margin: 10px 16px; border-radius: var(--radius); padding: 12px 14px; }
-  .topsoil-title { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-  .topsoil-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .topsoil-row:last-child { margin-bottom: 0; border-top: 1px solid #4a4000; padding-top: 8px; margin-top: 4px; }
-  .topsoil-label { font-size: 11px; color: var(--fog); flex: 1; }
-  .topsoil-input { background: var(--iron); border: 1px solid #4a4000; color: var(--snow); font-size: 14px; font-weight: 700; padding: 5px 8px; border-radius: 4px; font-family: var(--font); width: 80px; text-align: right; outline: none; }
-  .topsoil-input:focus { border-color: var(--gold); }
-  .topsoil-unit { font-size: 11px; color: var(--mid); width: 28px; }
-  .topsoil-total { font-size: 15px; font-weight: 700; color: var(--gold); min-width: 80px; text-align: right; }
-  .topsoil-widget { background: #1a1a00; border: 1px solid #4a4000; border-left: 4px solid var(--gold); margin: 10px 16px; border-radius: var(--radius); padding: 12px 14px; }
-  .topsoil-title { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-  .topsoil-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .topsoil-row:last-child { margin-bottom: 0; border-top: 1px solid #4a4000; padding-top: 8px; margin-top: 4px; }
-  .topsoil-label { font-size: 11px; color: var(--fog); flex: 1; }
-  .topsoil-input { background: var(--iron); border: 1px solid #4a4000; color: var(--snow); font-size: 14px; font-weight: 700; padding: 5px 8px; border-radius: 4px; font-family: var(--font); width: 80px; text-align: right; outline: none; }
-  .topsoil-input:focus { border-color: var(--gold); }
-  .topsoil-unit { font-size: 11px; color: var(--mid); width: 28px; }
-  .topsoil-total { font-size: 15px; font-weight: 700; color: var(--gold); min-width: 80px; text-align: right; }
 
   /* PHOTO UPLOAD */
   .photo-btn {
@@ -383,36 +375,17 @@
 </header>
 
 
-<div class="topsoil-widget">
-  <div class="topsoil-title">⛰ Topsoil On Hand</div>
-  <div class="topsoil-row">
-    <span class="topsoil-label">Topsoil Bin</span>
-    <input class="topsoil-input" type="number" id="tsBins" value="0" min="0" oninput="updateTopsoilTotal()">
-    <span class="topsoil-unit">ton</span>
-  </div>
-  <div class="topsoil-row">
-    <span class="topsoil-label">Cone Pile</span>
-    <input class="topsoil-input" type="number" id="tsCone" value="0" min="0" oninput="updateTopsoilTotal()">
-    <span class="topsoil-unit">ton</span>
-  </div>
-  <div class="topsoil-row">
-    <span class="topsoil-label" style="font-weight:700;color:var(--gold)">TOTAL ON HAND</span>
-    <span class="topsoil-total" id="tsTotal">0</span>
-    <span class="topsoil-unit">ton</span>
-  </div>
-</div>
-
 <div class="config-banner" id="configBanner"></div>
 
 <div class="add-bar">
-  <button class="add-btn" id="addBtn" onclick="requireName(openAddModal)">+ Add Item</button>
-  <button class="log-btn" style="border-color:#217346;color:#3ba55d" onclick="openSheetView()">📊 View Sheet / Changes</button>
-  <button class="job-btn" onclick="openJobChecker()">🔍 Check Job</button>
-  <button class="job-btn" style="border-color:#5a2000;color:#e07030" onclick="openDisposalLog()">🗑 Disposal Log</button>
-  <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull Material</button>
-  <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 Pull From List</button>
-  <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where Is It</button>
-  <button class="job-btn" style="border-color:#5a2a8a;color:#b389d9" onclick="openAerialPhotos()">🚁 Latest Aerial</button>
+  <button class="add-btn" id="addBtn" onclick="requireName(openAddModal)">+ Add<span class="btn-long"> Item</span></button>
+  <button class="log-btn" style="border-color:#217346;color:#3ba55d" onclick="openSheetView()">📊 Sheet<span class="btn-long"> / Changes</span></button>
+  <button class="job-btn" onclick="openJobChecker()">🔍 Check<span class="btn-long"> Job</span></button>
+  <button class="job-btn" style="border-color:#5a2000;color:#e07030" onclick="openDisposalLog()">🗑 Disposal<span class="btn-long"> Log</span></button>
+  <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull<span class="btn-long"> Material</span></button>
+  <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 <span class="btn-long">Pull From </span>List</button>
+  <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where<span class="btn-long"> Is It</span></button>
+  <button class="job-btn" style="border-color:#5a2a8a;color:#b389d9" onclick="openAerialPhotos()">🚁 Aerial<span class="btn-long"> Photos</span></button>
 </div>
 
 <div class="stale-banner" id="staleBanner" style="display:none"></div>
@@ -1807,13 +1780,6 @@ const EMBEDDED = [
 
 
 
-// ---- TOPSOIL ----
-function updateTopsoilTotal() {
-  const bins = parseFloat(document.getElementById('tsBins').value) || 0;
-  const cone = parseFloat(document.getElementById('tsCone').value) || 0;
-  document.getElementById('tsTotal').textContent = (bins + cone).toFixed(1);
-}
-
 
 // ---- ITEM PHOTOS ----
 // Drive serves the thumbnail; the file id is all that rides in the Sheet.
@@ -2921,7 +2887,13 @@ const ZONE_SEED = {
   // items here fall into four piles you can see from the air.
   nursery104: { label: '104 — Nursery & Storage', photos: ['zones/nursery-104.jpg','zones/nursery-104-oblique.jpg','zones/storage-strip.jpg'],
                 locs: ['104'], children: ['n104nursery','n104lumber','n104masonry','n104drain','n104fence','n104misc'], regions: [] },
-  n104nursery: { label: 'Nursery Block', photos: ['zones/nursery-104-oblique.jpg'], locs: ['104'], cats: ['NURSERY STOCK'], children: [], regions: [] },
+  // 86 plants in one list is still a scroll. Form is how anyone actually looks for
+  // a plant — you know you want a tree before you know which one.
+  n104nursery: { label: 'Nursery Block', photos: ['zones/nursery-104-oblique.jpg'], locs: ['104'], cats: ['NURSERY STOCK'],
+                 children: ['nurTree','nurShrub','nurPeren'], regions: [] },
+  nurTree:  { label: '🌲 Trees', photos: ['zones/nursery-104-oblique.jpg'], locs: ['104'], cats: ['NURSERY STOCK'], ptypes: ['tree'], children: [], regions: [] },
+  nurShrub: { label: '🌳 Shrubs', photos: ['zones/nursery-104-oblique.jpg'], locs: ['104'], cats: ['NURSERY STOCK'], ptypes: ['shrub'], children: [], regions: [] },
+  nurPeren: { label: '🌿 Perennials & Grasses', photos: ['zones/nursery-104-oblique.jpg'], locs: ['104'], cats: ['NURSERY STOCK'], ptypes: ['perennial'], children: [], regions: [] },
   n104lumber:  { label: 'Lumber & Posts', photos: ['zones/storage-strip.jpg'], locs: ['104'], cats: ['LUMBER & POSTS'], children: [], regions: [] },
   n104masonry: { label: 'Block & Retaining Wall', photos: ['zones/storage-strip.jpg'], locs: ['104'], cats: ['MASONRY & RETAINING WALL'], children: [], regions: [] },
   n104drain:   { label: 'Pipe & Culvert', photos: ['zones/storage-strip.jpg'], locs: ['104'], cats: ['DRAINAGE'], children: [], regions: [] },
@@ -2985,6 +2957,42 @@ function zoneNode(id) { return ZONES[id] || null; }
 function zoneCurrentId() { return zonePath[zonePath.length - 1]; }
 function zoneIsAdmin() { return !!(myProfile && myProfile.isAdmin && myProfile.status === 'approved'); }
 
+// ---- TREE / SHRUB / PERENNIAL ----
+// Nothing in the sheet says what form a plant is, but the yard already encodes it:
+// a tree is sold by caliper or height and balled-and-burlapped, a perennial comes in
+// a 1 gallon pot, a shrub in a 5. That covers almost everything, keywords catch the
+// rest, and the handful the rules get wrong are named outright rather than fudged.
+// Anything still unmatched shows up as unsorted instead of being quietly guessed.
+const PLANT_TYPE_OVERRIDES = {
+  'birdsnestspruce': 'shrub',          // dwarf conifer despite the name
+  'purpleleafplumsandcherry': 'shrub', // "cherry" would otherwise read as a tree
+  'alder': 'shrub',                    // sold here in containers as hedge stock
+  'regentserviceberryamelanchieralnifolia': 'shrub',
+  'nativesaskatoon': 'shrub',
+  'siberianpeashrub': 'shrub',
+  'baileycompactcranberrybush': 'shrub',
+  'blueberrynorthcountry': 'shrub',
+};
+// Word boundaries are not decoration here. Unanchored, "aster" matched CotoneASTER
+// and filed 147 shrubs as perennials, and "fir" would do the same to Fireweed.
+const PLANT_KEYWORDS = [
+  ['perennial', /\b(iris|bergenia|bleeding heart|fern|aster|anemone|daylily|columbine|grass|hosta|wildflower|sedum|lupine|peony|poppy)\b/i],
+  ['shrub',     /\b(potentilla|juniper|spirea|lilac|rosa|rose|cotoneaster|dogwood|currant|cranberr\w*|blueberry|boxwood|forsythia|saskatoon|peashrub|serviceberry|sand cherry|honeysuckle|viburnum|ninebark|willow)\b/i],
+  ['tree',      /\b(maple|birch|spruce|oak|crabapple|aspen|cherry|mountain ash|poplar|cottonwood|linden|elm|pine|larch|fir)\b/i],
+];
+
+function plantType(item) {
+  const name = String(item.name || '');
+  const specs = String(item.specs || '');
+  const key = normKey(name);
+  if (PLANT_TYPE_OVERRIDES[key]) return PLANT_TYPE_OVERRIDES[key];
+  // How it is sold beats what it is called: a 3" caliper B&B anything is a tree.
+  if (/\bcal\b|"\s*cal|ft\s*ht/i.test(specs)) return 'tree';
+  if (/\b1\s*gal/i.test(specs)) return 'perennial';
+  for (const [type, re] of PLANT_KEYWORDS) if (re.test(name)) return type;
+  return '';
+}
+
 // A node claims items by location, optionally narrowed to certain categories.
 // The category leg is what lets 104 split into its real piles without anyone
 // re-filing 129 rows: the pile a thing sits in is already its category.
@@ -2992,6 +3000,7 @@ function zoneRule(node) {
   return {
     locs: (node.locs || []).map(normKey),
     cats: (node.cats || []).map(normKey),
+    ptypes: (node.ptypes || []).slice(),
   };
 }
 
@@ -2999,6 +3008,7 @@ function itemMatchesRule(item, rule) {
   if (!rule.locs.length) return false;
   if (rule.locs.indexOf(normKey(item.location)) === -1) return false;
   if (rule.cats.length && rule.cats.indexOf(normKey(item.category)) === -1) return false;
+  if (rule.ptypes.length && rule.ptypes.indexOf(plantType(item)) === -1) return false;
   return true;
 }
 
