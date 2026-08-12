@@ -646,14 +646,20 @@
 <!-- NAME A NEW ZONE (admin draw mode) -->
 <div class="modal-overlay" id="zoneNameModal">
   <div class="modal name-modal">
-    <h2>Name This Area</h2>
+    <h2>What Did You Just Outline?</h2>
     <div class="modal-field full">
-      <label>What is this area called?</label>
-      <input type="text" id="zoneNameInput" placeholder="e.g. Conex 3">
+      <label>Pick an area that already exists here</label>
+      <select id="zoneExistingSelect" onchange="onZoneExistingPick()"></select>
     </div>
-    <div class="modal-field full">
-      <label>Which inventory location does it hold? (optional)</label>
-      <select id="zoneLocSelect"></select>
+    <div id="zoneNewFields">
+      <div class="modal-field full">
+        <label>…or name a new one</label>
+        <input type="text" id="zoneNameInput" placeholder="e.g. Conex 3">
+      </div>
+      <div class="modal-field full">
+        <label>Which inventory location does it hold? (optional)</label>
+        <select id="zoneLocSelect"></select>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cancelZoneDraft()">Cancel</button>
@@ -755,6 +761,8 @@ const T = {
     zoneSaved:'Area "N" saved ✓', zoneExported:'Zones exported — send the file to Claude to commit',
     zoneConfirmClear:'Remove every drawn area on this photo?',
     zoneNoMatch:'No zone covers "L" yet — draw one on the yard photo',
+    zoneUnsorted:'Not in any area yet', zoneAllSorted:'Everything here is sorted into an area ✓',
+    zoneNewArea:'— a new area —',
     pullYours:'Yours', pullOthers:'Staged by others', claimedBy:'N claimed',
     signInNeeded:'Sign in to make changes',
     nothingAdded:'Nothing checked to add', addToPull:'+ Pull',
@@ -816,6 +824,8 @@ const T = {
     zoneSaved:'Área "N" guardada ✓', zoneExported:'Zonas exportadas — envía el archivo a Claude',
     zoneConfirmClear:'¿Borrar todas las áreas dibujadas en esta foto?',
     zoneNoMatch:'Ninguna zona cubre "L" todavía — dibuja una en la foto del patio',
+    zoneUnsorted:'Aún sin área asignada', zoneAllSorted:'Todo aquí ya está en un área ✓',
+    zoneNewArea:'— un área nueva —',
     pullYours:'Tuyo', pullOthers:'Preparado por otros', claimedBy:'N apartados',
     signInNeeded:'Inicia sesión para hacer cambios',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
@@ -2620,7 +2630,18 @@ const ZONE_SEED = {
 
   // 129 of 205 items are filed under bare "104" — this node is the one most worth
   // subdividing, which is why it carries the closest imagery we have.
-  nursery104: { label: '104 — Nursery & Storage', photos: ['zones/nursery-104.jpg','zones/nursery-104-oblique.jpg','zones/storage-strip.jpg'], locs: ['104'], children: [], regions: [] },
+  // 104 is one label over several distinct piles, but the piles are already named
+  // in the data: category says which one a thing belongs to. So its sub-areas match
+  // on category WITHIN the location and nothing has to be re-filed — 124 of the 129
+  // items here fall into four piles you can see from the air.
+  nursery104: { label: '104 — Nursery & Storage', photos: ['zones/nursery-104.jpg','zones/nursery-104-oblique.jpg','zones/storage-strip.jpg'],
+                locs: ['104'], children: ['n104nursery','n104lumber','n104masonry','n104drain','n104fence','n104misc'], regions: [] },
+  n104nursery: { label: 'Nursery Block', photos: ['zones/nursery-104-oblique.jpg'], locs: ['104'], cats: ['NURSERY STOCK'], children: [], regions: [] },
+  n104lumber:  { label: 'Lumber & Posts', photos: ['zones/storage-strip.jpg'], locs: ['104'], cats: ['LUMBER & POSTS'], children: [], regions: [] },
+  n104masonry: { label: 'Block & Retaining Wall', photos: ['zones/storage-strip.jpg'], locs: ['104'], cats: ['MASONRY & RETAINING WALL'], children: [], regions: [] },
+  n104drain:   { label: 'Pipe & Culvert', photos: ['zones/storage-strip.jpg'], locs: ['104'], cats: ['DRAINAGE'], children: [], regions: [] },
+  n104fence:   { label: 'Fence Hardware', photos: ['zones/storage-strip.jpg'], locs: ['104'], cats: ['FENCE HARDWARE'], children: [], regions: [] },
+  n104misc:    { label: 'Misc & Hydroseed', photos: [], locs: ['104'], cats: ['MISC/EQUIPMENT','HYDROSEEDING MATERIALS'], children: [], regions: [] },
   bins:       { label: 'Material Bins', photos: ['zones/material-bins.jpg','aerial/yard-core.jpg'], locs: ['Material Bins'], children: [], regions: [] },
   newbldg:    { label: 'New Maintenance Building', photos: ['zones/new-building.jpg','zones/new-building-nadir.jpg'], locs: [], children: [], regions: [] },
 
@@ -2679,23 +2700,52 @@ function zoneNode(id) { return ZONES[id] || null; }
 function zoneCurrentId() { return zonePath[zonePath.length - 1]; }
 function zoneIsAdmin() { return !!(myProfile && myProfile.isAdmin && myProfile.status === 'approved'); }
 
-// Every location string at or beneath a node, so a parent can count what its
-// children hold without duplicating the mapping.
-function zoneLocsDeep(id, seen) {
+// A node claims items by location, optionally narrowed to certain categories.
+// The category leg is what lets 104 split into its real piles without anyone
+// re-filing 129 rows: the pile a thing sits in is already its category.
+function zoneRule(node) {
+  return {
+    locs: (node.locs || []).map(normKey),
+    cats: (node.cats || []).map(normKey),
+  };
+}
+
+function itemMatchesRule(item, rule) {
+  if (!rule.locs.length) return false;
+  if (rule.locs.indexOf(normKey(item.location)) === -1) return false;
+  if (rule.cats.length && rule.cats.indexOf(normKey(item.category)) === -1) return false;
+  return true;
+}
+
+// Every rule at or beneath a node, so a parent counts what its children hold
+// without anyone maintaining the mapping twice.
+function zoneRulesDeep(id, seen) {
   seen = seen || new Set();
   if (seen.has(id)) return [];   // a mis-drawn tree must not hang the app
   seen.add(id);
   const n = zoneNode(id);
   if (!n) return [];
-  let out = (n.locs || []).slice();
-  (n.children || []).forEach(c => { out = out.concat(zoneLocsDeep(c, seen)); });
+  let out = (n.locs || []).length ? [zoneRule(n)] : [];
+  (n.children || []).forEach(c => { out = out.concat(zoneRulesDeep(c, seen)); });
   return out;
 }
 
 function zoneItems(id) {
-  const locs = new Set(zoneLocsDeep(id).map(l => normKey(l)));
-  if (!locs.size) return [];
-  return items.filter(i => locs.has(normKey(i.location)));
+  const rules = zoneRulesDeep(id);
+  if (!rules.length) return [];
+  return items.filter(i => rules.some(r => itemMatchesRule(i, r)));
+}
+
+// What this node holds that none of its children have claimed — the leftovers.
+// Without this a parent would list everything its children already list, and the
+// things nobody has sorted yet would be invisible in the pile.
+function zoneOwnItems(id) {
+  const node = zoneNode(id);
+  if (!node) return [];
+  const own = zoneRule(node);
+  if (!own.locs.length) return [];
+  const childRules = (node.children || []).reduce((acc, c) => acc.concat(zoneRulesDeep(c)), []);
+  return items.filter(i => itemMatchesRule(i, own) && !childRules.some(r => itemMatchesRule(i, r)));
 }
 
 function zoneStats(id) {
@@ -2857,13 +2907,13 @@ function renderZoneBody(node, id) {
     html += `</div>`;
   }
 
-  // Items whose location maps to this node itself, not to a child — otherwise a
-  // parent would repeat everything its children already list.
-  const own = new Set((node.locs || []).map(l => normKey(l)));
-  const here = items.filter(i => own.has(normKey(i.location)));
-  html += `<div class="zone-section-label">${t('zoneWhatsHere')} (${here.length})</div>`;
+  // Only what no child has claimed, so a parent does not repeat its children and
+  // anything still unsorted stands out instead of hiding in the crowd.
+  const here = zoneOwnItems(id);
+  const kidCount = kids.length;
+  html += `<div class="zone-section-label">${kidCount ? t('zoneUnsorted') : t('zoneWhatsHere')} (${here.length})</div>`;
   if (!here.length) {
-    html += `<div class="zone-empty">${t('zoneNothingHere')}</div>`;
+    html += `<div class="zone-empty">${kidCount ? t('zoneAllSorted') : t('zoneNothingHere')}</div>`;
   } else {
     html += `<div class="zone-items">` + here
       .slice()
@@ -2912,30 +2962,60 @@ function onZoneStageTap(ev) {
 
 function finishZoneDraw() {
   if (zoneDraft.length < 3) { showToast(t('zoneNeed3'), 'error'); return; }
+  const node = zoneNode(zoneCurrentId());
+
+  // Most of the time the area being outlined is already a child of this node —
+  // 104 knows about its nursery block before anyone traces it. Offering those
+  // first turns the common case into one tap instead of typing a name that has
+  // to match something already there.
+  const claimed = new Set((node.regions || []).map(r => r.child));
+  const options = (node.children || [])
+    .filter(c => zoneNode(c) && !claimed.has(c))
+    .map(c => {
+      const s = zoneStats(c);
+      return `<option value="${c}">${escapeHtml(zoneNode(c).label)}${s.count ? ' — ' + s.count + ' ' + t('zoneItemsWord') : ''}</option>`;
+    }).join('');
+  document.getElementById('zoneExistingSelect').innerHTML =
+    options + `<option value="__new__">${t('zoneNewArea')}</option>`;
+  document.getElementById('zoneExistingSelect').value = options ? (node.children || []).find(c => !claimed.has(c)) : '__new__';
+
   const sel = document.getElementById('zoneLocSelect');
   sel.innerHTML = `<option value="">${t('zoneNoLoc')}</option>` +
     LOCATIONS.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
   document.getElementById('zoneNameInput').value = '';
+  onZoneExistingPick();
   document.getElementById('zoneNameModal').classList.add('open');
-  setTimeout(() => document.getElementById('zoneNameInput').focus(), 60);
+}
+
+function onZoneExistingPick() {
+  const isNew = document.getElementById('zoneExistingSelect').value === '__new__';
+  document.getElementById('zoneNewFields').style.display = isNew ? 'block' : 'none';
+  if (isNew) setTimeout(() => document.getElementById('zoneNameInput').focus(), 60);
 }
 
 function cancelZoneDraft() { document.getElementById('zoneNameModal').classList.remove('open'); }
 
 function saveZoneDraft() {
-  const label = document.getElementById('zoneNameInput').value.trim();
-  if (!label) { showToast(t('valueReq'), 'error'); return; }
-  const loc = document.getElementById('zoneLocSelect').value;
   const parentId = zoneCurrentId();
   const parent = zoneNode(parentId);
+  const picked = document.getElementById('zoneExistingSelect').value;
 
-  // A drawn area always becomes a real node, so it can hold its own photo and
-  // sub-areas later. If it maps to an existing node for that location, link to
-  // that instead of creating a duplicate.
-  let childId = loc ? zoneForLocation(loc) : null;
-  if (!childId) {
-    childId = 'z' + Date.now().toString(36);
-    ZONES[childId] = { label: label, photos: [], locs: loc ? [loc] : [], children: [], regions: [] };
+  let childId, label;
+  if (picked && picked !== '__new__' && zoneNode(picked)) {
+    childId = picked;
+    label = zoneNode(picked).label;
+  } else {
+    label = document.getElementById('zoneNameInput').value.trim();
+    if (!label) { showToast(t('valueReq'), 'error'); return; }
+    const loc = document.getElementById('zoneLocSelect').value;
+    // A drawn area always becomes a real node, so it can hold its own photo and
+    // sub-areas later. If it maps to an existing node for that location, link to
+    // that instead of creating a duplicate.
+    childId = loc ? zoneForLocation(loc) : null;
+    if (!childId) {
+      childId = 'z' + Date.now().toString(36);
+      ZONES[childId] = { label: label, photos: [], locs: loc ? [loc] : [], children: [], regions: [] };
+    }
   }
   if (!parent.children) parent.children = [];
   if (parent.children.indexOf(childId) === -1) parent.children.push(childId);
