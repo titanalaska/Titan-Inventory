@@ -3152,10 +3152,10 @@ function zoneIsAdmin() { return !!(myProfile && myProfile.isAdmin && myProfile.s
 // a 1 gallon pot, a shrub in a 5. That covers almost everything, keywords catch the
 // rest, and the handful the rules get wrong are named outright rather than fudged.
 // Anything still unmatched shows up as unsorted instead of being quietly guessed.
+// Corrections from Matt, who has walked the yard — these beat any rule below.
 const PLANT_TYPE_OVERRIDES = {
   'birdsnestspruce': 'shrub',          // dwarf conifer despite the name
   'purpleleafplumsandcherry': 'shrub', // "cherry" would otherwise read as a tree
-  'alder': 'shrub',                    // sold here in containers as hedge stock
   'regentserviceberryamelanchieralnifolia': 'shrub',
   'nativesaskatoon': 'shrub',
   'siberianpeashrub': 'shrub',
@@ -3167,7 +3167,7 @@ const PLANT_TYPE_OVERRIDES = {
 const PLANT_KEYWORDS = [
   ['perennial', /\b(iris|bergenia|bleeding heart|fern|aster|anemone|daylily|columbine|grass|hosta|wildflower|sedum|lupine|peony|poppy)\b/i],
   ['shrub',     /\b(potentilla|juniper|spirea|lilac|rosa|rose|cotoneaster|dogwood|currant|cranberr\w*|blueberry|boxwood|forsythia|saskatoon|peashrub|serviceberry|sand cherry|honeysuckle|viburnum|ninebark|willow)\b/i],
-  ['tree',      /\b(maple|birch|spruce|oak|crabapple|aspen|cherry|mountain ash|poplar|cottonwood|linden|elm|pine|larch|fir)\b/i],
+  ['tree',      /\b(maple|birch|spruce|oak|crabapple|aspen|cherry|mountain ash|poplar|cottonwood|linden|elm|pine|larch|fir|alder)\b/i],
 ];
 
 function plantType(item) {
