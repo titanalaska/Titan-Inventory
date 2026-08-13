@@ -3153,20 +3153,18 @@ function zoneIsAdmin() { return !!(myProfile && myProfile.isAdmin && myProfile.s
 // rest, and the handful the rules get wrong are named outright rather than fudged.
 // Anything still unmatched shows up as unsorted instead of being quietly guessed.
 // Corrections from Matt, who has walked the yard — these beat any rule below.
-const PLANT_TYPE_OVERRIDES = {
-  'birdsnestspruce': 'shrub',          // dwarf conifer despite the name
-  'purpleleafplumsandcherry': 'shrub', // "cherry" would otherwise read as a tree
-  'regentserviceberryamelanchieralnifolia': 'shrub',
-  'nativesaskatoon': 'shrub',
-  'siberianpeashrub': 'shrub',
-  'baileycompactcranberrybush': 'shrub',
-  'blueberrynorthcountry': 'shrub',
-};
+// Deliberately empty: every entry that used to live here was either wrong (Birds
+// Nest Spruce and Purple Leaf Plum / Sand Cherry are trees by his account, and the
+// alders are volunteer trees that came up in shrub pots) or already handled by the
+// keyword list. Put something here only when Matt says so, and say who said it.
+const PLANT_TYPE_OVERRIDES = {};
 // Word boundaries are not decoration here. Unanchored, "aster" matched CotoneASTER
 // and filed 147 shrubs as perennials, and "fir" would do the same to Fireweed.
 const PLANT_KEYWORDS = [
   ['perennial', /\b(iris|bergenia|bleeding heart|fern|aster|anemone|daylily|columbine|grass|hosta|wildflower|sedum|lupine|peony|poppy)\b/i],
-  ['shrub',     /\b(potentilla|juniper|spirea|lilac|rosa|rose|cotoneaster|dogwood|currant|cranberr\w*|blueberry|boxwood|forsythia|saskatoon|peashrub|serviceberry|sand cherry|honeysuckle|viburnum|ninebark|willow)\b/i],
+  // "sand cherry" is not here on purpose — the shrub list is checked before the tree
+  // list, so it would have caught Purple Leaf Plum / Sand Cherry, which is a tree.
+  ['shrub',     /\b(potentilla|juniper|spirea|lilac|rosa|rose|cotoneaster|dogwood|currant|cranberr\w*|blueberry|boxwood|forsythia|saskatoon|peashrub|serviceberry|honeysuckle|viburnum|ninebark|willow)\b/i],
   ['tree',      /\b(maple|birch|spruce|oak|crabapple|aspen|cherry|mountain ash|poplar|cottonwood|linden|elm|pine|larch|fir|alder)\b/i],
 ];
 
