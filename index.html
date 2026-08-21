@@ -313,6 +313,23 @@
   .zone-hotspot { fill: rgba(212,160,23,0.16); stroke: var(--gold); stroke-width: 0.004; cursor: pointer; }
   .zone-hotspot:hover { fill: rgba(212,160,23,0.34); }
   .zone-hotspot-label { position: absolute; transform: translate(-50%,-50%); color: var(--snow); font-size: 12px; font-weight: 700; line-height: 1.2; text-align: center; text-shadow: 0 0 4px #000, 0 1px 3px #000; pointer-events: auto; cursor: pointer; white-space: nowrap; }
+  /* Markers: the dot sits exactly on the tapped point, so the label is positioned
+     off it rather than being a sibling that would push the dot off-centre. */
+  /* Pins carry a number, not a name. Three conex doors side by side put three labels
+     in the same 170px of photo and they collided into unreadable mush — the legend
+     below the picture holds the words instead, which also stops long names spilling
+     off the edge of the image. */
+  .zone-marker { position: absolute; transform: translate(-50%,-50%); width: 26px; height: 26px; padding: 0; border: none; background: none; cursor: pointer; }
+  .zone-marker-dot { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #000; font-family: var(--font); font-size: 13px; font-weight: 700; border: 2px solid rgba(0,0,0,0.8); box-shadow: 0 0 0 3px rgba(212,160,23,0.3), 0 2px 5px rgba(0,0,0,0.6); }
+  .zone-marker:active .zone-marker-dot { transform: scale(0.88); }
+  .zone-legend { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+  .zone-legend-row { display: flex; align-items: center; gap: 8px; background: none; border: none; padding: 6px 4px; cursor: pointer; text-align: left; font-family: var(--font); border-radius: 4px; }
+  .zone-legend-row:hover { background: var(--steel); }
+  .zone-legend-num { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--gold); color: #000; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .zone-legend-name { flex: 1; min-width: 0; color: var(--snow); font-size: 13px; font-weight: 700; }
+  .zone-legend-count { color: var(--mid); font-size: 11px; white-space: nowrap; }
+  .zone-stage.marking { cursor: crosshair; }
+  .zone-stage.marking img { opacity: 0.85; }
   .zone-draft { fill: rgba(224,112,48,0.25); stroke: var(--rust); stroke-width: 0.004; stroke-dasharray: 0.01 0.008; }
   .zone-draft-pt { fill: var(--rust); stroke: var(--snow); stroke-width: 0.002; }
   .zone-nophoto { padding: 26px 14px; text-align: center; color: var(--mid); font-size: 12px; line-height: 1.6; border: 1px dashed #3a3a3a; border-radius: var(--radius); }
@@ -704,7 +721,7 @@
 <!-- NAME A NEW ZONE (admin draw mode) -->
 <div class="modal-overlay" id="zoneNameModal">
   <div class="modal name-modal">
-    <h2>What Did You Just Outline?</h2>
+    <h2>What Is At That Spot?</h2>
     <div class="modal-field full">
       <label>Pick an area that already exists here</label>
       <select id="zoneExistingSelect" onchange="onZoneExistingPick()"></select>
@@ -721,7 +738,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cancelZoneDraft()">Cancel</button>
-      <button class="btn-save" onclick="saveZoneDraft()">Save Area</button>
+      <button class="btn-save" onclick="saveZoneDraft()">Save Marker</button>
     </div>
   </div>
 </div>
@@ -812,10 +829,11 @@ const T = {
     retry:'Retry', pullNeedsLive:'Cannot pull while offline — sync first, your list is saved',
     whereBtn:'📍 Where?', zoneGoDeeper:'Go deeper', zoneWhatsHere:"What's here",
     zoneItemsWord:'items', zoneNothingHere:'Nothing logged here',
-    zoneDrawArea:'Draw area', zoneCancelDraw:'Cancel', zoneFinishArea:'Finish',
-    zoneUndoPoint:'Undo point', zoneClearAreas:'Clear areas', zoneExport:'Export zones',
-    zoneDrawHint:'Tap each corner of the area on the photo, then Finish. Double-tap the photo to view it full size.',
-    zoneNeed3:'Tap at least 3 corners', zoneNoLoc:'— no inventory location —',
+    zonePlaceMarker:'Place marker', zoneCancelDraw:'Cancel',
+    zoneClearMarkers:'Clear markers', zoneClearAreas:'Clear areas', zoneExport:'Export zones',
+    zoneMarkerHint:'Tap the spot on the photo to drop a marker there. Double-tap the photo to view it full size.',
+    zoneNeedPoint:'Tap the photo first', zoneNoLoc:'— no inventory location —',
+    zoneConfirmClearMarkers:'Remove the markers on this photo?',
     zoneSaved:'Area "N" saved ✓', zoneExported:'Zones exported — send the file to Claude to commit',
     zoneConfirmClear:'Remove every drawn area on this photo?',
     zoneNoMatch:'No zone covers "L" yet — draw one on the yard photo',
@@ -893,10 +911,11 @@ const T = {
     retry:'Reintentar', pullNeedsLive:'No se puede retirar sin conexión — sincroniza, tu lista está guardada',
     whereBtn:'📍 ¿Dónde?', zoneGoDeeper:'Ver más de cerca', zoneWhatsHere:'Qué hay aquí',
     zoneItemsWord:'artículos', zoneNothingHere:'Nada registrado aquí',
-    zoneDrawArea:'Dibujar área', zoneCancelDraw:'Cancelar', zoneFinishArea:'Terminar',
-    zoneUndoPoint:'Deshacer punto', zoneClearAreas:'Borrar áreas', zoneExport:'Exportar zonas',
-    zoneDrawHint:'Toca cada esquina del área en la foto y luego Terminar. Doble toque para ver la foto completa.',
-    zoneNeed3:'Toca al menos 3 esquinas', zoneNoLoc:'— sin ubicación de inventario —',
+    zonePlaceMarker:'Poner marcador', zoneCancelDraw:'Cancelar',
+    zoneClearMarkers:'Borrar marcadores', zoneClearAreas:'Borrar áreas', zoneExport:'Exportar zonas',
+    zoneMarkerHint:'Toca el punto en la foto para poner un marcador. Doble toque para ver la foto completa.',
+    zoneNeedPoint:'Toca la foto primero', zoneNoLoc:'— sin ubicación de inventario —',
+    zoneConfirmClearMarkers:'¿Borrar los marcadores de esta foto?',
     zoneSaved:'Área "N" guardada ✓', zoneExported:'Zonas exportadas — envía el archivo a Claude',
     zoneConfirmClear:'¿Borrar todas las áreas dibujadas en esta foto?',
     zoneNoMatch:'Ninguna zona cubre "L" todavía — dibuja una en la foto del patio',
@@ -3064,7 +3083,7 @@ function openAerialImage(src) {
 //
 // `regions` are tap targets drawn ON the node's photo, in 0..1 coordinates so they
 // survive any image size or a whole new drone flight at a different altitude. They
-// are drawn in the app by an admin, never hand-authored here -- see beginZoneDraw.
+// are placed in the app by an admin, never hand-authored here -- see beginZoneMarking.
 const ZONE_SEED = {
   // yard-overview is the whole property in one frame — the only shot that works as a
   // starting point. The graded-lot photos sit here rather than under a zone name
@@ -3163,8 +3182,8 @@ function saveZones() { try { localStorage.setItem('titanZones', JSON.stringify(Z
 
 let zonePath = ['root'];        // breadcrumb trail of node ids
 let zonePhotoIdx = 0;
-let zoneDrawing = false;
-let zoneDraft = [];             // [[x,y], …] in 0..1 while drawing
+let zoneMarking = false;
+let zoneMarkerPt = null;        // {x,y} in 0..1, the spot just tapped
 
 function zoneNode(id) { return ZONES[id] || null; }
 function zoneCurrentId() { return zonePath[zonePath.length - 1]; }
@@ -3271,7 +3290,7 @@ function openZones(id) {
 }
 
 function closeZones() {
-  cancelZoneDraw();
+  cancelZoneMarking();
   document.getElementById('zoneModal').classList.remove('open');
 }
 
@@ -3307,7 +3326,7 @@ function zoneForLocation(loc) {
 }
 
 function goZone(id) {
-  cancelZoneDraw();
+  cancelZoneMarking();
   if (!zoneNode(id)) return;
   zonePath.push(id);
   zonePhotoIdx = 0;
@@ -3315,7 +3334,7 @@ function goZone(id) {
 }
 
 function zoneCrumbTo(idx) {
-  cancelZoneDraw();
+  cancelZoneMarking();
   zonePath = zonePath.slice(0, idx + 1);
   zonePhotoIdx = 0;
   renderZones();
@@ -3369,22 +3388,40 @@ function renderZoneStage(node) {
                  onclick="onZoneRegionTap(${i})">${escapeHtml(r.label || '')}</div>`;
   }).join('');
 
-  const draftPoly = zoneDraft.length > 1
-    ? `<polygon class="zone-draft" points="${zoneDraft.map(p => p[0].toFixed(4) + ',' + p[1].toFixed(4)).join(' ')}"></polygon>` : '';
-  const draftPts = zoneDraft.map(p => `<circle class="zone-draft-pt" cx="${p[0].toFixed(4)}" cy="${p[1].toFixed(4)}" r="0.008"></circle>`).join('');
+  // A marker belongs to the photo it was placed on. Without this filter, a pin put on
+  // the oblique would also float somewhere meaningless on the nadir shot.
+  const markers = (node.markers || [])
+    .map((m, i) => ({ m: m, i: i }))
+    .filter(o => (o.m.photo == null ? 0 : o.m.photo) === zonePhotoIdx);
+
+  const pins = markers.map(({ m, i }, n) =>
+    `<button class="zone-marker" style="left:${(m.x*100).toFixed(2)}%;top:${(m.y*100).toFixed(2)}%"
+             onclick="event.stopPropagation(); onZoneMarkerTap(${i})" title="${escapeHtml(m.label || '')}">
+       <span class="zone-marker-dot">${n + 1}</span>
+     </button>`).join('');
+
+  const legend = markers.length ? `<div class="zone-legend">` + markers.map(({ m, i }, n) => {
+    const s = m.child && zoneNode(m.child) ? zoneStats(m.child) : null;
+    return `<button class="zone-legend-row" onclick="onZoneMarkerTap(${i})">
+        <span class="zone-legend-num">${n + 1}</span>
+        <span class="zone-legend-name">${escapeHtml(m.label || '')}</span>
+        <span class="zone-legend-count">${s && s.count ? s.count + ' ' + t('zoneItemsWord') : ''}</span>
+      </button>`;
+  }).join('') + `</div>` : '';
 
   wrap.innerHTML = `
-    <div class="zone-stage" id="zoneStage">
+    <div class="zone-stage ${zoneMarking ? 'marking' : ''}" id="zoneStage"
+         ${zoneMarking ? 'onclick="onZoneStageTap(event)"' : ''}>
       <img src="${escapeHtml(src)}" alt="${escapeHtml(node.label)}"
            ondblclick="openAerialImage('${escapeHtml(src)}')">
-      <svg viewBox="0 0 1 1" preserveAspectRatio="none" id="zoneSvg"
-           ${zoneDrawing ? 'onclick="onZoneStageTap(event)" style="cursor:crosshair"' : ''}>
-        ${polys}${draftPoly}${draftPts}
+      <svg viewBox="0 0 1 1" preserveAspectRatio="none" id="zoneSvg" style="pointer-events:none">
+        ${polys}
       </svg>
-      ${zoneDrawing ? '' : labels}
+      ${labels}${pins}
     </div>
     ${photos.length > 1 ? `<div class="zone-strip">${photos.map((p, i) =>
-      `<img src="${escapeHtml(p)}" class="${i === zonePhotoIdx ? 'active' : ''}" onclick="setZonePhoto(${i})">`).join('')}</div>` : ''}`;
+      `<img src="${escapeHtml(p)}" class="${i === zonePhotoIdx ? 'active' : ''}" onclick="setZonePhoto(${i})">`).join('')}</div>` : ''}
+    ${legend}`;
 }
 
 function polyCentroid(pts) {
@@ -3432,49 +3469,50 @@ function renderZoneBody(node, id) {
   body.innerHTML = html;
 }
 
-// ---- ADMIN: DRAW THE TAP TARGETS ----
-// Hand-authoring polygon coordinates from a photo is guesswork; whoever knows the
-// yard should trace them, and re-trace them after a new drone flight. Zones live in
-// localStorage while being edited, then get exported and committed to the repo so
-// every phone gets them.
+// ---- ADMIN: DROP THE TAP TARGETS ----
+// One tap puts a pin on the building; tracing a polygon around it took several and
+// was miserable on a phone held in one hand in a yard. Pins live in localStorage
+// while being placed, then get exported and committed so every phone gets them.
 function renderZoneAdminBar() {
   const bar = document.getElementById('zoneAdminBar');
   if (!zoneIsAdmin()) { bar.style.display = 'none'; return; }
   const node = zoneNode(zoneCurrentId());
   const hasPhoto = (node.photos || []).length > 0;
+  const mine = (node.markers || []).filter(m => (m.photo == null ? 0 : m.photo) === zonePhotoIdx);
   bar.style.display = 'flex';
   bar.innerHTML = `
-    ${hasPhoto ? `<button class="zone-mini-btn ${zoneDrawing ? 'active' : ''}" onclick="${zoneDrawing ? 'cancelZoneDraw()' : 'beginZoneDraw()'}">
-      ${zoneDrawing ? '✕ ' + t('zoneCancelDraw') : '✏ ' + t('zoneDrawArea')}</button>` : ''}
-    ${zoneDrawing && zoneDraft.length >= 3 ? `<button class="zone-mini-btn active" onclick="finishZoneDraw()">✓ ${t('zoneFinishArea')}</button>` : ''}
-    ${zoneDrawing && zoneDraft.length ? `<button class="zone-mini-btn" onclick="undoZonePoint()">↶ ${t('zoneUndoPoint')}</button>` : ''}
-    ${(node.regions || []).length && !zoneDrawing ? `<button class="zone-mini-btn danger" onclick="clearZoneRegions()">${t('zoneClearAreas')}</button>` : ''}
-    ${!zoneDrawing ? `<button class="zone-mini-btn" onclick="exportZones()">⬇ ${t('zoneExport')}</button>` : ''}
-    ${zoneDrawing ? `<div class="zone-admin-hint">${t('zoneDrawHint')}</div>` : ''}`;
+    ${hasPhoto ? `<button class="zone-mini-btn ${zoneMarking ? 'active' : ''}" onclick="${zoneMarking ? 'cancelZoneMarking()' : 'beginZoneMarking()'}">
+      ${zoneMarking ? '✕ ' + t('zoneCancelDraw') : '📍 ' + t('zonePlaceMarker')}</button>` : ''}
+    ${mine.length && !zoneMarking ? `<button class="zone-mini-btn danger" onclick="clearZoneMarkers()">${t('zoneClearMarkers')}</button>` : ''}
+    ${(node.regions || []).length && !zoneMarking ? `<button class="zone-mini-btn danger" onclick="clearZoneRegions()">${t('zoneClearAreas')}</button>` : ''}
+    ${!zoneMarking ? `<button class="zone-mini-btn" onclick="exportZones()">⬇ ${t('zoneExport')}</button>` : ''}
+    ${zoneMarking ? `<div class="zone-admin-hint">${t('zoneMarkerHint')}</div>` : ''}`;
 }
 
-function beginZoneDraw() { zoneDrawing = true; zoneDraft = []; renderZones(); }
-function cancelZoneDraw() { if (!zoneDrawing && !zoneDraft.length) return; zoneDrawing = false; zoneDraft = []; }
-function undoZonePoint() { zoneDraft.pop(); renderZones(); }
+function beginZoneMarking() { zoneMarking = true; renderZones(); }
+function cancelZoneMarking() { zoneMarking = false; zoneMarkerPt = null; renderZones(); }
 
+// One tap is the whole gesture: it fixes the point and opens the naming panel.
 function onZoneStageTap(ev) {
-  const svg = document.getElementById('zoneSvg');
-  const r = svg.getBoundingClientRect();
-  const x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
-  const y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
-  zoneDraft.push([x, y]);
-  renderZones();
+  if (!zoneMarking) return;
+  const stage = document.getElementById('zoneStage');
+  const r = stage.getBoundingClientRect();
+  zoneMarkerPt = {
+    x: Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)),
+    y: Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height)),
+  };
+  openZoneNamePanel();
 }
 
-function finishZoneDraw() {
-  if (zoneDraft.length < 3) { showToast(t('zoneNeed3'), 'error'); return; }
+function openZoneNamePanel() {
   const node = zoneNode(zoneCurrentId());
 
-  // Most of the time the area being outlined is already a child of this node —
-  // 104 knows about its nursery block before anyone traces it. Offering those
-  // first turns the common case into one tap instead of typing a name that has
-  // to match something already there.
-  const claimed = new Set((node.regions || []).map(r => r.child));
+  // Most of the time the thing being pinned is already a child of this node —
+  // Red Conexes knows about Red Tool 1 before anyone drops a pin on it. Offering
+  // those first turns the common case into one tap instead of typing a name that
+  // has to match something already there.
+  const claimed = new Set(
+    (node.markers || []).map(m => m.child).concat((node.regions || []).map(r => r.child)));
   const options = (node.children || [])
     .filter(c => zoneNode(c) && !claimed.has(c))
     .map(c => {
@@ -3514,29 +3552,46 @@ function saveZoneDraft() {
     label = document.getElementById('zoneNameInput').value.trim();
     if (!label) { showToast(t('valueReq'), 'error'); return; }
     const loc = document.getElementById('zoneLocSelect').value;
-    // A drawn area always becomes a real node, so it can hold its own photo and
+    // A pinned spot always becomes a real node, so it can hold its own photo and
     // sub-areas later. If it maps to an existing node for that location, link to
     // that instead of creating a duplicate.
     childId = loc ? zoneForLocation(loc) : null;
     if (!childId) {
       childId = 'z' + Date.now().toString(36);
-      ZONES[childId] = { label: label, photos: [], locs: loc ? [loc] : [], children: [], regions: [] };
+      ZONES[childId] = { label: label, photos: [], locs: loc ? [loc] : [], children: [], regions: [], markers: [] };
     }
   }
+  if (!zoneMarkerPt) { showToast(t('zoneNeedPoint'), 'error'); return; }
   if (!parent.children) parent.children = [];
   if (parent.children.indexOf(childId) === -1) parent.children.push(childId);
-  if (!parent.regions) parent.regions = [];
-  parent.regions.push({ label: label, points: zoneDraft.slice(), child: childId, photo: zonePhotoIdx });
+  if (!parent.markers) parent.markers = [];
+  parent.markers.push({ label: label, x: zoneMarkerPt.x, y: zoneMarkerPt.y, child: childId, photo: zonePhotoIdx });
 
   saveZones();
-  zoneDrawing = false; zoneDraft = [];
+  zoneMarking = false; zoneMarkerPt = null;
   document.getElementById('zoneNameModal').classList.remove('open');
   showToast(t('zoneSaved').replace('N', label), 'success');
   renderZones();
 }
 
+function onZoneMarkerTap(idx) {
+  if (zoneMarking) return;
+  const node = zoneNode(zoneCurrentId());
+  const m = (node.markers || [])[idx];
+  if (m && m.child && zoneNode(m.child)) goZone(m.child);
+}
+
+function clearZoneMarkers() {
+  const node = zoneNode(zoneCurrentId());
+  if (!confirm(t('zoneConfirmClearMarkers'))) return;
+  // Only this photo's pins — the other photos on this node keep theirs.
+  node.markers = (node.markers || []).filter(m => (m.photo == null ? 0 : m.photo) !== zonePhotoIdx);
+  saveZones();
+  renderZones();
+}
+
 function onZoneRegionTap(idx) {
-  if (zoneDrawing) return;
+  if (zoneMarking) return;
   const node = zoneNode(zoneCurrentId());
   const r = (node.regions || [])[idx];
   if (r && r.child && zoneNode(r.child)) goZone(r.child);
