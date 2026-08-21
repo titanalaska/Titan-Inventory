@@ -3114,14 +3114,17 @@ const ZONE_SEED = {
                   'zones/red-outside.jpg','zones/red-in-1.jpg','zones/red-in-2.jpg',
                   'zones/red-in-3.jpg','zones/red-in-4.jpg','aerial/yard-core.jpg'],
                 locs: ['Red Building'], children: ['redConex','redt1','redt2','redt3'], regions: [] },
-  // The red/orange conexes by the pit office, distinct from the blue row. Deliberately
-  // holds no `locs`: the doors carry their own numbers and one is painted "4", but
-  // nobody has said which of these is Red Tool 1, 2 or 3 — so it stays a photo node
-  // until Matt says, rather than guessing a mapping that would send someone to the
-  // wrong container.
-  redConex:   { label: 'Red Conexes', photos: [
-                  'zones/red-conex-1.jpg','zones/red-conex-2.jpg','zones/red-conex-3.jpg','zones/red-conex-4.jpg'],
-                locs: [], children: [], regions: [] },
+  // The red/orange conexes by the pit office, distinct from the blue row. What is in
+  // each is Matt's (2026-08-20); the numbering is not. The doors carry container
+  // numbers and one is painted "4", but nobody has said which of these is Red Tool
+  // 1, 2 or 3 — so these still claim no inventory location rather than guess a
+  // mapping that would send someone to the wrong container.
+  redConex:   { label: 'Red Conexes', photos: ['zones/red-conex-4.jpg','zones/red-conex-2.jpg'],
+                note: 'Far left of the three is the office conex — paperwork. The red and the orange hold tools, truck parts and general storage.',
+                locs: [], children: ['redConexTools','redConexOffice'], regions: [] },
+  redConexTools:  { label: 'Tools & Truck Parts', photos: ['zones/red-conex-1.jpg','zones/red-conex-3.jpg'],
+                    locs: [], children: [], regions: [] },
+  redConexOffice: { label: 'Office Conex — Paperwork', photos: [], locs: [], children: [], regions: [] },
   redt1:      { label: 'Red Tool 1', photos: [], locs: ['Red Tool 1'], children: [], regions: [] },
   redt2:      { label: 'Red Tool 2', photos: [], locs: ['Red Tool 2'], children: [], regions: [] },
   redt3:      { label: 'Red Tool 3', photos: [], locs: ['Red Tool 3'], children: [], regions: [] },
