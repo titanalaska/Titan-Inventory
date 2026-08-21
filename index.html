@@ -3113,21 +3113,19 @@ const ZONE_SEED = {
   red:        { label: 'Red Building', photos: [
                   'zones/red-outside.jpg','zones/red-in-1.jpg','zones/red-in-2.jpg',
                   'zones/red-in-3.jpg','zones/red-in-4.jpg','aerial/yard-core.jpg'],
-                locs: ['Red Building'], children: ['redConex','redt1','redt2','redt3'], regions: [] },
-  // The red/orange conexes by the pit office, distinct from the blue row. What is in
-  // each is Matt's (2026-08-20); the numbering is not. The doors carry container
-  // numbers and one is painted "4", but nobody has said which of these is Red Tool
-  // 1, 2 or 3 — so these still claim no inventory location rather than guess a
-  // mapping that would send someone to the wrong container.
-  redConex:   { label: 'Red Conexes', photos: ['zones/red-conex-4.jpg','zones/red-conex-2.jpg'],
-                note: 'Far left of the three is the office conex — paperwork. The red and the orange hold tools, truck parts and general storage.',
-                locs: [], children: ['redConexTools','redConexOffice'], regions: [] },
-  redConexTools:  { label: 'Tools & Truck Parts', photos: ['zones/red-conex-1.jpg','zones/red-conex-3.jpg'],
-                    locs: [], children: [], regions: [] },
-  redConexOffice: { label: 'Office Conex — Paperwork', photos: [], locs: [], children: [], regions: [] },
-  redt1:      { label: 'Red Tool 1', photos: [], locs: ['Red Tool 1'], children: [], regions: [] },
-  redt2:      { label: 'Red Tool 2', photos: [], locs: ['Red Tool 2'], children: [], regions: [] },
-  redt3:      { label: 'Red Tool 3', photos: [], locs: ['Red Tool 3'], children: [], regions: [] },
+                locs: ['Red Building'], children: ['redConex'], regions: [] },
+  // The red/orange conexes by the pit office, distinct from the blue row. Matt's
+  // numbering, 2026-08-20, standing in front of them: red on the right is 1, orange
+  // in the middle is 2, red on the left is 3 and holds the office paperwork. The
+  // labels carry colour and position because that is what someone actually navigates
+  // by out there — "Red Tool 2" alone tells you nothing when three doors face you.
+  redConex:   { label: 'Red Conexes', photos: [
+                  'zones/red-conex-4.jpg','zones/red-conex-2.jpg','zones/red-conex-1.jpg','zones/red-conex-3.jpg'],
+                note: 'Facing them: red on the right is 1, orange in the middle is 2, red on the left is 3 (office paperwork). 1 and 2 hold tools, truck parts and general storage.',
+                locs: [], children: ['redt1','redt2','redt3'], regions: [] },
+  redt1:      { label: 'Red Tool 1 — red, right', photos: [], locs: ['Red Tool 1'], children: [], regions: [] },
+  redt2:      { label: 'Red Tool 2 — orange, middle', photos: [], locs: ['Red Tool 2'], children: [], regions: [] },
+  redt3:      { label: 'Red Tool 3 — red, left · office paperwork', photos: [], locs: ['Red Tool 3'], children: [], regions: [] },
 
   conexes:    { label: 'Blue Conexes', photos: ['zones/blue-conexes.jpg','zones/new-building-nadir.jpg'], locs: [],
                 children: ['cx1','cx2','cx3','cx4','cx5','cx6','cx7'], regions: [] },
