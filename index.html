@@ -354,6 +354,26 @@
   .zone-mini-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
   .zone-where-btn { background: none; border: 1px solid #2a5a8a; color: #5a9fd4; border-radius: 4px; padding: 4px 9px; font-family: var(--font); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 
+  /* Photo sprint — big target, minimal chrome, meant for one hand in a building */
+  .sprint-progress { margin-bottom: 12px; }
+  .sprint-bar { height: 4px; background: #2a2a2a; border-radius: 2px; overflow: hidden; }
+  .sprint-bar span { display: block; height: 100%; background: #5ac48a; transition: width 0.2s; }
+  .sprint-count { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; margin-top: 6px; text-transform: uppercase; }
+  .sprint-name { font-size: 19px; font-weight: 700; color: var(--snow); line-height: 1.25; }
+  .sprint-specs { font-size: 13px; color: var(--fog); margin-top: 4px; }
+  .sprint-facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .sprint-facts span { background: var(--steel); border: 1px solid #333; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: var(--fog); }
+  .sprint-shoot { width: 100%; margin-top: 16px; background: #1a3a28; border: 1px solid #2a6a4a; color: #5ac48a; font-family: var(--font); font-size: 16px; font-weight: 700; letter-spacing: 0.06em; padding: 18px; border-radius: var(--radius); cursor: pointer; }
+  .sprint-shoot:active { transform: scale(0.98); }
+  .sprint-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
+  .sprint-nav button { flex: 1; }
+  .sprint-nav button:disabled { opacity: 0.35; }
+  .sprint-status { min-height: 16px; font-size: 12px; margin-top: 8px; }
+  .sprint-status.busy { color: var(--gold); }
+  .sprint-status.fail { color: #e07070; }
+  .sprint-finished { text-align: center; padding: 28px 10px; color: var(--fog); font-size: 14px; }
+  .sprint-finished-big { font-size: 40px; color: #5ac48a; margin-bottom: 8px; }
+
   /* Material by job */
   .jobs-total { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
   .jobs-warn { font-size: 11px; color: #ffb0b0; background: #3a1a1a; border: 1px solid #6a2a2a; border-radius: var(--radius); padding: 8px 10px; margin-bottom: 10px; line-height: 1.5; }
@@ -414,6 +434,7 @@
     <div id="statShowingLabel">Showing: <span id="statShowing">—</span></div>
     <div id="statEstLabel">Est. flags: <span id="statEst">—</span></div>
     <div id="statNoUnitLabel" class="stat-clickable" onclick="toggleNoUnitFilter()" title="Show only items missing a unit">Needs unit: <span id="statNoUnit">—</span></div>
+    <div id="statNoPhotoLabel" class="stat-clickable" onclick="toggleNoPhotoFilter()" title="Show only items missing a photo">Needs photo: <span id="statNoPhoto">—</span></div>
   </div>
   <div class="cat-jump" id="catJump" style="margin:0 -16px"></div>
 </header>
@@ -431,6 +452,7 @@
   <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where<span class="btn-long"> Is It</span></button>
   <button class="job-btn" style="border-color:#5a2a8a;color:#b389d9" onclick="openAerialPhotos()">🚁 Aerial<span class="btn-long"> Photos</span></button>
   <button class="job-btn" style="border-color:#7a5a00;color:#c9a227" onclick="openJobsView()">📁 <span class="btn-long">Material By </span>Jobs</button>
+  <button class="job-btn" style="border-color:#2a6a4a;color:#5ac48a" onclick="requireName(openPhotoSprint)">📸 <span class="btn-long">Photo </span>Sprint</button>
 </div>
 
 <div class="stale-banner" id="staleBanner" style="display:none"></div>
@@ -627,6 +649,17 @@
     <div class="aerial-grid" id="aerialGrid"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="document.getElementById('aerialModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- PHOTO SPRINT MODAL -->
+<div class="modal-overlay" id="sprintModal">
+  <div class="modal name-modal">
+    <h2 style="color:#5ac48a">📸 Photo Sprint</h2>
+    <div id="sprintBody"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePhotoSprint()">Done</button>
     </div>
   </div>
 </div>
@@ -842,6 +875,10 @@ const T = {
     pullYours:'Yours', pullOthers:'Staged by others', claimedBy:'N claimed',
     signInNeeded:'Sign in to make changes',
     confirmSignOut:'Sign out on this device?', signedOut:'Signed out',
+    noPhotoStat:'Needs photo:', sprintBtn:'📸 Photo Sprint',
+    sprintShoot:'Shoot This One', sprintSkipBtn:'Skip', sprintBack:'Back',
+    sprintShot:'shot', sprintNothing:'Everything showing already has a photo ✓',
+    sprintDone:'N photos added ✓', sprintComplete:'Done — N photos added. Change the filter and run it again.',
     returnBtn:'↩ Return', returnLoading:'Checking what is still out…',
     stillOut:'still out', returnOtherJob:'— another job / not job related —',
     returnHint:'N still out on J. Returning here credits them back to that job.',
@@ -924,6 +961,10 @@ const T = {
     pullYours:'Tuyo', pullOthers:'Preparado por otros', claimedBy:'N apartados',
     signInNeeded:'Inicia sesión para hacer cambios',
     confirmSignOut:'¿Cerrar sesión en este dispositivo?', signedOut:'Sesión cerrada',
+    noPhotoStat:'Falta foto:', sprintBtn:'📸 Sesión de Fotos',
+    sprintShoot:'Tomar Esta', sprintSkipBtn:'Saltar', sprintBack:'Atrás',
+    sprintShot:'tomadas', sprintNothing:'Todo lo visible ya tiene foto ✓',
+    sprintDone:'N fotos agregadas ✓', sprintComplete:'Listo — N fotos agregadas. Cambia el filtro y repite.',
     returnBtn:'↩ Devolver', returnLoading:'Revisando qué sigue afuera…',
     stillOut:'aún afuera', returnOtherJob:'— otro trabajo / no es de trabajo —',
     returnHint:'N aún en J. Devolverlos aquí se los acredita a ese trabajo.',
@@ -1026,6 +1067,7 @@ let items = [];
 let expandedId = null;
 let collapsedCats = new Set();
 let noUnitOnly = false;
+let noPhotoOnly = false;
 let currentUser = '';
 let pendingAction = null;
 let translationCache = JSON.parse(localStorage.getItem('titanTranslationCache') || '{}');
@@ -1122,6 +1164,7 @@ function applyTranslations() {
   document.getElementById('statShowingLabel').innerHTML = t('showing') + ' <span id="statShowing">' + (document.getElementById('statShowing')||{}).textContent + '</span>';
   document.getElementById('statEstLabel').innerHTML = t('estFlags') + ' <span id="statEst">' + (document.getElementById('statEst')||{}).textContent + '</span>';
   document.getElementById('statNoUnitLabel').innerHTML = t('noUnitStat') + ' <span id="statNoUnit">' + (document.getElementById('statNoUnit')||{}).textContent + '</span>';
+  document.getElementById('statNoPhotoLabel').innerHTML = t('noPhotoStat') + ' <span id="statNoPhoto">' + (document.getElementById('statNoPhoto')||{}).textContent + '</span>';
   document.getElementById('addBtn').textContent = t('addBtn');
   document.getElementById('modalTitle').textContent = t('modalTitle');
   document.getElementById('labelName').textContent = t('labelName');
@@ -3701,21 +3744,31 @@ async function loadItems() {
   btn.classList.remove('syncing'); btn.textContent = t('sync');
 }
 
-function renderItems() {
+// What the search box and the two dropdowns currently allow through. Pulled out of
+// renderItems so the photo sprint runs on exactly what is on screen rather than
+// reimplementing the same filter and drifting from it.
+function currentFilteredItems() {
   const search = document.getElementById('searchInput').value.toLowerCase();
   const filterCat = document.getElementById('filterCat').value;
   const filterLoc = document.getElementById('filterLoc').value;
-  let filtered = items.filter(item => {
+  return items.filter(item => {
     const name = String(item.name || ''), category = String(item.category || ''), location = String(item.location || ''), specs = String(item.specs || '');
     const ms = !search || name.toLowerCase().includes(search) || specs.toLowerCase().includes(search) || category.toLowerCase().includes(search) || String(item.id).includes(search);
     if (noUnitOnly && normalizeUnit(item.unit)) return false;
+    if (noPhotoOnly && String(item.photo || '').trim()) return false;
     return ms && (!filterCat || category.trim() === filterCat.trim()) && (!filterLoc || location.trim() === filterLoc.trim());
   });
+}
+
+function renderItems() {
+  let filtered = currentFilteredItems();
   document.getElementById('statItems').textContent = items.length;
   document.getElementById('statShowing').textContent = filtered.length;
   document.getElementById('statEst').textContent = items.filter(i => i.estimated).length;
   document.getElementById('statNoUnit').textContent = items.filter(i => !normalizeUnit(i.unit)).length;
   document.getElementById('statNoUnitLabel').classList.toggle('stat-active', noUnitOnly);
+  document.getElementById('statNoPhoto').textContent = itemsNeedingPhoto().length;
+  document.getElementById('statNoPhotoLabel').classList.toggle('stat-active', noPhotoOnly);
   const grouped = {};
   filtered.forEach(item => { const cat = item.category || 'UNSORTED'; if (!grouped[cat]) grouped[cat] = []; grouped[cat].push(item); });
   const catJump = document.getElementById('catJump');
@@ -3862,6 +3915,106 @@ function renderItems() {
 }
 
 function toggleNoUnitFilter() { noUnitOnly = !noUnitOnly; collapsedCats.clear(); renderItems(); }
+function toggleNoPhotoFilter() { noPhotoOnly = !noPhotoOnly; collapsedCats.clear(); renderItems(); }
+
+// ---- PHOTO SPRINT ----
+// Every one of 205 items had no photo a month after the feature shipped, because
+// adding one meant find item, expand, tap, wait — per item. Nothing about that is
+// worth doing 205 times. This turns it into a queue: the app names the item, you
+// shoot it, it advances. The app knowing which item you are on is the whole point,
+// since 37 near-identical post caps shot loose into a folder cannot be matched back
+// afterwards by anyone, including the person who took them.
+let sprintQueue = [];
+let sprintPos = 0;
+let sprintDone = 0;
+
+function itemsNeedingPhoto(list) {
+  return (list || items).filter(i => !String(i.photo || '').trim());
+}
+
+function openPhotoSprint() {
+  // Whatever is on screen defines the run, so filtering to a category or location
+  // first gives you "just the Gray Building" without another control.
+  const visible = currentFilteredItems();
+  sprintQueue = itemsNeedingPhoto(visible);
+  if (!sprintQueue.length) { showToast(t('sprintNothing'), 'success'); return; }
+  sprintPos = 0; sprintDone = 0;
+  document.getElementById('sprintModal').classList.add('open');
+  renderPhotoSprint();
+}
+
+function closePhotoSprint() {
+  document.getElementById('sprintModal').classList.remove('open');
+  if (sprintDone) { renderItems(); showToast(t('sprintDone').replace('N', sprintDone), 'success'); }
+  sprintQueue = []; sprintPos = 0; sprintDone = 0;
+}
+
+function sprintSkip() { sprintPos++; renderPhotoSprint(); }
+function sprintBack() { if (sprintPos > 0) sprintPos--; renderPhotoSprint(); }
+
+function renderPhotoSprint() {
+  const body = document.getElementById('sprintBody');
+  if (sprintPos >= sprintQueue.length) {
+    body.innerHTML = `<div class="sprint-finished">
+      <div class="sprint-finished-big">${sprintDone ? '✓' : '—'}</div>
+      <div>${t('sprintComplete').replace('N', sprintDone)}</div>
+    </div>`;
+    return;
+  }
+  const item = sprintQueue[sprintPos];
+  const unit = normalizeUnit(item.unit);
+  body.innerHTML = `
+    <div class="sprint-progress">
+      <div class="sprint-bar"><span style="width:${((sprintPos)/sprintQueue.length*100).toFixed(1)}%"></span></div>
+      <div class="sprint-count">${sprintPos + 1} / ${sprintQueue.length}${sprintDone ? ' · ' + sprintDone + ' ' + t('sprintShot') : ''}</div>
+    </div>
+    <div class="sprint-name">${escapeHtml(itemName(item))}</div>
+    ${item.specs ? `<div class="sprint-specs">${escapeHtml(item.specs)}</div>` : ''}
+    <div class="sprint-facts">
+      <span>${escapeHtml(item.location || 'Unknown')}</span>
+      <span>${item.qty}${unit ? ' ' + escapeHtml(unitAbbr(unit)) : ''}</span>
+      <span>${escapeHtml(catLabel(item.category || ''))}</span>
+    </div>
+    <div class="sprint-status" id="sprintStatus"></div>
+    <input type="file" id="sprintFile" accept="image/*" capture="environment" style="display:none"
+           onchange="sprintCapture(this)">
+    <button class="sprint-shoot" onclick="document.getElementById('sprintFile').click()">📷 ${t('sprintShoot')}</button>
+    <div class="sprint-nav">
+      <button class="zone-mini-btn" onclick="sprintBack()" ${sprintPos === 0 ? 'disabled' : ''}>← ${t('sprintBack')}</button>
+      <button class="zone-mini-btn" onclick="sprintSkip()">${t('sprintSkipBtn')} →</button>
+    </div>`;
+}
+
+async function sprintCapture(input) {
+  if (!input.files || !input.files[0]) return;
+  const item = sprintQueue[sprintPos];
+  if (!item) return;
+  const status = document.getElementById('sprintStatus');
+  status.textContent = t('uploading');
+  status.className = 'sprint-status busy';
+  try {
+    const base64 = await shrinkImage(input.files[0], 1000, 0.75);
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: authedBody({ action:'savePhoto', itemId: String(item.id), data: base64, mimeType:'image/jpeg' })
+    });
+    const data = await res.json();
+    if (handleAuthFailure(data)) { status.textContent = ''; return; }
+    if (data.error) throw new Error(data.error);
+    item.photo = data.photoId;
+    logChange('PHOTO', item.name, 'Photo added');
+    sprintDone++;
+    if (data.shareOk === false) showToast(t('photoNoShare'), 'error');
+    // Straight on to the next one — stopping to admire it is what made this a chore.
+    sprintPos++;
+    renderPhotoSprint();
+  } catch(e) {
+    status.textContent = t('photoFail');
+    status.className = 'sprint-status fail';
+  }
+  input.value = '';
+}
 function toggleExpand(id) { expandedId = expandedId === id ? null : id; renderItems(); }
 function toggleCategory(cat) {
   if (collapsedCats.has(cat)) collapsedCats.delete(cat); else collapsedCats.add(cat);
