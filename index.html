@@ -3785,38 +3785,24 @@ function whereIsItem(id) {
   openZones(target);
 }
 
-// One request instead of four. Apps Script has roughly a two-second floor per call
-// regardless of how little it does, so opening the app spent most of its wait on the
-// round trips rather than on any actual work. Falls back to the separate calls when
-// the deployed script has no bootstrap action, so the page is safe to ship first.
-async function bootstrapApp() {
-  if (!APPS_SCRIPT_URL) { loadItems(); return false; }
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=bootstrap`, { signal: controller.signal, redirect: 'follow' });
-    clearTimeout(timeout);
-    const data = await res.json();
-    if (!data || !Array.isArray(data.items)) return false;
-
-    if (data.categories && data.categories.length) CATEGORIES = data.categories;
-    if (data.locations && data.locations.length) LOCATIONS = data.locations;
-    populateSelects();
-
-    applyItemsFromSheet(data.items);
-
-    profiles = data.profiles || [];
-    if (myProfile) {
-      const mine = profiles.find(p => String(p.id) === String(myProfile.id));
-      if (mine) { myProfile = mine; saveProfileLocally(); currentUser = myProfile.name; }
-    }
-    renderProfileGate();
-    renderAdminPanel();
-
-    if (Array.isArray(data.pull)) { applySharedPull(data.pull); updatePullUI(); }
-    renderItems();
-    return true;
-  } catch(e) { return false; }
+// Four calls in parallel, not one call doing four jobs.
+//
+// This was built the other way round first, on the assumption that four requests at
+// roughly two seconds each meant an eight-second wait. Measured, that was wrong: the
+// browser had always been firing them concurrently, so the real wait was the slowest
+// single call, about 2.4s. Folding the work into one Apps Script execution made it
+// serial inside a request that still pays the same two-second floor — 4.3s, nearly
+// twice as slow. The server still answers `bootstrap`; the app just doesn't want it.
+//
+// Concurrency is the whole trick here, so Promise.all rather than four awaits.
+async function loadEverything() {
+  if (!APPS_SCRIPT_URL) { seedItemsFromCache(); return; }
+  await Promise.all([
+    loadItems(),
+    fetchLists(),
+    fetchPullList(),
+    fetchProfiles(),
+  ]);
 }
 
 window.onload = async () => {
@@ -3825,14 +3811,7 @@ window.onload = async () => {
   updatePullUI();   // a list staged before the phone locked is still waiting
   seedItemsFromCache();   // paints immediately; the network only confirms it
 
-  const ok = await bootstrapApp();
-  if (!ok) {
-    // Older deployment, or the call failed — do it the long way.
-    fetchLists();
-    await loadItems();
-    fetchPullList();
-    await fetchProfiles();
-  }
+  await loadEverything();
   // Prompt for identity right away rather than waiting for someone to tap a
   // gated action — browsing itself stays open, but anyone not yet approved
   // sees where they stand immediately instead of discovering it by accident.
