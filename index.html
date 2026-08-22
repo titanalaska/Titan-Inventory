@@ -372,6 +372,23 @@
   .zone-sprint-btn { width: 100%; margin-top: 14px; background: #1a3a28; border: 1px solid #2a6a4a; color: #5ac48a; font-family: var(--font); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; padding: 11px; border-radius: var(--radius); cursor: pointer; }
   .zone-sprint-btn:active { transform: scale(0.98); }
 
+  /* History — changes and disposals under one roof */
+  .hist-tabs { display: flex; gap: 6px; margin-top: 4px; }
+  .hist-tab { flex: 1; background: var(--steel); border: 1px solid #333; color: var(--mid); font-family: var(--font); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 9px; border-radius: var(--radius); cursor: pointer; }
+  .hist-tab.active { background: #16301f; border-color: #2a6a4a; color: #5ac48a; }
+  .hist-row { display: flex; gap: 8px; padding: 8px 2px; border-bottom: 1px solid #232323; }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-type { flex: none; align-self: flex-start; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 6px; border-radius: 3px; min-width: 54px; text-align: center; }
+  .h-pull { background: #3a2c00; color: var(--gold); }
+  .h-return { background: #16301f; color: #5ac48a; }
+  .h-delete { background: #3a1a1a; color: #e07070; }
+  .h-disposal { background: #3a2000; color: #e07030; }
+  .h-edit { background: #262626; color: var(--mid); }
+  .hist-main { flex: 1; min-width: 0; }
+  .hist-item { font-size: 13px; font-weight: 700; color: var(--snow); }
+  .hist-detail { font-size: 12px; color: var(--fog); margin-top: 1px; }
+  .hist-meta { font-size: 10px; color: #555; margin-top: 2px; }
+
   /* Material by job */
   .jobs-total { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
   .jobs-warn { font-size: 11px; color: #ffb0b0; background: #3a1a1a; border: 1px solid #6a2a2a; border-radius: var(--radius); padding: 8px 10px; margin-bottom: 10px; line-height: 1.5; }
@@ -442,9 +459,8 @@
 
 <div class="add-bar">
   <button class="add-btn" id="addBtn" onclick="requireName(openAddModal)">+ Add<span class="btn-long"> Item</span></button>
-  <button class="log-btn" style="border-color:#217346;color:#3ba55d" onclick="openSheetView()">📊 Sheet<span class="btn-long"> / Changes</span></button>
+  <button class="log-btn" style="border-color:#217346;color:#3ba55d" onclick="openHistory('changes')">📋 History</button>
   <button class="job-btn" onclick="openJobChecker()">🔍 Check<span class="btn-long"> Job</span></button>
-  <button class="job-btn" style="border-color:#5a2000;color:#e07030" onclick="openDisposalLog()">🗑 Disposal<span class="btn-long"> Log</span></button>
   <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull<span class="btn-long"> Material</span></button>
   <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 <span class="btn-long">Pull From </span>List</button>
   <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where<span class="btn-long"> Is It</span></button>
@@ -628,12 +644,17 @@
 </div>
 
 <!-- DISPOSAL LOG VIEWER -->
-<div class="modal-overlay" id="disposalViewModal">
+<div class="modal-overlay" id="historyModal">
   <div class="modal" style="max-width:560px">
-    <h2 style="color:#e07030">🗑 Disposal Log</h2>
-    <div id="disposalLogList" style="margin-top:8px;max-height:60vh;overflow-y:auto"></div>
+    <h2 style="color:#3ba55d">📋 History</h2>
+    <div class="hist-tabs">
+      <button class="hist-tab" id="histTabChanges" onclick="setHistoryTab('changes')">Changes</button>
+      <button class="hist-tab" id="histTabDisposals" onclick="setHistoryTab('disposals')">Disposals</button>
+    </div>
+    <div id="historyList" style="margin-top:10px;max-height:58vh;overflow-y:auto"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="document.getElementById('disposalViewModal').classList.remove('open')">Close</button>
+      <button class="btn-cancel" onclick="closeHistory()">Close</button>
+      <button class="zone-mini-btn" onclick="openSheetView()">📊 Open Sheet</button>
     </div>
   </div>
 </div>
@@ -865,6 +886,9 @@ const T = {
     sprintShot:'shot', sprintNothing:'Everything showing already has a photo ✓',
     sprintDone:'N photos added ✓', sprintComplete:'Done — N photos added. Change the filter and run it again.',
     zoneSprintHere:'Photograph what is here — N need one',
+    seedToday:'today', seedYesterday:'yesterday',
+    historyLoading:'Loading…', historyNoChanges:'Nothing logged yet.',
+    historyNoDisposals:'No disposals logged yet.',
     returnBtn:'↩ Return', returnLoading:'Checking what is still out…',
     stillOut:'still out', returnOtherJob:'— another job / not job related —',
     returnHint:'N still out on J. Returning here credits them back to that job.',
@@ -952,6 +976,9 @@ const T = {
     sprintShot:'tomadas', sprintNothing:'Todo lo visible ya tiene foto ✓',
     sprintDone:'N fotos agregadas ✓', sprintComplete:'Listo — N fotos agregadas. Cambia el filtro y repite.',
     zoneSprintHere:'Fotografiar lo de aquí — faltan N',
+    seedToday:'hoy', seedYesterday:'ayer',
+    historyLoading:'Cargando…', historyNoChanges:'Nada registrado todavía.',
+    historyNoDisposals:'No hay desechos registrados.',
     returnBtn:'↩ Devolver', returnLoading:'Revisando qué sigue afuera…',
     stillOut:'aún afuera', returnOtherJob:'— otro trabajo / no es de trabajo —',
     returnHint:'N aún en J. Devolverlos aquí se los acredita a ese trabajo.',
@@ -3037,12 +3064,73 @@ async function confirmDisposal() {
   showToast('Disposal logged — qty updated', 'success');
 }
 
-async function openDisposalLog() {
-  const listEl = document.getElementById('disposalLogList');
-  listEl.innerHTML = '<div style="color:var(--gold);font-size:12px;padding:8px">Loading...</div>';
-  document.getElementById('disposalViewModal').classList.add('open');
+// ---- HISTORY ----
+// Two buttons for one question. "Sheet / Changes" only opened the spreadsheet in a
+// browser tab, which on a phone is close to useless, so the Change Log — the record
+// of what actually happened to material — was effectively invisible in the app.
+// Disposals are just one kind of change, so they are a tab here rather than a
+// separate button, and the spreadsheet is a link for when someone wants the raw grid.
+let historyTab = 'changes';
 
-  // Try to load from sheet
+function openHistory(tab) {
+  historyTab = tab || 'changes';
+  document.getElementById('historyModal').classList.add('open');
+  setHistoryTab(historyTab);
+}
+function closeHistory() { document.getElementById('historyModal').classList.remove('open'); }
+
+function setHistoryTab(tab) {
+  historyTab = tab;
+  document.getElementById('histTabChanges').classList.toggle('active', tab === 'changes');
+  document.getElementById('histTabDisposals').classList.toggle('active', tab === 'disposals');
+  if (tab === 'changes') renderChangeHistory(); else renderDisposalHistory();
+}
+
+async function renderChangeHistory() {
+  const listEl = document.getElementById('historyList');
+  listEl.innerHTML = `<div style="color:var(--gold);font-size:12px;padding:8px">${t('historyLoading')}</div>`;
+  let entries = [];
+  if (APPS_SCRIPT_URL) {
+    try {
+      const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action:'getLog', limit: 200 })}`);
+      const data = await res.json();
+      entries = data.entries || [];
+    } catch(e) {}
+  }
+  if (historyTab !== 'changes') return;   // tab switched while this was in flight
+  if (!entries.length) {
+    listEl.innerHTML = `<p style="color:var(--mid);font-size:13px;padding:16px 0">${t('historyNoChanges')}</p>`;
+    return;
+  }
+  listEl.innerHTML = entries.map(e => {
+    const type = String(e.type || '');
+    const cls = type === 'PULL' ? 'h-pull' : type === 'RETURN' ? 'h-return'
+              : type === 'DELETE' ? 'h-delete' : type.indexOf('DISPOSAL') !== -1 ? 'h-disposal' : 'h-edit';
+    return `<div class="hist-row">
+      <span class="hist-type ${cls}">${escapeHtml(type)}</span>
+      <div class="hist-main">
+        <div class="hist-item">${escapeHtml(e.itemName || '')}</div>
+        <div class="hist-detail">${escapeHtml(e.detail || '')}</div>
+        <div class="hist-meta">${escapeHtml(String(e.who || ''))} · ${escapeHtml(fmtHistTime(e.time))}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// The sheet writes times two ways depending on the action, so parse loosely and
+// fall back to whatever string is there rather than printing "Invalid Date".
+function fmtHistTime(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d)) return String(v);
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
+         d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+async function renderDisposalHistory() {
+  const listEl = document.getElementById('historyList');
+  listEl.innerHTML = `<div style="color:var(--gold);font-size:12px;padding:8px">${t('historyLoading')}</div>`;
+
   let sheetLog = [];
   if (APPS_SCRIPT_URL) {
     try {
@@ -3051,11 +3139,12 @@ async function openDisposalLog() {
       if (data && data.entries) sheetLog = data.entries;
     } catch(e) {}
   }
+  if (historyTab !== 'disposals') return;
 
   const combined = sheetLog.length > 0 ? sheetLog : disposalLog;
 
   if (combined.length === 0) {
-    listEl.innerHTML = '<p style="color:var(--mid);font-size:13px;padding:16px 0">No disposals logged yet.</p>';
+    listEl.innerHTML = `<p style="color:var(--mid);font-size:13px;padding:16px 0">${t('historyNoDisposals')}</p>`;
     return;
   }
 
@@ -3680,16 +3769,56 @@ function updateStaleBanner() {
   const el = document.getElementById('staleBanner');
   if (!el) return;
   el.style.display = liveData ? 'none' : 'flex';
-  if (!liveData) el.innerHTML = `<span>${t('staleWarn').replace('D', EMBEDDED_DATE)}</span>
+  if (!liveData) el.innerHTML = `<span>${t('staleWarn').replace('D', escapeHtml(seedLabel))}</span>
     <button class="stale-retry" onclick="loadItems()">${t('retry')}</button>`;
 }
+
+// ---- LAST-SYNC CACHE ----
+// Apps Script costs about two seconds a call and there is no making one faster, so
+// the app used to sit on a month-old baked-in snapshot until the network answered.
+// Keeping the last good sync means the list paints from this morning instead, and
+// the wait stops being something you look at.
+//
+// Wholesale replace, never a merge — the same rule the Sheet follows. A cache that
+// contributed leftover rows would resurrect deletions exactly as the embedded merge
+// once did.
+function readItemsCache() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('titanItemsCache') || 'null');
+    if (raw && Array.isArray(raw.items) && raw.items.length) return raw;
+  } catch(e) {}
+  return null;
+}
+
+function writeItemsCache(list) {
+  try {
+    localStorage.setItem('titanItemsCache', JSON.stringify({ items: list, at: Date.now() }));
+  } catch(e) { /* quota or private mode — the app just falls back to the seed */ }
+}
+
+// "today 3:42 PM" reads better than a timestamp when the point is how stale it is.
+function describeSeedAge(ms) {
+  if (!ms) return EMBEDDED_DATE;
+  const d = new Date(ms), now = new Date();
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return t('seedToday') + ' ' + time;
+  const y = new Date(now); y.setDate(y.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return t('seedYesterday') + ' ' + time;
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + time;
+}
+
+let seedLabel = EMBEDDED_DATE;
 
 async function loadItems() {
   const btn = document.getElementById('syncBtn');
   btn.classList.add('syncing'); btn.textContent = t('syncing');
-  // Always load embedded data first so app is never blank
-  EMBEDDED.forEach(i => { i.unit = normalizeUnit(i.unit); });
-  items = [...EMBEDDED];
+  // Paint from the freshest thing on hand — last sync if this device has one,
+  // otherwise the baked-in snapshot so a new phone is never blank.
+  const cached = readItemsCache();
+  const seed = cached ? cached.items : EMBEDDED;
+  seedLabel = cached ? describeSeedAge(cached.at) : EMBEDDED_DATE;
+  seed.forEach(i => { i.unit = normalizeUnit(i.unit); });
+  items = seed.slice();
   liveData = false;
   updateStaleBanner();
   renderItems();
@@ -3717,6 +3846,9 @@ async function loadItems() {
         // counts read as current.
         items = data.items;
         liveData = true;
+        // Cache after the alias remapping above, so the next cold start opens on
+        // normalized data and doesn't re-do the work.
+        writeItemsCache(data.items);
         updateStaleBanner();
         showToast(t('synced'), 'success'); renderItems();
       } else {
