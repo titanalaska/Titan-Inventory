@@ -290,10 +290,6 @@
   .disposal-entry .d-cause { color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
   .disposal-entry .d-time { color: #555; font-size: 10px; }
 
-  /* LATEST AERIAL */
-  .aerial-date { font-size: 12px; color: var(--mid); margin-bottom: 12px; line-height: 1.5; }
-  .aerial-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .aerial-grid img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius); cursor: zoom-in; background: var(--iron); }
 
   /* WHERE IS IT — zone drill-down */
   .zone-modal { max-width: 720px; }
@@ -373,6 +369,8 @@
   .sprint-status.fail { color: #e07070; }
   .sprint-finished { text-align: center; padding: 28px 10px; color: var(--fog); font-size: 14px; }
   .sprint-finished-big { font-size: 40px; color: #5ac48a; margin-bottom: 8px; }
+  .zone-sprint-btn { width: 100%; margin-top: 14px; background: #1a3a28; border: 1px solid #2a6a4a; color: #5ac48a; font-family: var(--font); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; padding: 11px; border-radius: var(--radius); cursor: pointer; }
+  .zone-sprint-btn:active { transform: scale(0.98); }
 
   /* Material by job */
   .jobs-total { font-size: 11px; color: var(--mid); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
@@ -450,7 +448,6 @@
   <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull<span class="btn-long"> Material</span></button>
   <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 <span class="btn-long">Pull From </span>List</button>
   <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where<span class="btn-long"> Is It</span></button>
-  <button class="job-btn" style="border-color:#5a2a8a;color:#b389d9" onclick="openAerialPhotos()">🚁 Aerial<span class="btn-long"> Photos</span></button>
   <button class="job-btn" style="border-color:#7a5a00;color:#c9a227" onclick="openJobsView()">📁 <span class="btn-long">Material By </span>Jobs</button>
   <button class="job-btn" style="border-color:#2a6a4a;color:#5ac48a" onclick="requireName(openPhotoSprint)">📸 <span class="btn-long">Photo </span>Sprint</button>
 </div>
@@ -637,18 +634,6 @@
     <div id="disposalLogList" style="margin-top:8px;max-height:60vh;overflow-y:auto"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="document.getElementById('disposalViewModal').classList.remove('open')">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- LATEST AERIAL MODAL -->
-<div class="modal-overlay" id="aerialModal">
-  <div class="modal" style="max-width:640px">
-    <h2 style="color:#b389d9">🚁 Latest Aerial Photos</h2>
-    <div class="aerial-date" id="aerialDateLabel"></div>
-    <div class="aerial-grid" id="aerialGrid"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="document.getElementById('aerialModal').classList.remove('open')">Close</button>
     </div>
   </div>
 </div>
@@ -879,6 +864,7 @@ const T = {
     sprintShoot:'Shoot This One', sprintSkipBtn:'Skip', sprintBack:'Back',
     sprintShot:'shot', sprintNothing:'Everything showing already has a photo ✓',
     sprintDone:'N photos added ✓', sprintComplete:'Done — N photos added. Change the filter and run it again.',
+    zoneSprintHere:'Photograph what is here — N need one',
     returnBtn:'↩ Return', returnLoading:'Checking what is still out…',
     stillOut:'still out', returnOtherJob:'— another job / not job related —',
     returnHint:'N still out on J. Returning here credits them back to that job.',
@@ -965,6 +951,7 @@ const T = {
     sprintShoot:'Tomar Esta', sprintSkipBtn:'Saltar', sprintBack:'Atrás',
     sprintShot:'tomadas', sprintNothing:'Todo lo visible ya tiene foto ✓',
     sprintDone:'N fotos agregadas ✓', sprintComplete:'Listo — N fotos agregadas. Cambia el filtro y repite.',
+    zoneSprintHere:'Fotografiar lo de aquí — faltan N',
     returnBtn:'↩ Devolver', returnLoading:'Revisando qué sigue afuera…',
     stillOut:'aún afuera', returnOtherJob:'— otro trabajo / no es de trabajo —',
     returnHint:'N aún en J. Devolverlos aquí se los acredita a ese trabajo.',
@@ -3084,31 +3071,9 @@ async function openDisposalLog() {
     </div>`).join('');
 }
 
-// ── LATEST AERIAL PHOTOS ──────────────────────────────
-// Satellite imagery (even TomTom's) lags too far behind for a yard that
-// reshuffles constantly — drone photos pulled from BuilderTrend's daily
-// logs are the actual current view. Fixed structures (Conexes, Gray
-// Building, etc.) don't move, so these only need refreshing roughly
-// monthly, not automated: swap the files in /aerial and update the date
-// below, then commit. No BuilderTrend API needed for that cadence.
-const AERIAL_PHOTOS = [
-  'aerial/yard-overview.jpg', 'aerial/yard-core.jpg', 'zones/nursery-104.jpg',
-  'zones/nursery-104-oblique.jpg', 'zones/storage-strip.jpg', 'zones/material-bins.jpg',
-  'zones/gray-building.jpg', 'zones/blue-conexes.jpg', 'zones/pit.jpg', 'zones/pit-oblique.jpg',
-  'zones/new-building.jpg', 'zones/new-building-nadir.jpg', 'aerial/graded-lot.jpg',
-  'aerial/graded-lot-oblique.jpg', 'aerial/graded-lot-oblique-2.jpg'
-];
-const AERIAL_PHOTOS_DATE = 'Aug 11, 2026';
-
-function openAerialPhotos() {
-  document.getElementById('aerialDateLabel').textContent =
-    `From ${AERIAL_PHOTOS_DATE}. Fixed structures (Conexes, Gray Building, etc.) are accurate — material piles and vehicles may have moved since.`;
-  document.getElementById('aerialGrid').innerHTML = AERIAL_PHOTOS
-    .map(src => `<img src="${src}" onclick="openAerialImage('${src}')">`).join('');
-  document.getElementById('aerialModal').classList.add('open');
-}
-
-function openAerialImage(src) {
+// ── FULL-SIZE PHOTO VIEWER ────────────────────────────
+// The zone stage double-tap opens a photo full size; nothing "aerial" about it.
+function openFullPhoto(src) {
   document.getElementById('photoViewerImg').src = src;
   document.getElementById('photoViewer').classList.add('open');
 }
@@ -3456,7 +3421,7 @@ function renderZoneStage(node) {
     <div class="zone-stage ${zoneMarking ? 'marking' : ''}" id="zoneStage"
          ${zoneMarking ? 'onclick="onZoneStageTap(event)"' : ''}>
       <img src="${escapeHtml(src)}" alt="${escapeHtml(node.label)}"
-           ondblclick="openAerialImage('${escapeHtml(src)}')">
+           ondblclick="openFullPhoto('${escapeHtml(src)}')">
       <svg viewBox="0 0 1 1" preserveAspectRatio="none" id="zoneSvg" style="pointer-events:none">
         ${polys}
       </svg>
@@ -3497,6 +3462,16 @@ function renderZoneBody(node, id) {
   // anything still unsorted stands out instead of hiding in the crowd.
   const here = zoneOwnItems(id);
   const kidCount = kids.length;
+
+  // Offer the camera where the gap is visible, counting everything at or under this
+  // node rather than just this level — standing in the Gray Building, "40 need photos"
+  // is the useful number, not however many happen to sit on the parent row.
+  const needShots = itemsNeedingPhoto(zoneItems(id)).length;
+  if (needShots) {
+    html += `<button class="zone-sprint-btn" onclick="sprintThisZone()">
+      📸 ${t('zoneSprintHere').replace('N', needShots)}</button>`;
+  }
+
   html += `<div class="zone-section-label">${kidCount ? t('zoneUnsorted') : t('zoneWhatsHere')} (${here.length})</div>`;
   if (!here.length) {
     html += `<div class="zone-empty">${kidCount ? t('zoneAllSorted') : t('zoneNothingHere')}</div>`;
@@ -3658,6 +3633,17 @@ function exportZones() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   showToast(t('zoneExported'), 'success');
+}
+
+// Shoot everything this zone holds, from inside the zone. Standing in the Gray
+// Building is exactly when you want its forty photo-less items queued up, and
+// having to back out and set a filter is how that doesn't happen.
+function sprintThisZone() {
+  const id = zoneCurrentId();
+  const missing = itemsNeedingPhoto(zoneItems(id));
+  if (!missing.length) { showToast(t('sprintNothing'), 'success'); return; }
+  closeZones();
+  requireName(() => openPhotoSprint(zoneItems(id)));
 }
 
 // From an item straight to the picture of where it lives.
@@ -3932,11 +3918,10 @@ function itemsNeedingPhoto(list) {
   return (list || items).filter(i => !String(i.photo || '').trim());
 }
 
-function openPhotoSprint() {
-  // Whatever is on screen defines the run, so filtering to a category or location
-  // first gives you "just the Gray Building" without another control.
-  const visible = currentFilteredItems();
-  sprintQueue = itemsNeedingPhoto(visible);
+// Pass a list to shoot exactly that; pass nothing and the run follows whatever the
+// search box and dropdowns are already showing.
+function openPhotoSprint(list) {
+  sprintQueue = itemsNeedingPhoto(list || currentFilteredItems());
   if (!sprintQueue.length) { showToast(t('sprintNothing'), 'success'); return; }
   sprintPos = 0; sprintDone = 0;
   document.getElementById('sprintModal').classList.add('open');
