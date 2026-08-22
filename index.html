@@ -464,7 +464,6 @@
   <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull<span class="btn-long"> Material</span></button>
   <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 <span class="btn-long">Pull From </span>List</button>
   <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where<span class="btn-long"> Is It</span></button>
-  <button class="job-btn" style="border-color:#7a5a00;color:#c9a227" onclick="openJobsView()">📁 <span class="btn-long">Material By </span>Jobs</button>
   <button class="job-btn" style="border-color:#2a6a4a;color:#5ac48a" onclick="requireName(openPhotoSprint)">📸 <span class="btn-long">Photo </span>Sprint</button>
 </div>
 
@@ -648,12 +647,14 @@
   <div class="modal" style="max-width:560px">
     <h2 style="color:#3ba55d">📋 History</h2>
     <div class="hist-tabs">
+      <button class="hist-tab" id="histTabJobs" onclick="setHistoryTab('jobs')">By Job</button>
       <button class="hist-tab" id="histTabChanges" onclick="setHistoryTab('changes')">Changes</button>
       <button class="hist-tab" id="histTabDisposals" onclick="setHistoryTab('disposals')">Disposals</button>
     </div>
     <div id="historyList" style="margin-top:10px;max-height:58vh;overflow-y:auto"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeHistory()">Close</button>
+      <button class="zone-mini-btn" id="histExportBtn" onclick="exportJobs()" style="display:none">⬇ Export</button>
       <button class="zone-mini-btn" onclick="openSheetView()">📊 Open Sheet</button>
     </div>
   </div>
@@ -669,17 +670,6 @@
     </div>
   </div>
 </div>
-
-<!-- JOBS MODAL -->
-<div class="modal-overlay" id="jobsModal">
-  <div class="modal zone-modal">
-    <h2 style="color:#c9a227">📁 Material By Job</h2>
-    <div id="jobsBody"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeJobsView()">Close</button>
-      <button class="zone-mini-btn" onclick="exportJobs()">⬇ Export</button>
-    </div>
-  </div>
 </div>
 
 <!-- RETURN TO YARD MODAL -->
@@ -889,6 +879,8 @@ const T = {
     seedToday:'today', seedYesterday:'yesterday',
     historyLoading:'Loading…', historyNoChanges:'Nothing logged yet.',
     historyNoDisposals:'No disposals logged yet.',
+    aiDuplicate:'Looks like #I N — already in inventory. Adjust that instead of adding a second row.',
+    aiLowConfidence:'Identified, but not confidently — check the name before saving.',
     returnBtn:'↩ Return', returnLoading:'Checking what is still out…',
     stillOut:'still out', returnOtherJob:'— another job / not job related —',
     returnHint:'N still out on J. Returning here credits them back to that job.',
@@ -979,6 +971,8 @@ const T = {
     seedToday:'hoy', seedYesterday:'ayer',
     historyLoading:'Cargando…', historyNoChanges:'Nada registrado todavía.',
     historyNoDisposals:'No hay desechos registrados.',
+    aiDuplicate:'Parece #I N — ya está en inventario. Ajusta ese en vez de agregar otro.',
+    aiLowConfidence:'Identificado, pero sin certeza — revisa el nombre antes de guardar.',
     returnBtn:'↩ Devolver', returnLoading:'Revisando qué sigue afuera…',
     stillOut:'aún afuera', returnOtherJob:'— otro trabajo / no es de trabajo —',
     returnHint:'N aún en J. Devolverlos aquí se los acredita a ese trabajo.',
@@ -2017,20 +2011,54 @@ async function analyzePhoto(input) {
   });
 
   try {
+    // The category list used to be frozen in this string and had drifted from the
+    // Sheet — it offered "FENCE HARDWARE" while the yard actually files things under
+    // FENCING, CONCRETE & MASONRY, HARDWARE & FASTENERS and others that were simply
+    // not on the menu, so the right answer was unpickable. Read the live list instead.
+    const cats = CATEGORIES.filter(c => c && c !== 'Unknown');
+    // A sample of real names teaches the house style — "2-3/8\" galvanized ring-style
+    // post caps (prong clips)", not "metal cap" — and lets it spot something the yard
+    // already stocks instead of quietly creating a second row for it.
+    const known = items
+      .slice()
+      .sort((a, b) => (Number(b.qty) || 0) - (Number(a.qty) || 0))
+      .slice(0, 120)
+      .map(i => `#${i.id} ${i.name}${i.specs ? ' — ' + i.specs : ''}`)
+      .join('\n');
+
     const text = await callClaude({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
+      // Identifying a fence fitting from a photo is the one job here that needed a
+      // stronger model; the text matching elsewhere stays on Haiku.
+      model: 'claude-sonnet-5',
+      max_tokens: 700,
       messages: [{
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } },
-          { type: 'text', text: 'This is a construction/landscaping supply item. Identify it and return ONLY a JSON object with these fields: {"name": "item name", "category": "one of: LUMBER & POSTS, FENCE HARDWARE, DRAINAGE, LANDSCAPE HARDWARE, HYDROSEEDING MATERIALS, MASONRY & RETAINING WALL, ELECTRICAL/CONDUIT, PIT & AGGREGATE MATERIALS, MISC/EQUIPMENT", "specs": "size, part number, brand, key specs"}. No other text.' }
+          { type: 'text', text:
+`Identify this construction / landscaping supply item for a fencing and landscaping yard in Anchorage, Alaska.
+
+Categories you may use (exactly one, copied verbatim):
+${cats.join('\n')}
+
+Items this yard already stocks — match the naming style, and if the photo shows one of these, say so:
+${known}
+
+Return ONLY JSON:
+{"name":"...","category":"...","specs":"size, part number, brand, finish","existingId":null,"confidence":"high|medium|low"}
+
+Rules:
+- "name" follows the style above: what it is, then the distinguishing detail. Include size and finish (black vs galvanized) when visible, since most of these differ only by that.
+- "specs" carries measurements, part numbers, brand, and container size. Say nothing rather than guess a number you cannot read.
+- "existingId" is the numeric id from the list above if this is plainly the same product, otherwise null. Do not stretch for a match — two caps of different diameters are different items.
+- "confidence" reflects how sure you are of the identification.
+No other text.` }
         ]
       }]
     });
     const cleaned = text.replace(/```json|```/g, '').trim();
     const item = JSON.parse(cleaned);
-    
+
     // Fill in the form
     if (item.name) document.getElementById('newName').value = item.name;
     if (item.specs) document.getElementById('newSpecs').value = item.specs;
@@ -2040,7 +2068,16 @@ async function analyzePhoto(input) {
         if (o.value === item.category) { catSel.value = item.category; break; }
       }
     }
-    showToast('Item identified ✓', 'success');
+    // Adding a second row for something already on the shelf is how one product ends
+    // up with two counts that both look right, so say it plainly before it happens.
+    const dup = item.existingId != null ? items.find(i => String(i.id) === String(item.existingId)) : null;
+    if (dup) {
+      showToast(t('aiDuplicate').replace('N', itemName(dup)).replace('I', dup.id), 'error');
+    } else if (String(item.confidence || '').toLowerCase() === 'low') {
+      showToast(t('aiLowConfidence'), 'error');
+    } else {
+      showToast('Item identified ✓', 'success');
+    }
   } catch(e) {
     showToast('Could not identify — fill in manually', 'error');
   }
@@ -2700,22 +2737,13 @@ function fmtJobDate(d) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-async function openJobsView() {
-  document.getElementById('jobsModal').classList.add('open');
-  document.getElementById('jobsBody').innerHTML =
-    `<div class="loading-state" style="color:var(--gold)"><div class="spinner"></div>${t('jobsLoading')}</div>`;
-  await loadJobLedger(true);
-  renderJobsView();
-}
-
-function closeJobsView() { document.getElementById('jobsModal').classList.remove('open'); }
 function toggleJob(job) {
   if (openJobs.has(job)) openJobs.delete(job); else openJobs.add(job);
   renderJobsView();
 }
 
 function renderJobsView() {
-  const body = document.getElementById('jobsBody');
+  const body = document.getElementById('historyList');
   const report = jobReport();
   if (!report.length) {
     body.innerHTML = `<div class="zone-empty">${t('jobsEmpty')}</div>`;
@@ -3081,9 +3109,22 @@ function closeHistory() { document.getElementById('historyModal').classList.remo
 
 function setHistoryTab(tab) {
   historyTab = tab;
+  document.getElementById('histTabJobs').classList.toggle('active', tab === 'jobs');
   document.getElementById('histTabChanges').classList.toggle('active', tab === 'changes');
   document.getElementById('histTabDisposals').classList.toggle('active', tab === 'disposals');
-  if (tab === 'changes') renderChangeHistory(); else renderDisposalHistory();
+  // Export only means something for the job rollup.
+  document.getElementById('histExportBtn').style.display = tab === 'jobs' ? 'inline-block' : 'none';
+  if (tab === 'jobs') renderJobsInHistory();
+  else if (tab === 'changes') renderChangeHistory();
+  else renderDisposalHistory();
+}
+
+async function renderJobsInHistory() {
+  const listEl = document.getElementById('historyList');
+  listEl.innerHTML = `<div style="color:var(--gold);font-size:12px;padding:8px">${t('historyLoading')}</div>`;
+  await loadJobLedger(true);
+  if (historyTab !== 'jobs') return;
+  renderJobsView();
 }
 
 async function renderChangeHistory() {
@@ -3744,21 +3785,61 @@ function whereIsItem(id) {
   openZones(target);
 }
 
-window.onload = () => {
+// One request instead of four. Apps Script has roughly a two-second floor per call
+// regardless of how little it does, so opening the app spent most of its wait on the
+// round trips rather than on any actual work. Falls back to the separate calls when
+// the deployed script has no bootstrap action, so the page is safe to ship first.
+async function bootstrapApp() {
+  if (!APPS_SCRIPT_URL) { loadItems(); return false; }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=bootstrap`, { signal: controller.signal, redirect: 'follow' });
+    clearTimeout(timeout);
+    const data = await res.json();
+    if (!data || !Array.isArray(data.items)) return false;
+
+    if (data.categories && data.categories.length) CATEGORIES = data.categories;
+    if (data.locations && data.locations.length) LOCATIONS = data.locations;
+    populateSelects();
+
+    applyItemsFromSheet(data.items);
+
+    profiles = data.profiles || [];
+    if (myProfile) {
+      const mine = profiles.find(p => String(p.id) === String(myProfile.id));
+      if (mine) { myProfile = mine; saveProfileLocally(); currentUser = myProfile.name; }
+    }
+    renderProfileGate();
+    renderAdminPanel();
+
+    if (Array.isArray(data.pull)) { applySharedPull(data.pull); updatePullUI(); }
+    renderItems();
+    return true;
+  } catch(e) { return false; }
+}
+
+window.onload = async () => {
   loadSavedProfile();
   populateSelects();
-  fetchLists();
-  loadItems();
   updatePullUI();   // a list staged before the phone locked is still waiting
-  fetchPullList();  // …and someone else may have staged against it since
+  seedItemsFromCache();   // paints immediately; the network only confirms it
+
+  const ok = await bootstrapApp();
+  if (!ok) {
+    // Older deployment, or the call failed — do it the long way.
+    fetchLists();
+    await loadItems();
+    fetchPullList();
+    await fetchProfiles();
+  }
   // Prompt for identity right away rather than waiting for someone to tap a
   // gated action — browsing itself stays open, but anyone not yet approved
   // sees where they stand immediately instead of discovering it by accident.
-  fetchProfiles().then(() => {
-    // A profile cached from before sessions existed has no token, so ask for the
-    // PIN once on open rather than letting the first edit of the day fail.
-    if (!myProfile || myProfile.status !== 'approved' || !authToken) promptName();
-  });
+  //
+  // A profile cached from before sessions existed has no token, so ask for the
+  // PIN once on open rather than letting the first edit of the day fail.
+  if (!myProfile || myProfile.status !== 'approved' || !authToken) promptName();
 };
 
 // Whether what is on screen came from the Sheet or from the baked-in snapshot.
@@ -3809,11 +3890,9 @@ function describeSeedAge(ms) {
 
 let seedLabel = EMBEDDED_DATE;
 
-async function loadItems() {
-  const btn = document.getElementById('syncBtn');
-  btn.classList.add('syncing'); btn.textContent = t('syncing');
-  // Paint from the freshest thing on hand — last sync if this device has one,
-  // otherwise the baked-in snapshot so a new phone is never blank.
+// Paint from the freshest thing on hand — last sync if this device has one,
+// otherwise the baked-in snapshot so a new phone is never blank.
+function seedItemsFromCache() {
   const cached = readItemsCache();
   const seed = cached ? cached.items : EMBEDDED;
   seedLabel = cached ? describeSeedAge(cached.at) : EMBEDDED_DATE;
@@ -3822,6 +3901,33 @@ async function loadItems() {
   liveData = false;
   updateStaleBanner();
   renderItems();
+}
+
+// Shared by both the bootstrap call and the plain getAll path, so the two cannot
+// drift on alias remapping or on caching.
+function applyItemsFromSheet(list) {
+  // Remap any legacy category/location names still sitting in the sheet
+  list.forEach(i => {
+    if (CATEGORY_ALIASES[i.category]) i.category = CATEGORY_ALIASES[i.category];
+    if (LOCATION_ALIASES[i.location]) i.location = LOCATION_ALIASES[i.location];
+    i.unit = normalizeUnit(i.unit);
+  });
+  // The Sheet replaces the seed outright. It used to keep any embedded row the
+  // Sheet lacked, which quietly undid deletions -- #84/#85 Swedish Columnar
+  // Aspen came back on every sync long after they were gone, and their July
+  // counts read as current.
+  items = list;
+  liveData = true;
+  // Cache after the alias remapping, so the next cold start opens on normalized
+  // data and doesn't re-do the work.
+  writeItemsCache(list);
+  updateStaleBanner();
+}
+
+async function loadItems() {
+  const btn = document.getElementById('syncBtn');
+  btn.classList.add('syncing'); btn.textContent = t('syncing');
+  seedItemsFromCache();
   if (APPS_SCRIPT_URL) {
     try {
       const controller = new AbortController();
@@ -3834,22 +3940,7 @@ async function loadItems() {
       try { data = JSON.parse(text); }
       catch(parseErr) { throw new Error('Bad response (not JSON): ' + text.slice(0, 80)); }
       if (data && data.items) {
-        // Remap any legacy category/location names still sitting in the sheet
-        data.items.forEach(i => {
-          if (CATEGORY_ALIASES[i.category]) i.category = CATEGORY_ALIASES[i.category];
-          if (LOCATION_ALIASES[i.location]) i.location = LOCATION_ALIASES[i.location];
-          i.unit = normalizeUnit(i.unit);
-        });
-        // The Sheet replaces the seed outright. It used to keep any embedded row the
-        // Sheet lacked, which quietly undid deletions -- #84/#85 Swedish Columnar
-        // Aspen came back on every sync long after they were gone, and their July
-        // counts read as current.
-        items = data.items;
-        liveData = true;
-        // Cache after the alias remapping above, so the next cold start opens on
-        // normalized data and doesn't re-do the work.
-        writeItemsCache(data.items);
-        updateStaleBanner();
+        applyItemsFromSheet(data.items);
         showToast(t('synced'), 'success'); renderItems();
       } else {
         throw new Error(data && data.error ? data.error : 'No items in response');
