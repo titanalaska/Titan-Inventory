@@ -386,6 +386,12 @@
   .hist-tabs { display: flex; gap: 6px; margin-top: 4px; }
   .hist-tab { flex: 1; background: var(--steel); border: 1px solid #333; color: var(--mid); font-family: var(--font); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 9px; border-radius: var(--radius); cursor: pointer; }
   .hist-tab.active { background: #16301f; border-color: #2a6a4a; color: #5ac48a; }
+  /* Four tabs don't fit one phone row at this font size, so let them wrap. */
+  .hist-tabs { flex-wrap: wrap; }
+  .hist-tab { flex: 1 1 calc(50% - 3px); min-width: 0; }
+  .dest-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+  .dest-tab { flex: 1; background: var(--steel); border: 1px solid #333; color: var(--mid); font-family: var(--font); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; padding: 9px; border-radius: var(--radius); cursor: pointer; }
+  .dest-tab.active { background: #3a2c00; border-color: #7a5a00; color: var(--gold); }
   .hist-row { display: flex; gap: 8px; padding: 8px 2px; border-bottom: 1px solid #232323; }
   .hist-row:last-child { border-bottom: none; }
   .hist-type { flex: none; align-self: flex-start; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 6px; border-radius: 3px; min-width: 54px; text-align: center; }
@@ -659,6 +665,7 @@
     <h2 style="color:#3ba55d">📋 History</h2>
     <div class="hist-tabs">
       <button class="hist-tab" id="histTabJobs" onclick="setHistoryTab('jobs')">By Job</button>
+      <button class="hist-tab" id="histTabEquip" onclick="setHistoryTab('equipment')">By Equipment</button>
       <button class="hist-tab" id="histTabChanges" onclick="setHistoryTab('changes')">Changes</button>
       <button class="hist-tab" id="histTabDisposals" onclick="setHistoryTab('disposals')">Disposals</button>
     </div>
@@ -731,9 +738,17 @@
     <div id="pullModalBody" class="pull-body"></div>
     <div id="pullCommitRow" style="display:none">
       <div class="pull-summary" id="pullSummary"></div>
-      <div class="modal-field full">
+      <div class="dest-toggle">
+        <button class="dest-tab active" id="destTabJob" onclick="setPullDest('job')">For a job</button>
+        <button class="dest-tab" id="destTabEquip" onclick="setPullDest('equipment')">For equipment</button>
+      </div>
+      <div class="modal-field full" id="pullJobWrap">
         <label id="pullJobLabel">Job / reason</label>
         <input type="text" id="pullJobInput" placeholder="e.g. Wolf — Phase 2">
+      </div>
+      <div class="modal-field full" id="pullEquipWrap" style="display:none">
+        <label>Which machine?</label>
+        <select id="pullEquipSelect" onchange="handleListSelect(this,'equipment')"></select>
       </div>
       <button class="btn-save" id="pullCommitBtn" style="width:100%;margin-top:8px" onclick="requireName(commitPull)">PULL ALL</button>
     </div>
@@ -889,6 +904,10 @@ const T = {
     zoneSprintHere:'Photograph what is here — N need one',
     seedToday:'today', seedYesterday:'yesterday',
     installed:'Added — open it from your home screen',
+    newEquipTitle:'Add Equipment', addNewEquip:'+ Add new machine…',
+    equipReq:'Pick the machine first',
+    equipEmpty:'Nothing has been used on a machine yet.',
+    equipTotal:'J machines · U units used',
     historyLoading:'Loading…', historyNoChanges:'Nothing logged yet.',
     historyNoDisposals:'No disposals logged yet.',
     aiDuplicate:'Looks like #I N — already in inventory. Adjust that instead of adding a second row.',
@@ -982,6 +1001,10 @@ const T = {
     zoneSprintHere:'Fotografiar lo de aquí — faltan N',
     seedToday:'hoy', seedYesterday:'ayer',
     installed:'Agregada — ábrela desde tu pantalla de inicio',
+    newEquipTitle:'Agregar Equipo', addNewEquip:'+ Agregar máquina…',
+    equipReq:'Elige la máquina primero',
+    equipEmpty:'Nada se ha usado en una máquina todavía.',
+    equipTotal:'J máquinas · U unidades usadas',
     historyLoading:'Cargando…', historyNoChanges:'Nada registrado todavía.',
     historyNoDisposals:'No hay desechos registrados.',
     aiDuplicate:'Parece #I N — ya está en inventario. Ajusta ese en vez de agregar otro.',
@@ -1030,6 +1053,11 @@ const T = {
 // a code change — see fetchLists().
 let LOCATIONS = ['Unknown','Gray Building','104','Maui Lot','North C Street','South C Street','Red Building','Conex 1','Conex 2','Conex 3','Conex 4','Conex 5','Conex 6','Conex 7','Civil A','Civil B','Red Tool 1','Red Tool 2','Red Tool 3','Yard','Material Bins'];
 let CATEGORIES = ['LUMBER & POSTS','FENCE HARDWARE','DRAINAGE','LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS','MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT','NURSERY STOCK','PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT'];
+// Machines, not places. Shop stock is consumed by a piece of equipment rather than
+// by a job — a filter goes onto a loader, not onto the Wolf job — so it needs its
+// own vocabulary or the two get jumbled in the same ledger. Lives in the Config tab
+// beside categories and locations, and the mechanics can add to it themselves.
+let EQUIPMENT = [];
 
 // Legacy names still sitting in the Google Sheet get silently remapped to their
 // current category/location on load, so old data never has to be hand-edited in the sheet.
@@ -1588,6 +1616,7 @@ async function fetchLists() {
     const data = await res.json();
     if (data.categories && data.categories.length) CATEGORIES = data.categories;
     if (data.locations && data.locations.length) LOCATIONS = data.locations;
+    if (Array.isArray(data.equipment)) EQUIPMENT = data.equipment;
     populateSelects();
     renderItems();
   } catch(e) { /* fallback lists already in place */ }
@@ -1607,9 +1636,9 @@ function handleListSelect(selectEl, type) {
 
 function openListModal(type, targetSelectId) {
   pendingListTarget = { type, targetSelectId };
-  const existing = type === 'category' ? CATEGORIES : LOCATIONS;
+  const existing = type === 'category' ? CATEGORIES : type === 'equipment' ? EQUIPMENT : LOCATIONS;
   document.getElementById('listModalTitle').textContent =
-    type === 'category' ? t('newCatTitle') : t('newLocTitle');
+    type === 'category' ? t('newCatTitle') : type === 'equipment' ? t('newEquipTitle') : t('newLocTitle');
   // Showing what already exists is the cheapest guard against someone adding
   // "Conex 8" when the yard already calls it "Conex 08".
   document.getElementById('listModalExistingLabel').textContent = t('existingLabel');
@@ -1645,7 +1674,9 @@ async function submitListValue() {
     } else if (data.error) {
       showToast(data.error, 'error');
     } else {
-      if (type === 'category') CATEGORIES.push(value); else LOCATIONS.push(value);
+      if (type === 'category') CATEGORIES.push(value);
+      else if (type === 'equipment') EQUIPMENT.push(value);
+      else LOCATIONS.push(value);
       logChange('ADD', value, `New ${type} added`);
       applyListValue(type, value, targetSelectId);
       showToast(t('listAdded'), 'success');
@@ -2137,7 +2168,7 @@ async function pushPullList() {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: authedBody({
         action: 'syncPull', who: currentUser, entries: entries,
-        job: (document.getElementById('pullJobInput') || {}).value || ''
+        job: (typeof pullDestination === 'function' ? pullDestination() : '')
       })
     });
     const data = await res.json();
@@ -2228,6 +2259,39 @@ function updatePullUI() {
     <button class="pull-banner-done" onclick="togglePullMode()">${t('done')}</button>`;
   const btn = document.getElementById('pullModeBtn');
   if (btn) btn.classList.toggle('pull-active', pullMode);
+}
+
+// ---- WHERE THE MATERIAL IS GOING ----
+// A job and a machine are the same shape in the ledger but not the same question.
+// "What did the Wolf job take" and "what have we put into that loader this year"
+// both matter, and mixing them into one list answers neither well.
+let pullDest = 'job';
+
+function setPullDest(kind) {
+  pullDest = kind;
+  document.getElementById('destTabJob').classList.toggle('active', kind === 'job');
+  document.getElementById('destTabEquip').classList.toggle('active', kind === 'equipment');
+  document.getElementById('pullJobWrap').style.display = kind === 'job' ? 'block' : 'none';
+  document.getElementById('pullEquipWrap').style.display = kind === 'equipment' ? 'block' : 'none';
+  if (kind === 'equipment') populateEquipSelect();
+}
+
+function populateEquipSelect() {
+  const sel = document.getElementById('pullEquipSelect');
+  const prev = sel.value;
+  sel.innerHTML = EQUIPMENT.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('')
+    + `<option value="__new__">${t('addNewEquip')}</option>`;
+  if (prev && EQUIPMENT.indexOf(prev) !== -1) sel.value = prev;
+  sel.dataset.prev = sel.value;
+}
+
+// What the pull is being charged to, whichever tab is showing.
+function pullDestination() {
+  if (pullDest === 'equipment') {
+    const v = document.getElementById('pullEquipSelect').value;
+    return v === '__new__' ? '' : v;
+  }
+  return document.getElementById('pullJobInput').value.trim();
 }
 
 function openPullModal() {
@@ -2362,8 +2426,12 @@ async function commitPull() {
   // baked-in snapshot would push a months-old number into the Sheet as if it were
   // a fresh count. The staged list survives in localStorage, so waiting costs nothing.
   if (!liveData) { showToast(t('pullNeedsLive'), 'error'); return; }
-  const job = document.getElementById('pullJobInput').value.trim();
-  if (!job) { showToast(t('jobReq'), 'error'); document.getElementById('pullJobInput').focus(); return; }
+  const job = pullDestination();
+  if (!job) {
+    showToast(pullDest === 'equipment' ? t('equipReq') : t('jobReq'), 'error');
+    if (pullDest === 'job') document.getElementById('pullJobInput').focus();
+    return;
+  }
 
   const btn = document.getElementById('pullCommitBtn');
   btn.disabled = true; btn.textContent = t('pulling');
@@ -2449,7 +2517,7 @@ async function tryBulkPull(job) {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: authedBody({ action:'bulkPull', items: payload, job: job, who: currentUser })
+      body: authedBody({ action:'bulkPull', items: payload, job: job, kind: pullDest, who: currentUser })
     });
     const data = await res.json();
     // A refused session must stop here. Falling through to the per-item path
@@ -2725,8 +2793,11 @@ let disposalItemId = null;
 // tally that could disagree with it.
 let openJobs = new Set();
 
-function jobReport() {
-  const jobs = Object.keys(jobMoves || {}).map(job => {
+// `wantEquip` picks which ledger to report: machines or jobs. Same maths either way.
+function jobReport(wantEquip) {
+  const jobs = Object.keys(jobMoves || {})
+    .filter(job => !!jobMoves[job].equip === !!wantEquip)
+    .map(job => {
     const J = jobMoves[job];
     const lines = Object.keys(J.items).map(name => {
       const it = J.items[name];
@@ -2755,16 +2826,16 @@ function toggleJob(job) {
   renderJobsView();
 }
 
-function renderJobsView() {
+function renderJobsView(wantEquip) {
   const body = document.getElementById('historyList');
-  const report = jobReport();
+  const report = jobReport(wantEquip);
   if (!report.length) {
-    body.innerHTML = `<div class="zone-empty">${t('jobsEmpty')}</div>`;
+    body.innerHTML = `<div class="zone-empty">${wantEquip ? t('equipEmpty') : t('jobsEmpty')}</div>`;
     return;
   }
   let html = '';
   if (jobLogTruncated) html += `<div class="jobs-warn">${t('jobsTruncated')}</div>`;
-  html += `<div class="jobs-total">${t('jobsTotal').replace('J', report.length)
+  html += `<div class="jobs-total">${(wantEquip ? t('equipTotal') : t('jobsTotal')).replace('J', report.length)
     .replace('U', report.reduce((s, j) => s + j.netUnits, 0).toLocaleString())}</div>`;
 
   report.forEach(j => {
@@ -2795,9 +2866,9 @@ function renderJobsView() {
 }
 
 // Plain text, because it has to paste into an email or a bid without fighting it.
-function exportJobs() {
-  const report = jobReport();
-  const lines = ['TITAN ALASKA — MATERIAL BY JOB', 'Generated ' + new Date().toLocaleString(), ''];
+function exportJobs(wantEquip) {
+  const report = jobReport(wantEquip);
+  const lines = [(wantEquip ? 'TITAN ALASKA — MATERIAL BY EQUIPMENT' : 'TITAN ALASKA — MATERIAL BY JOB'), 'Generated ' + new Date().toLocaleString(), ''];
   report.forEach(j => {
     lines.push('=== ' + j.job + ' ===');
     lines.push('  still out: ' + j.netUnits + ' units across ' + j.species + ' species'
@@ -2843,15 +2914,19 @@ function parseJobMoves(entries) {
     // The job name is greedy and the trailing "— before → after" is the anchor.
     // Matching lazily up to the first em-dash split "Wolf — Phase 2" into "Wolf",
     // and that is the example in the pull list's own placeholder.
+    // USE is the same movement as PULL, charged to a machine rather than a job.
     let m = null, dir = 0;
-    if (type === 'PULL' && (m = detail.match(/^(\d+)(?:\s+\S+)?\s+for\s+(.+)\s+—\s*\d+\s*→\s*\d+\s*$/))) dir = 1;
+    if ((type === 'PULL' || type === 'USE') && (m = detail.match(/^(\d+)(?:\s+\S+)?\s+for\s+(.+)\s+—\s*\d+\s*→\s*\d+\s*$/))) dir = 1;
     else if (type === 'RETURN' && (m = detail.match(/^(\d+)(?:\s+\S+)?\s+back from\s+(.+)\s+—\s*\d+\s*→\s*\d+\s*$/))) dir = -1;
     if (!dir || !m) return;
     const job = m[2].trim();
+    const isEquip = type === 'USE';
     const qty = Number(m[1]) || 0;
     const when = e.time ? new Date(e.time) : null;
-    if (!jobs[job]) jobs[job] = { job: job, items: {}, first: null, last: null };
+    if (!jobs[job]) jobs[job] = { job: job, items: {}, first: null, last: null, equip: false };
     const J = jobs[job];
+    // One USE is enough to mark it a machine; a return doesn't say which kind it was.
+    if (isEquip) J.equip = true;
     if (!J.items[name]) J.items[name] = { out: 0, back: 0 };
     if (dir > 0) J.items[name].out += qty; else J.items[name].back += qty;
     if (when && !isNaN(when)) {
@@ -2886,7 +2961,7 @@ async function loadJobLedger(force) {
   if (!APPS_SCRIPT_URL) { jobLedger = {}; jobMoves = {}; return; }
   if (jobMoves && !force) return;
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action:'getLog', limit: 5000, types: 'PULL,RETURN' })}`);
+    const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action:'getLog', limit: 5000, types: 'PULL,USE,RETURN' })}`);
     const data = await res.json();
     const entries = data.entries || [];
     jobMoves = parseJobMoves(entries);
@@ -3123,21 +3198,26 @@ function closeHistory() { document.getElementById('historyModal').classList.remo
 function setHistoryTab(tab) {
   historyTab = tab;
   document.getElementById('histTabJobs').classList.toggle('active', tab === 'jobs');
+  document.getElementById('histTabEquip').classList.toggle('active', tab === 'equipment');
   document.getElementById('histTabChanges').classList.toggle('active', tab === 'changes');
   document.getElementById('histTabDisposals').classList.toggle('active', tab === 'disposals');
-  // Export only means something for the job rollup.
-  document.getElementById('histExportBtn').style.display = tab === 'jobs' ? 'inline-block' : 'none';
-  if (tab === 'jobs') renderJobsInHistory();
+  // Export only means something for the two rollups.
+  const rollup = tab === 'jobs' || tab === 'equipment';
+  const btn = document.getElementById('histExportBtn');
+  btn.style.display = rollup ? 'inline-block' : 'none';
+  btn.onclick = () => exportJobs(tab === 'equipment');
+  if (rollup) renderRollupInHistory(tab === 'equipment');
   else if (tab === 'changes') renderChangeHistory();
   else renderDisposalHistory();
 }
 
-async function renderJobsInHistory() {
+async function renderRollupInHistory(wantEquip) {
   const listEl = document.getElementById('historyList');
   listEl.innerHTML = `<div style="color:var(--gold);font-size:12px;padding:8px">${t('historyLoading')}</div>`;
   await loadJobLedger(true);
-  if (historyTab !== 'jobs') return;
-  renderJobsView();
+  const stillHere = wantEquip ? 'equipment' : 'jobs';
+  if (historyTab !== stillHere) return;   // tab switched while this was in flight
+  renderJobsView(wantEquip);
 }
 
 async function renderChangeHistory() {
