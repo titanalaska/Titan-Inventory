@@ -2,8 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>TITAN ALASKA — Inventory</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#D4A017">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Inventory">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <style>
   :root {
     --black: #0a0a0a; --steel: #111111; --iron: #1a1a1a;
@@ -26,6 +32,10 @@
 
   .lang-btn { background: #1a1500; border: 1px solid #3a3000; color: #c8a000; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); transition: background 0.15s; }
   .lang-btn:hover { background: #2a2500; }
+  /* Only shown once the browser says the app actually qualifies to be installed —
+     a dead "Install" button is worse than none. */
+  .install-btn { background: #16301f; border: 1px solid #2a6a4a; color: #5ac48a; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); }
+  .install-btn:hover { background: #1d4029; }
   .lang-btn.es { background: #3a1a00; border-color: #8a5a00; color: var(--gold); }
 
   .user-btn { background: #1a1500; border: 1px solid #3a3000; color: #D4A017; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -432,6 +442,7 @@
     <div class="header-btns">
       <button class="admin-btn" id="adminBtn" onclick="openAdminPanel()" style="display:none">🔑 Approvals</button>
       <button class="user-btn" id="userBtn" onclick="promptName()">👤 Sign In</button>
+      <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none">⬇ INSTALL</button>
       <button class="lang-btn" id="langBtn" onclick="toggleLang()">ES</button>
       <button class="sync-btn" id="syncBtn" onclick="loadItems()">↻ SYNC</button>
     </div>
@@ -877,6 +888,7 @@ const T = {
     sprintDone:'N photos added ✓', sprintComplete:'Done — N photos added. Change the filter and run it again.',
     zoneSprintHere:'Photograph what is here — N need one',
     seedToday:'today', seedYesterday:'yesterday',
+    installed:'Added — open it from your home screen',
     historyLoading:'Loading…', historyNoChanges:'Nothing logged yet.',
     historyNoDisposals:'No disposals logged yet.',
     aiDuplicate:'Looks like #I N — already in inventory. Adjust that instead of adding a second row.',
@@ -969,6 +981,7 @@ const T = {
     sprintDone:'N fotos agregadas ✓', sprintComplete:'Listo — N fotos agregadas. Cambia el filtro y repite.',
     zoneSprintHere:'Fotografiar lo de aquí — faltan N',
     seedToday:'hoy', seedYesterday:'ayer',
+    installed:'Agregada — ábrela desde tu pantalla de inicio',
     historyLoading:'Cargando…', historyNoChanges:'Nada registrado todavía.',
     historyNoDisposals:'No hay desechos registrados.',
     aiDuplicate:'Parece #I N — ya está en inventario. Ajusta ese en vez de agregar otro.',
@@ -3805,7 +3818,47 @@ async function loadEverything() {
   ]);
 }
 
+// ── OFFLINE / INSTALL ────────────────────────────────
+// Registered defensively: a failure here must never take the app down with it, and
+// the page is opened straight off disk often enough during development that an
+// insecure origin is expected rather than exceptional.
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+  navigator.serviceWorker.register('./sw.js').catch(() => {
+    /* offline support unavailable; everything else still works */
+  });
+}
+
+// Chrome fires this instead of showing its own prompt once the app qualifies as
+// installable, so stash it and put our own button up.
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  const b = document.getElementById('installBtn');
+  if (b) b.style.display = 'inline-block';
+});
+
+async function installApp() {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  const { outcome } = await installPrompt.userChoice;
+  if (outcome === 'accepted') {
+    const b = document.getElementById('installBtn');
+    if (b) b.style.display = 'none';
+    showToast(t('installed'), 'success');
+  }
+  installPrompt = null;
+}
+
+window.addEventListener('appinstalled', () => {
+  const b = document.getElementById('installBtn');
+  if (b) b.style.display = 'none';
+});
+
 window.onload = async () => {
+  registerServiceWorker();
   loadSavedProfile();
   populateSelects();
   updatePullUI();   // a list staged before the phone locked is still waiting
