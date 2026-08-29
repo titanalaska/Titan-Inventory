@@ -747,7 +747,9 @@
         <input type="text" id="pullJobInput" placeholder="e.g. Wolf — Phase 2">
       </div>
       <div class="modal-field full" id="pullEquipWrap" style="display:none">
-        <label>Which machine?</label>
+        <label id="pullEquipLabel">Which machine?</label>
+        <input type="text" id="pullEquipFilter" style="display:none;margin-bottom:6px"
+               oninput="populateEquipSelect()" placeholder="Unit # — T-14, M3, BCT7">
         <select id="pullEquipSelect" onchange="handleListSelect(this,'equipment')"></select>
       </div>
       <button class="btn-save" id="pullCommitBtn" style="width:100%;margin-top:8px" onclick="requireName(commitPull)">PULL ALL</button>
@@ -2276,13 +2278,35 @@ function setPullDest(kind) {
   if (kind === 'equipment') populateEquipSelect();
 }
 
+// The fleet is ~100 machines and the crew names them by unit number, not by
+// make and model — "T-14", "M3", "BCT7". So the filter matches anywhere in the
+// string: typing "takeuchi" finds the mini ex whose number you've forgotten,
+// and typing "t-14" finds it the way you'd actually say it.
+//
+// Hidden below a handful of machines. A search box over five options is clutter.
+const EQUIP_FILTER_MIN = 8;
+
 function populateEquipSelect() {
   const sel = document.getElementById('pullEquipSelect');
+  const box = document.getElementById('pullEquipFilter');
   const prev = sel.value;
-  sel.innerHTML = EQUIPMENT.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('')
+
+  box.style.display = EQUIPMENT.length >= EQUIP_FILTER_MIN ? 'block' : 'none';
+  const q = (box.style.display === 'none' ? '' : box.value).trim().toLowerCase();
+  const shown = q ? EQUIPMENT.filter(e => e.toLowerCase().indexOf(q) !== -1) : EQUIPMENT;
+
+  // "Add new" stays put no matter what's filtered out — a machine missing from
+  // the list is exactly when you need it, and a dead end there sends the part
+  // back to being charged to nothing.
+  sel.innerHTML = shown.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('')
     + `<option value="__new__">${t('addNewEquip')}</option>`;
-  if (prev && EQUIPMENT.indexOf(prev) !== -1) sel.value = prev;
+
+  if (prev && shown.indexOf(prev) !== -1) sel.value = prev;
   sel.dataset.prev = sel.value;
+
+  const label = document.getElementById('pullEquipLabel');
+  if (label) label.textContent = q && shown.length !== EQUIPMENT.length
+    ? `Which machine? (${shown.length} of ${EQUIPMENT.length})` : 'Which machine?';
 }
 
 // What the pull is being charged to, whichever tab is showing.
