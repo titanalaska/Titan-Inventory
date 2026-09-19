@@ -505,6 +505,7 @@
     <div id="statEstLabel">Est. flags: <span id="statEst">—</span></div>
     <div id="statNoUnitLabel" class="stat-clickable" onclick="toggleNoUnitFilter()" title="Show only items missing a unit">Needs unit: <span id="statNoUnit">—</span></div>
     <div id="statNoPhotoLabel" class="stat-clickable" onclick="toggleNoPhotoFilter()" title="Show only items missing a photo">Needs photo: <span id="statNoPhoto">—</span></div>
+    <div id="statStaleLabel" class="stat-clickable" onclick="toggleStaleFilter()" title="Show only items not verified in 60 days">Unverified: <span id="statStale">—</span></div>
   </div>
   <div class="cat-jump" id="catJump" style="margin:0 -16px"></div>
 </header>
@@ -1180,6 +1181,7 @@ let expandedId = null;
 let collapsedCats = new Set();
 let noUnitOnly = false;
 let noPhotoOnly = false;
+let staleOnly = false;     // items not verified in 60 days, or never
 let currentUser = '';
 let pendingAction = null;
 let translationCache = JSON.parse(localStorage.getItem('titanTranslationCache') || '{}');
@@ -4162,6 +4164,7 @@ function currentFilteredItems() {
     const ms = !search || name.toLowerCase().includes(search) || specs.toLowerCase().includes(search) || category.toLowerCase().includes(search) || String(item.id).includes(search);
     if (noUnitOnly && normalizeUnit(item.unit)) return false;
     if (noPhotoOnly && String(item.photo || '').trim()) return false;
+    if (staleOnly && !countIsStale(item)) return false;
     return ms && (!filterCat || category.trim() === filterCat.trim()) && (!filterLoc || location.trim() === filterLoc.trim());
   });
 }
@@ -4175,6 +4178,8 @@ function renderItems() {
   document.getElementById('statNoUnitLabel').classList.toggle('stat-active', noUnitOnly);
   document.getElementById('statNoPhoto').textContent = itemsNeedingPhoto().length;
   document.getElementById('statNoPhotoLabel').classList.toggle('stat-active', noPhotoOnly);
+  document.getElementById('statStale').textContent = items.filter(countIsStale).length;
+  document.getElementById('statStaleLabel').classList.toggle('stat-active', staleOnly);
   const grouped = {};
   filtered.forEach(item => { const cat = item.category || 'UNSORTED'; if (!grouped[cat]) grouped[cat] = []; grouped[cat].push(item); });
   const catJump = document.getElementById('catJump');
@@ -4322,6 +4327,15 @@ function renderItems() {
 
 function toggleNoUnitFilter() { noUnitOnly = !noUnitOnly; collapsedCats.clear(); renderItems(); }
 function toggleNoPhotoFilter() { noPhotoOnly = !noPhotoOnly; collapsedCats.clear(); renderItems(); }
+
+// Never counted reads as stale rather than fresh. That is the whole point:
+// the July audit was useless not because it was wrong but because a line
+// nobody ever looked at was indistinguishable from one counted and correct.
+function countIsStale(item) {
+  var days = countDaysSince(item.lastAudited);
+  return days === null || days >= 60;
+}
+function toggleStaleFilter() { staleOnly = !staleOnly; collapsedCats.clear(); renderItems(); }
 
 // ---- PHOTO SPRINT ----
 // Every one of 205 items had no photo a month after the feature shipped, because
