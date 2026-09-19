@@ -4654,7 +4654,38 @@ function countSearchResults(q) {
   }).slice(0, 12);
 }
 
-function onCountSearch() { renderCount(true); }
+
+// Typing must not rebuild the search field. Writing the whole modal body on
+// every keystroke replaced the <input> the phone keyboard was attached to,
+// which dropped focus and closed the keyboard after each letter.
+function renderCountResults() {
+  var box = document.getElementById('countResults');
+  var field = document.getElementById('countSearch');
+  if (!box || !field) return;
+  var q = field.value;
+  var hits = countSearchResults(q);
+  var html = '';
+  if (q.trim().length >= 2 && !hits.length) {
+    html += '<div class="count-empty">' + countEsc(t('countNoMatch')) + '</div>';
+  }
+  if (q.trim().length >= 2) {
+    html += '<button class="count-hit" style="border-color:#2a6a4a;color:#5ac48a" ' +
+      'onclick="countOpenAdd()">' + countEsc(t('countAddPlant').replace('Q', q.trim())) + '</button>';
+  }
+  hits.forEach(function (item2) {
+    var u = normalizeUnit(item2.unit);
+    var days = countDaysSince(item2.lastAudited);
+    var stale = days === null || days >= 60;
+    var when = days === null ? t('countNeverAudited') : days + 'd';
+    html += '<button class="count-hit" onclick="countPick(&quot;' + countEsc(item2.id) + '&quot;)">' +
+      '<span>' + countEsc(itemName(item2)) + '</span>' +
+      '<span class="count-hit-qty ' + (stale ? 'stale' : '') + '">' +
+      (Number(item2.qty) || 0) + (u ? ' ' + u : '') + ' &middot; ' + countEsc(when) + '</span></button>';
+  });
+  box.innerHTML = html;
+}
+
+function onCountSearch() { renderCountResults(); }
 
 function countPick(id) {
   countPicked = String(id);
@@ -4704,26 +4735,7 @@ function renderCount(keepSearch) {
   } else {
     html += '<input class="count-search" id="countSearch" type="search" autocomplete="off" placeholder="' +
       countEsc(t('countSearch')) + '" value="' + countEsc(q) + '" oninput="onCountSearch()">';
-    var hits = countSearchResults(q);
-    html += '<div class="count-results">';
-    if (q.trim().length >= 2 && !hits.length) {
-      html += '<div class="count-empty">' + countEsc(t('countNoMatch')) + '</div>';
-    }
-    if (q.trim().length >= 2) {
-      html += '<button class="count-hit" style="border-color:#2a6a4a;color:#5ac48a" ' +
-        'onclick="countOpenAdd()">' + countEsc(t('countAddPlant').replace('Q', q.trim())) + '</button>';
-    }
-    hits.forEach(function (item2) {
-      var u = normalizeUnit(item2.unit);
-      var days = countDaysSince(item2.lastAudited);
-      var stale = days === null || days >= 60;
-      var when = days === null ? t('countNeverAudited') : days + 'd';
-      html += '<button class="count-hit" onclick="countPick(&quot;' + countEsc(item2.id) + '&quot;)">' +
-        '<span>' + countEsc(itemName(item2)) + '</span>' +
-        '<span class="count-hit-qty ' + (stale ? 'stale' : '') + '">' +
-        (Number(item2.qty) || 0) + (u ? ' ' + u : '') + ' &middot; ' + countEsc(when) + '</span></button>';
-    });
-    html += '</div>';
+    html += '<div class="count-results" id="countResults"></div>';
   }
 
   html += '<div class="count-recent-head">' + countEsc(t('countRecent')) + '</div>';
@@ -4745,6 +4757,7 @@ function renderCount(keepSearch) {
 
   body.innerHTML = html;
   if (countPicked) renderCountButtons();
+  else if (!countAdding) renderCountResults();
 }
 
 // The buttons name the number they will produce, so the choice is made by
