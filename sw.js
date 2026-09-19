@@ -29,7 +29,7 @@
  * the imagery itself is replaced.
  */
 
-const SHELL_VERSION = 'v2';
+const SHELL_VERSION = 'v3';
 const PHOTO_VERSION = 'v1';
 const SHELL_CACHE = `ti-shell-${SHELL_VERSION}`;
 const PHOTO_CACHE = `ti-photos-${PHOTO_VERSION}`;

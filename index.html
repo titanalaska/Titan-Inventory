@@ -4646,9 +4646,13 @@ function countDaysSince(iso) {
   return Math.floor((Date.now() - then.getTime()) / 86400000);
 }
 
+// Three letters before guessing. Two is enough to match half the yard, so the
+// list churns under your thumb while you are still typing the word.
+var COUNT_MIN_CHARS = 3;
+
 function countSearchResults(q) {
   var needle = String(q || '').trim().toLowerCase();
-  if (needle.length < 2) return [];
+  if (needle.length < COUNT_MIN_CHARS) return [];
   return items.filter(function (it) {
     return itemName(it).toLowerCase().indexOf(needle) !== -1;
   }).slice(0, 12);
@@ -4665,10 +4669,10 @@ function renderCountResults() {
   var q = field.value;
   var hits = countSearchResults(q);
   var html = '';
-  if (q.trim().length >= 2 && !hits.length) {
+  if (q.trim().length >= COUNT_MIN_CHARS && !hits.length) {
     html += '<div class="count-empty">' + countEsc(t('countNoMatch')) + '</div>';
   }
-  if (q.trim().length >= 2) {
+  if (q.trim().length >= COUNT_MIN_CHARS) {
     html += '<button class="count-hit" style="border-color:#2a6a4a;color:#5ac48a" ' +
       'onclick="countOpenAdd()">' + countEsc(t('countAddPlant').replace('Q', q.trim())) + '</button>';
   }
