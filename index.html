@@ -993,6 +993,10 @@ const T = {
     countSaved:'N saved', countFailed:'Did not save — tap to retry', countRecent:'This session',
     countNothingYet:'Nothing counted yet. Search for a plant to start.',
     countStale:'Not verified in 60 days', countNeverAudited:'never counted',
+    countAddPlant:'+ Add "Q" as new', countAddTitle:'Found in the yard', countAddSave:'Add it',
+    countAddCat:'Category', countAddQty:'How many', countAddUnit:'Unit (ea, roll…)', countAddCancel:'Cancel',
+    countAddNeedCat:'Pick a category — the yard map files by it',
+    countAdded:'Q added', countUndoneMsg:'Undone',
     countBtn:'☑ Count',
   },
   es: {
@@ -1002,6 +1006,10 @@ const T = {
     countSaved:'N guardado', countFailed:'No se guardó — toca para reintentar', countRecent:'Esta sesión',
     countNothingYet:'Nada contado todavía. Busca una planta para empezar.',
     countStale:'Sin verificar en 60 días', countNeverAudited:'nunca contado',
+    countAddPlant:'+ Añadir "Q" como nueva', countAddTitle:'Encontrado en el vivero', countAddSave:'Añadir',
+    countAddCat:'Categoría', countAddQty:'Cuántas', countAddUnit:'Unidad (ea, roll…)', countAddCancel:'Cancelar',
+    countAddNeedCat:'Elige una categoría — el mapa del patio la usa',
+    countAdded:'Q añadido', countUndoneMsg:'Deshecho',
     countBtn:'☑ Contar',
     inventory:'INVENTARIO', sync:'↻ SINCRONIZAR', syncing:'↻ SINCRONIZANDO…', search:'Buscar artículos…',
     allCats:'Todas las Categorías', allLocs:'Todas las Ubicaciones', items:'Artículos:', showing:'Mostrando:', estFlags:'Estimados:',
@@ -4588,6 +4596,9 @@ async function addItem() {
 // ============================================================
 let countPicked = null;     // id of the item being counted
 let countEntries = [];      // this session, newest first
+let countSeq = 0;           // ids the undo buttons address
+let countAdding = false;    // showing the add-a-plant form
+let countAddDraft = null;   // keeps the form filled across a failed save
 
 function openCount() {
   countPicked = null;
@@ -4653,7 +4664,9 @@ function renderCount(keepSearch) {
   var q = keepSearch && prev ? prev.value : '';
   var html = '';
 
-  if (countPicked) {
+  if (countAdding) {
+    html += renderCountAddForm();
+  } else if (countPicked) {
     var it = countItemById(countPicked);
     if (!it) { countPicked = null; renderCount(); return; }
     var unit = normalizeUnit(it.unit);
@@ -4682,6 +4695,10 @@ function renderCount(keepSearch) {
     if (q.trim().length >= 2 && !hits.length) {
       html += '<div class="count-empty">' + countEsc(t('countNoMatch')) + '</div>';
     }
+    if (q.trim().length >= 2) {
+      html += '<button class="count-hit" style="border-color:#2a6a4a;color:#5ac48a" ' +
+        'onclick="countOpenAdd()">' + countEsc(t('countAddPlant').replace('Q', q.trim())) + '</button>';
+    }
     hits.forEach(function (item2) {
       var u = normalizeUnit(item2.unit);
       var days = countDaysSince(item2.lastAudited);
@@ -4704,7 +4721,11 @@ function renderCount(keepSearch) {
       var shown = e.status === 'failed'
         ? countEsc(t('countFailed'))
         : e.before + ' &rarr; <span class="count-row-n">' + e.after + '</span>';
-      html += '<div class="count-row' + cls + '"><span>' + countEsc(e.name) + '</span><span>' + shown + '</span></div>';
+      var undoBtn = e.status === 'ok'
+        ? '<button class="count-undo" onclick="countUndoEntry(' + e.seq + ')">' + countEsc(t('countUndo')) + '</button>'
+        : '';
+      html += '<div class="count-row' + cls + '"><span>' + countEsc(e.name) + '</span>' +
+        '<span>' + shown + ' ' + undoBtn + '</span></div>';
     });
   }
 
@@ -4738,7 +4759,7 @@ async function countCommit(mode) {
   if (isNaN(n) || n < 0) return;
 
   var entry = {
-    id: it.id, name: itemName(it), mode: mode,
+    seq: ++countSeq, id: it.id, name: itemName(it), mode: mode,
     before: Number(it.qty) || 0, after: null, delta: 0, status: 'pending'
   };
   countEntries.unshift(entry);
@@ -4766,6 +4787,115 @@ async function countCommit(mode) {
     entry.status = 'failed';
     entry.error = String(err && err.message ? err.message : err);
     showToast(entry.error, 'error');
+  }
+  renderCount();
+}
+
+
+// ---- Undo one entry -------------------------------------------------------
+// Sends the value from before the entry rather than a delta, and the value the
+// entry left behind. The server refuses if the sheet no longer holds that, so
+// an undo cannot quietly wipe a pull that happened in between.
+async function countUndoEntry(seq) {
+  var entry = countEntries.find(function (e) { return e.seq === seq; });
+  if (!entry || entry.status !== 'ok') return;
+  var prevStatus = entry.status;
+  entry.status = 'pending';
+  renderCount();
+
+  try {
+    var res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: authedBody({ action: 'auditUndo', id: entry.id, restore: entry.before, expect: entry.after })
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    var it = countItemById(entry.id);
+    if (it) it.qty = data.after;
+    countEntries = countEntries.filter(function (e) { return e.seq !== seq; });
+    showToast(t('countUndoneMsg'), 'success');
+  } catch (err) {
+    entry.status = prevStatus;
+    showToast(String(err && err.message ? err.message : err), 'error');
+  }
+  renderCount();
+}
+
+// ---- Add a plant that was never in the system -----------------------------
+function countOpenAdd() {
+  var f = document.getElementById('countSearch');
+  countAddDraft = { name: f ? f.value.trim() : '', category: '', qty: '', unit: '' };
+  countAdding = true;
+  renderCount();
+}
+
+function countCancelAdd() { countAdding = false; countAddDraft = null; renderCount(); }
+
+function renderCountAddForm() {
+  var d = countAddDraft || { name: '', category: '', qty: '', unit: '' };
+  var opts = '<option value="">' + countEsc(t('countAddCat')) + '…</option>';
+  CATEGORIES.forEach(function (c) {
+    opts += '<option value="' + countEsc(c) + '"' + (d.category === c ? ' selected' : '') + '>' +
+      countEsc(catLabel(c)) + '</option>';
+  });
+  return '<div class="count-picked">' +
+    '<div class="count-picked-name">' + countEsc(t('countAddTitle')) + '</div>' +
+    '<input class="count-search" id="countAddName" style="margin-bottom:8px" placeholder="' +
+      countEsc(t('labelName')) + '" value="' + countEsc(d.name) + '">' +
+    '<select class="count-search" id="countAddCat" style="margin-bottom:8px">' + opts + '</select>' +
+    '<input class="count-search" id="countAddUnit" style="margin-bottom:8px" placeholder="' +
+      countEsc(t('countAddUnit')) + '" value="' + countEsc(d.unit) + '">' +
+    '<input class="count-input" id="countAddQty" type="number" inputmode="numeric" min="0" step="1" ' +
+      'placeholder="' + countEsc(t('countAddQty')) + '" value="' + countEsc(d.qty) + '">' +
+    '<div class="count-commit">' +
+      '<button class="count-replace" onclick="countCancelAdd()">' + countEsc(t('countAddCancel')) + '</button>' +
+      '<button class="count-add" onclick="countAddCommit()">' + countEsc(t('countAddSave')) + '</button>' +
+    '</div></div>';
+}
+
+async function countAddCommit() {
+  var name = (document.getElementById('countAddName') || {}).value || '';
+  var cat = (document.getElementById('countAddCat') || {}).value || '';
+  var unit = (document.getElementById('countAddUnit') || {}).value || '';
+  var qtyRaw = (document.getElementById('countAddQty') || {}).value || '';
+  name = name.trim();
+  if (!name) return;
+
+  // The zone tree matches on category. Without one the row lands in "unknown"
+  // and nobody finds it again, which defeats the point of having walked out
+  // there and found it.
+  if (!cat) { showToast(t('countAddNeedCat'), 'error'); return; }
+
+  var qty = Math.floor(Number(qtyRaw));
+  if (isNaN(qty) || qty < 0) return;
+
+  countAddDraft = { name: name, category: cat, qty: qtyRaw, unit: unit };
+
+  try {
+    var res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: authedBody({ action: 'auditAdd', name: name, category: cat, unit: unit.trim(), n: qty })
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    items.push({
+      id: data.id, name: data.name, category: data.category, qty: data.qty,
+      specs: '', estimated: false, location: data.location || '', unit: data.unit || '',
+      photo: '', lastAudited: data.lastAudited, auditedBy: data.auditedBy
+    });
+    countEntries.unshift({
+      seq: ++countSeq, id: data.id, name: data.name, mode: 'replace',
+      before: 0, after: data.qty, delta: data.qty, status: 'ok'
+    });
+    countAdding = false;
+    countAddDraft = null;
+    showToast(t('countAdded').replace('Q', data.name), 'success');
+  } catch (err) {
+    showToast(String(err && err.message ? err.message : err), 'error');
   }
   renderCount();
 }
