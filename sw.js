@@ -20,12 +20,19 @@
  *                                app must not have. An honest error beats a
  *                                confident wrong number.
  *
- * Bump CACHE_VERSION on deploy; old caches are dropped on activate.
+ * Bump SHELL_VERSION on deploy; old caches are dropped on activate.
+ *
+ * The two caches version separately on purpose. The shell changes every time
+ * the app does, the photos almost never. Bumping one number for both would
+ * evict roughly 40 images on every release and make installed phones pull
+ * them again, often on cell data in the yard. Touch PHOTO_VERSION only when
+ * the imagery itself is replaced.
  */
 
-const CACHE_VERSION = 'v1';
-const SHELL_CACHE = `ti-shell-${CACHE_VERSION}`;
-const PHOTO_CACHE = `ti-photos-${CACHE_VERSION}`;
+const SHELL_VERSION = 'v2';
+const PHOTO_VERSION = 'v1';
+const SHELL_CACHE = `ti-shell-${SHELL_VERSION}`;
+const PHOTO_CACHE = `ti-photos-${PHOTO_VERSION}`;
 
 // The repo ships about 40 photos; the cap is headroom for a couple of imagery
 // refreshes before the oldest start dropping out.
