@@ -102,6 +102,11 @@
   .peek { padding: 10px 0 4px; }
   .peek-photo { width: 100%; max-height: 240px; object-fit: cover; border-radius: 5px; display: block; margin-bottom: 8px; cursor: zoom-in; background: #222; }
   .peek-specs { font-size: 12px; color: var(--mid); margin-bottom: 8px; }
+  .grade-chip { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; padding:2px 7px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+  .grade-Nursery { background:#1F5E2A; color:#DFF3E2; }
+  .grade-Park    { background:#6B4E0F; color:#F7EBCB; }
+  .grade-Field   { background:#4A3038; color:#F0DADF; }
   .peek-facts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11px; color: var(--mid); letter-spacing: 0.04em; margin-bottom: 10px; }
   .peek-facts strong { color: var(--snow); font-weight: 700; }
   .peek-stage { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -897,6 +902,8 @@ const T = {
     allCats:'All Categories', allLocs:'All Locations', items:'Items:', showing:'Showing:', estFlags:'Est. flags:',
     addBtn:'+ Add Item', modalTitle:'Add New Item', labelName:'Item Name', labelCat:'Category',
     labelLoc:'Location', labelQty:'Quantity', labelSpecs:'Specs', labelEst:'Estimated quantity',
+    labelGrade:'Grade', gradeNone:'— not graded —', gradeNursery:'Nursery — retail quality',
+    gradePark:'Park — good enough for a job', gradeField:'Field — rough',
     labelUnit:'Unit', pickUnit:'Set unit…', needsUnit:'no unit', noUnitStat:'Needs unit:',
     addNewCat:'+ Add new category…', addNewLoc:'+ Add new location…',
     newCatTitle:'Add New Category', newLocTitle:'Add New Location',
@@ -1016,6 +1023,8 @@ const T = {
     allCats:'Todas las Categorías', allLocs:'Todas las Ubicaciones', items:'Artículos:', showing:'Mostrando:', estFlags:'Estimados:',
     addBtn:'+ Agregar Artículo', modalTitle:'Agregar Nuevo Artículo', labelName:'Nombre del Artículo', labelCat:'Categoría',
     labelLoc:'Ubicación', labelQty:'Cantidad', labelSpecs:'Especificaciones', labelEst:'Cantidad estimada',
+    labelGrade:'Grado', gradeNone:'— sin grado —', gradeNursery:'Vivero — calidad de venta',
+    gradePark:'Parque — sirve para obra', gradeField:'Campo — rústico',
     labelUnit:'Unidad', pickUnit:'Elegir unidad…', needsUnit:'sin unidad', noUnitStat:'Falta unidad:',
     addNewCat:'+ Agregar categoría…', addNewLoc:'+ Agregar ubicación…',
     newCatTitle:'Agregar Nueva Categoría', newLocTitle:'Agregar Nueva Ubicación',
@@ -1116,6 +1125,15 @@ const T = {
 // truth once it loads, so the crew can add a conex or a category without waiting on
 // a code change — see fetchLists().
 let LOCATIONS = ['Unknown','Gray Building','104','Maui Lot','North C Street','South C Street','Red Building','Conex 1','Conex 2','Conex 3','Conex 4','Conex 5','Conex 6','Conex 7','Civil A','Civil B','Red Tool 1','Red Tool 2','Red Tool 3','Yard','Material Bins'];
+// Nursery / Park / Field, the words vendors actually print. McKay's product master
+// carries a Park Grade column; Martin sells Alaskan white spruce as field grade.
+// Blank is the default and means ungraded - a fence post has no grade.
+const GRADES = [
+  {value:'',        key:'gradeNone'},
+  {value:'Nursery', key:'gradeNursery'},
+  {value:'Park',    key:'gradePark'},
+  {value:'Field',   key:'gradeField'}
+];
 let CATEGORIES = ['LUMBER & POSTS','FENCE HARDWARE','DRAINAGE','LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS','MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT','NURSERY STOCK','PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT'];
 // Machines, not places. Shop stock is consumed by a piece of equipment rather than
 // by a job — a filter goes onto a loader, not onto the Wolf job — so it needs its
@@ -2457,6 +2475,13 @@ function renderPullModal() {
 // wrong tree on the truck. So specs are part of the identity, and rows that differ
 // on specs are surfaced to a person rather than pooled behind their back.
 function normKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+// A grade only means something on living stock. Everything else stays unlabelled
+// rather than carrying an empty chip around.
+function gradeChip(item) {
+  const g = String(item.grade || '').trim();
+  if (!g) return '';
+  return `<span class="grade-chip grade-${g}">${escapeHtml(g)}</span>`;
+}
 function poolKey(item) { return [normKey(item.name), normKey(item.category), normKey(item.specs)].join('|'); }
 function speciesKey(item) { return [normKey(item.name), normKey(item.category)].join('|'); }
 
@@ -4246,7 +4271,7 @@ function renderItems() {
             <div class="peek">
               ${item.photo ? `<img class="peek-photo" src="${photoUrl(item.photo, 600)}" loading="lazy" alt=""
                      onclick="event.stopPropagation(); openPhotoViewer('${escapeHtml(item.photo)}')">` : ''}
-              ${item.specs ? `<div class="peek-specs">${escapeHtml(item.specs)}</div>` : ''}
+              ${(item.specs || item.grade) ? `<div class="peek-specs">${gradeChip(item)}${escapeHtml(item.specs||'')}</div>` : ''}
               <div class="peek-facts">
                 <span>${t('labelLoc')}: <strong>${escapeHtml(item.location || 'Unknown')}</strong></span>
                 <span>${t('labelCat')}: <strong>${escapeHtml(catLabel(item.category || ''))}</strong></span>
@@ -4261,7 +4286,7 @@ function renderItems() {
                 <button class="peek-quick" onclick="setPullQty(${item.id}, ${item.qty})">${t('takeAll')}</button>
               </div>
             </div>` : `
-            ${item.specs ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${escapeHtml(item.specs)}</div>` : ''}
+            ${(item.specs || item.grade) ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${gradeChip(item)}${escapeHtml(item.specs||'')}</div>` : ''}
             <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
               <button class="zone-where-btn" onclick="event.stopPropagation(); whereIsItem(${item.id})">${t('whereBtn')}</button>
               <button class="return-btn" onclick="event.stopPropagation(); requireName(()=>openReturnModal(${item.id}))">${t('returnBtn')}</button>
@@ -4291,6 +4316,12 @@ function renderItems() {
               <div class="detail-field full">
                 <label>${t('labelSpecs')}</label>
                 <input type="text" id="specs-${item.id}" value="${escapeHtml(item.specs||'')}" onchange="markDirty(${item.id})">
+              </div>
+              <div class="detail-field">
+                <label>${t('labelGrade')}</label>
+                <select id="grade-${item.id}" onchange="markDirty(${item.id})">
+                  ${GRADES.map(g => `<option value="${g.value}" ${String(item.grade||'')===g.value?'selected':''}>${t(g.key)}</option>`).join('')}
+                </select>
               </div>
               <div class="detail-field full">
                 <label class="est-toggle">
@@ -4489,11 +4520,14 @@ async function saveItem(id) {
   const newCat = document.getElementById(`cat-${id}`).value;
   const newUnit = document.getElementById(`unit-${id}`).value;
   const newSpecs = document.getElementById(`specs-${id}`).value;
+  const gradeEl = document.getElementById(`grade-${id}`);
+  const newGrade = gradeEl ? gradeEl.value : (item.grade || '');
   const newEst = document.getElementById(`est-${id}`).checked;
   if (newLoc !== item.location) changes.push(`Location: ${item.location} → ${newLoc}`);
   if (newCat !== item.category) changes.push(`Category changed`);
   if (newUnit !== normalizeUnit(item.unit)) changes.push(`Unit: ${unitAbbr(item.unit) || '(none)'} → ${unitAbbr(newUnit) || '(none)'}`);
   item.location = newLoc; item.category = newCat; item.unit = newUnit; item.specs = newSpecs; item.estimated = newEst;
+  item.grade = newGrade;
   if (changes.length > 0) logChange('EDIT', item.name, changes.join(', '));
   else logChange('EDIT', item.name, 'Updated');
   await pushUpdate(item);
@@ -4530,7 +4564,7 @@ async function deleteItem(id) {
 async function pushUpdate(item) {
   if (!APPS_SCRIPT_URL) { showToast(t('savedLocal'), ''); return false; }
   try {
-    const params = authedParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', changedBy: currentUser });
+    const params = authedParams({ action:'update', id:item.id, name:item.name, category:item.category, location:item.location, qty:item.qty, unit:normalizeUnit(item.unit), specs:item.specs||'', estimated:item.estimated, photo:item.photo||'', grade:item.grade||'', changedBy: currentUser });
     const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
     // This used to fire the success toast without reading the reply. A refused
     // write would have said "Saved ✓" while the sheet never changed, which is a
