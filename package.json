@@ -1,0 +1,26 @@
+{
+  "name": "titan-inventory",
+  "version": "1.0.0",
+  "description": "Titan Inventory PWA. The app is index.html; this manifest exists only to run the tests.",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "verify-tests": "node tests/mutation-check.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/titanalaska/Titan-Inventory.git"
+  },
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/titanalaska/Titan-Inventory/issues"
+  },
+  "homepage": "https://github.com/titanalaska/Titan-Inventory#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  },
+  "private": true
+}
