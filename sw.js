@@ -29,10 +29,16 @@
  * the imagery itself is replaced.
  */
 
-const SHELL_VERSION = 'v3';
+const SHELL_VERSION = 'v4';
 const PHOTO_VERSION = 'v1';
 const SHELL_CACHE = `ti-shell-${SHELL_VERSION}`;
 const PHOTO_CACHE = `ti-photos-${PHOTO_VERSION}`;
+
+// Safety data sheets. The page fills this cache itself (warmSdsCache in
+// index.html) and prunes it, so the name is shared with the page and is never
+// bumped: a revised sheet ships under a new filename instead. This worker only
+// serves from it -- a sheet has to open in the red building, which has no signal.
+const SDS_CACHE = 'ti-sds-v1';
 
 // The repo ships about 40 photos; the cap is headroom for a couple of imagery
 // refreshes before the oldest start dropping out.
@@ -51,7 +57,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  const keep = [SHELL_CACHE, PHOTO_CACHE];
+  const keep = [SHELL_CACHE, PHOTO_CACHE, SDS_CACHE];
   event.waitUntil(
     caches.keys()
       .then(names => Promise.all(names.filter(n => n.startsWith('ti-') && !keep.includes(n))
@@ -114,6 +120,10 @@ self.addEventListener('fetch', (event) => {
   if (url.hostname === 'drive.google.com') return;
 
   if (url.origin === self.location.origin) {
+    if (/\/sds\/[^/]+\.pdf$/i.test(url.pathname)) {
+      event.respondWith(cacheFirst(req, SDS_CACHE).catch(() => Response.error()));
+      return;
+    }
     if (/\/(zones|aerial)\/|\.(png|jpg|jpeg|webp)$/i.test(url.pathname)) {
       event.respondWith(cacheFirst(req, PHOTO_CACHE, MAX_PHOTOS).catch(() => Response.error()));
       return;

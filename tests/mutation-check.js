@@ -85,6 +85,56 @@ const MUTATIONS = [
     replace: '\'<input class="count-input" id="countNum" type="text" inputmode="numeric" min="0" step="1" \' +',
     caughtBy: 'field is a number pad',
   },
+
+  // --- safety data sheets ---
+  {
+    name: 'show an SDS nobody has checked against the label',
+    find: "  return (s && s.file && String(s.checkedBy || '').trim()) ? s : null;",
+    replace: '  return (s && s.file) ? s : null;',
+    caughtBy: 'nobody has checked does not show',
+  },
+  {
+    name: 'only ask for a sheet when one is listed, so a missing one is invisible',
+    find: "  return String(item.category || '').trim().toUpperCase() === CHEM_CATEGORY || !!SDS_SHEETS[item.id];",
+    replace: '  return !!SDS_SHEETS[item.id];',
+    caughtBy: 'no sheet is flagged, not quietly left out',
+  },
+  {
+    name: 'match the category exactly, so " Chemicals " from the sheet slips through',
+    find: "  return String(item.category || '').trim().toUpperCase() === CHEM_CATEGORY || !!SDS_SHEETS[item.id];",
+    replace: "  return String(item.category || '') === CHEM_CATEGORY || !!SDS_SHEETS[item.id];",
+    caughtBy: 'survives stray spaces and case',
+  },
+  {
+    name: 'count sheets needed as sheets on file',
+    find: "  document.getElementById('statSds').textContent = sdsNeed.filter(i => !sdsMissing(i)).length + '/' + sdsNeed.length;",
+    replace: "  document.getElementById('statSds').textContent = sdsNeed.length + '/' + sdsNeed.length;",
+    caughtBy: 'on file over needed',
+  },
+  {
+    name: 'let the SDS filter show everything',
+    find: '    if (sdsOnly && !sdsRequired(item)) return false;\n',
+    replace: '',
+    caughtBy: 'filter is the chemical list',
+  },
+  {
+    name: 'leave the sheet out of the pull view',
+    find: '              ${sdsBlock(item)}\n              <div class="peek-facts">',
+    replace: '              <div class="peek-facts">',
+    caughtBy: 'shows while pulling',
+  },
+  {
+    name: 'link the sheet outside sds/, where the service worker never keeps it',
+    find: "function sdsUrl(s) { return 'sds/' + encodeURIComponent(s.file); }",
+    replace: 'function sdsUrl(s) { return encodeURIComponent(s.file); }',
+    caughtBy: 'checked sheet opens from the item',
+  },
+  {
+    name: 'list a sheet whose PDF never made it into the repo',
+    find: 'const SDS_SHEETS = {\n};',
+    replace: "const SDS_SHEETS = {\n  7: { file:'not-in-repo.pdf', product:'X', maker:'Y', revised:'', checkedBy:'Matt' },\n};",
+    caughtBy: 'actually ships in sds/',
+  },
 ];
 
 // Normalised to LF: git checks this repo out with CRLF on Windows, so a find

@@ -149,6 +149,11 @@
   .tag-loc { background: #1a1500; color: #c8a000; }
   .tag-loc.unknown { background: #352010; color: #c8902a; }
   .tag-est { background: #352a10; color: var(--gold); }
+  .tag-nosds { background: #3a1414; color: #f07a7a; }
+  .sds-btn { display: inline-block; margin-top: 8px; background: #3a2a08; border: 1px solid #c8961e; color: #f5c451; border-radius: 4px; padding: 7px 12px; font-family: var(--font); font-size: 13px; font-weight: 700; text-decoration: none; }
+  .sds-meta { font-size: 11px; color: var(--mid); margin-top: 4px; }
+  .sds-missing { margin-top: 8px; background: #3a1414; border: 1px solid #8a2a2a; color: #f07a7a; border-radius: 4px; padding: 7px 10px; font-size: 12px; font-weight: 600; }
+  .stat-warn span { color: #f07a7a; }
   /* The missing unit belongs next to the number it makes ambiguous, not in the tag
      row — as a tag it wrapped half the cards onto an extra line. */
   .qty-nounit { font-size: 13px; font-weight: 700; color: #e07070; }
@@ -511,6 +516,7 @@
     <div id="statNoUnitLabel" class="stat-clickable" onclick="toggleNoUnitFilter()" title="Show only items missing a unit">Needs unit: <span id="statNoUnit">—</span></div>
     <div id="statNoPhotoLabel" class="stat-clickable" onclick="toggleNoPhotoFilter()" title="Show only items missing a photo">Needs photo: <span id="statNoPhoto">—</span></div>
     <div id="statStaleLabel" class="stat-clickable" onclick="toggleStaleFilter()" title="Show only items not verified in 60 days">Unverified: <span id="statStale">—</span></div>
+    <div id="statSdsLabel" class="stat-clickable" onclick="toggleSdsFilter()" title="Show only items that need a safety data sheet" style="display:none">SDS: <span id="statSds">—</span></div>
   </div>
   <div class="cat-jump" id="catJump" style="margin:0 -16px"></div>
 </header>
@@ -947,6 +953,9 @@ const T = {
     signInNeeded:'Sign in to make changes',
     confirmSignOut:'Sign out on this device?', signedOut:'Signed out',
     noPhotoStat:'Needs photo:', sprintBtn:'📸 Photo Sprint',
+    sdsStat:'SDS:', noSdsTag:'No SDS', sdsOpen:'Safety Data Sheet (SDS)', sdsRevised:'rev.',
+    sdsNone:'No safety sheet on file yet. Use the paper binder, and report it.',
+    sdsUnchecked:'Safety sheet not checked yet. Use the paper binder for now.',
     sprintShoot:'Shoot This One', sprintSkipBtn:'Skip', sprintBack:'Back',
     sprintShot:'shot', sprintNothing:'Everything showing already has a photo ✓',
     sprintDone:'N photos added ✓', sprintComplete:'Done — N photos added. Change the filter and run it again.',
@@ -993,7 +1002,7 @@ const T = {
       'LUMBER & POSTS':'LUMBER & POSTS','FENCE HARDWARE':'FENCE HARDWARE',
       'DRAINAGE':'DRAINAGE',
       'LANDSCAPE HARDWARE':'LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS':'HYDROSEEDING MATERIALS',
-      'MASONRY & RETAINING WALL':'MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT':'ELECTRICAL/CONDUIT','NURSERY STOCK':'NURSERY STOCK','PIT & AGGREGATE MATERIALS':'PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT':'MISC/EQUIPMENT',
+      'MASONRY & RETAINING WALL':'MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT':'ELECTRICAL/CONDUIT','NURSERY STOCK':'NURSERY STOCK','PIT & AGGREGATE MATERIALS':'PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT':'MISC/EQUIPMENT','CHEMICALS':'CHEMICALS',
     },
     countTitle:'Count the yard', countSearch:'Type a plant…', countNoMatch:'Nothing matches',
     countOnSheet:'Sheet says', countedToday:'Counted today', countAdd:'Add to N', countReplace:'Replace with N',
@@ -1068,6 +1077,9 @@ const T = {
     signInNeeded:'Inicia sesión para hacer cambios',
     confirmSignOut:'¿Cerrar sesión en este dispositivo?', signedOut:'Sesión cerrada',
     noPhotoStat:'Falta foto:', sprintBtn:'📸 Sesión de Fotos',
+    sdsStat:'HDS:', noSdsTag:'Sin HDS', sdsOpen:'Hoja de Datos de Seguridad (HDS)', sdsRevised:'rev.',
+    sdsNone:'Todavía no hay hoja de seguridad. Use la carpeta de papel y avise.',
+    sdsUnchecked:'La hoja de seguridad aún no está revisada. Use la carpeta de papel por ahora.',
     sprintShoot:'Tomar Esta', sprintSkipBtn:'Saltar', sprintBack:'Atrás',
     sprintShot:'tomadas', sprintNothing:'Todo lo visible ya tiene foto ✓',
     sprintDone:'N fotos agregadas ✓', sprintComplete:'Listo — N fotos agregadas. Cambia el filtro y repite.',
@@ -1116,7 +1128,7 @@ const T = {
       'LANDSCAPE HARDWARE':'HERRAJES DE PAISAJISMO',
       'HYDROSEEDING MATERIALS':'MATERIALES DE HIDROSIEMBRA',
       'MASONRY & RETAINING WALL':'MAMPOSTERÍA Y MUROS DE CONTENCIÓN',
-      'ELECTRICAL/CONDUIT':'ELÉCTRICO/CONDUCTO','NURSERY STOCK':'PLANTAS Y VIVERO','PIT & AGGREGATE MATERIALS':'MATERIALES DE CANTERA Y AGREGADOS','MISC/EQUIPMENT':'VARIOS/EQUIPO',
+      'ELECTRICAL/CONDUIT':'ELÉCTRICO/CONDUCTO','NURSERY STOCK':'PLANTAS Y VIVERO','PIT & AGGREGATE MATERIALS':'MATERIALES DE CANTERA Y AGREGADOS','MISC/EQUIPMENT':'VARIOS/EQUIPO','CHEMICALS':'QUÍMICOS',
     }
   }
 };
@@ -1134,6 +1146,66 @@ const GRADES = [
   {value:'Park',    key:'gradePark'},
   {value:'Field',   key:'gradeField'}
 ];
+// ── SAFETY DATA SHEETS ───────────────────────────────
+// OSHA HazCom (1910.1200) wants the SDS for every hazardous chemical "readily
+// accessible" to the crew on their shift. A phone counts only if nothing stands
+// in the way, and the red building has no signal -- so the PDFs ship in this
+// repo under sds/, same origin as the app, where the service worker can keep
+// them. A Drive link would be dead in exactly the place it is needed.
+//
+// Keyed by inventory item id. Each entry is the MANUFACTURER'S current sheet
+// for that exact product, attached by a person and checked by a person:
+//   37: { file:'quikrete-vinyl-concrete-patcher-2024-05.pdf',
+//         product:'Vinyl Concrete Patcher', maker:'Quikrete', revised:'2024-05-01',
+//         checkedBy:'' },
+// checkedBy ships blank and the sheet does NOT show until someone who compared
+// it to the product label puts their name there. A wrong sheet is worse than no
+// sheet: the crew trusts it. A revised sheet ships under a new filename, the way
+// new photos do, so the cached copy on a phone can never be the old one.
+//
+// Anything in CHEM_CATEGORY needs a sheet whether or not it has an entry here;
+// that is what makes a missing one show up instead of silently not existing.
+// Items outside it (Quikrete in MASONRY, say) opt in by having an entry.
+const CHEM_CATEGORY = 'CHEMICALS';
+const SDS_CACHE = 'ti-sds-v1';   // sw.js keeps a cache by this exact name
+const SDS_SHEETS = {
+};
+function sdsRequired(item) {
+  return String(item.category || '').trim().toUpperCase() === CHEM_CATEGORY || !!SDS_SHEETS[item.id];
+}
+// Only a checked sheet counts. An unchecked one is still missing.
+function sdsFor(item) {
+  const s = SDS_SHEETS[item.id];
+  return (s && s.file && String(s.checkedBy || '').trim()) ? s : null;
+}
+function sdsMissing(item) { return sdsRequired(item) && !sdsFor(item); }
+function sdsUrl(s) { return 'sds/' + encodeURIComponent(s.file); }
+function sdsBlock(item) {
+  if (!sdsRequired(item)) return '';
+  const s = sdsFor(item);
+  if (s) {
+    return `<a class="sds-btn" href="${sdsUrl(s)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">⚠ ${t('sdsOpen')}</a>
+      <div class="sds-meta">${escapeHtml([s.maker, s.product].filter(Boolean).join(' · '))}${s.revised ? ' · ' + t('sdsRevised') + ' ' + escapeHtml(s.revised) : ''}</div>`;
+  }
+  const waiting = SDS_SHEETS[item.id] && SDS_SHEETS[item.id].file;
+  return `<div class="sds-missing">⚠ ${t(waiting ? 'sdsUnchecked' : 'sdsNone')}</div>`;
+}
+// Pull every checked sheet down while there is signal, so the first time
+// somebody needs one is not the first time the phone has seen it. Drops
+// sheets that are no longer listed, so a superseded revision does not linger.
+function warmSdsCache() {
+  if (!('caches' in window)) return;
+  const want = Object.keys(SDS_SHEETS).map(id => sdsFor({ id })).filter(Boolean)
+    .map(s => new URL(sdsUrl(s), location.href).href);
+  caches.open(SDS_CACHE).then(cache =>
+    cache.keys().then(keys => Promise.all(
+      keys.filter(k => want.indexOf(k.url) === -1).map(k => cache.delete(k))
+    )).then(() => Promise.all(want.map(u =>
+      cache.match(u).then(hit => hit || cache.add(u).catch(() => null))
+    )))
+  ).catch(() => { /* offline copies unavailable; the links still work online */ });
+}
+
 let CATEGORIES = ['LUMBER & POSTS','FENCE HARDWARE','DRAINAGE','LANDSCAPE HARDWARE','HYDROSEEDING MATERIALS','MASONRY & RETAINING WALL','ELECTRICAL/CONDUIT','NURSERY STOCK','PIT & AGGREGATE MATERIALS','MISC/EQUIPMENT'];
 // Machines, not places. Shop stock is consumed by a piece of equipment rather than
 // by a job — a filter goes onto a loader, not onto the Wolf job — so it needs its
@@ -1200,6 +1272,7 @@ let collapsedCats = new Set();
 let noUnitOnly = false;
 let noPhotoOnly = false;
 let staleOnly = false;     // items not verified in 60 days, or never
+let sdsOnly = false;       // the chemical list: everything that needs a safety data sheet
 let currentUser = '';
 let pendingAction = null;
 let translationCache = JSON.parse(localStorage.getItem('titanTranslationCache') || '{}');
@@ -1297,6 +1370,7 @@ function applyTranslations() {
   document.getElementById('statEstLabel').innerHTML = t('estFlags') + ' <span id="statEst">' + (document.getElementById('statEst')||{}).textContent + '</span>';
   document.getElementById('statNoUnitLabel').innerHTML = t('noUnitStat') + ' <span id="statNoUnit">' + (document.getElementById('statNoUnit')||{}).textContent + '</span>';
   document.getElementById('statNoPhotoLabel').innerHTML = t('noPhotoStat') + ' <span id="statNoPhoto">' + (document.getElementById('statNoPhoto')||{}).textContent + '</span>';
+  document.getElementById('statSdsLabel').innerHTML = t('sdsStat') + ' <span id="statSds">' + (document.getElementById('statSds')||{}).textContent + '</span>';
   document.getElementById('addBtn').textContent = t('addBtn');
   document.getElementById('modalTitle').textContent = t('modalTitle');
   document.getElementById('labelName').textContent = t('labelName');
@@ -4020,6 +4094,7 @@ function registerServiceWorker() {
   navigator.serviceWorker.register('./sw.js').catch(() => {
     /* offline support unavailable; everything else still works */
   });
+  warmSdsCache();
 }
 
 // Chrome fires this instead of showing its own prompt once the app qualifies as
@@ -4190,6 +4265,7 @@ function currentFilteredItems() {
     if (noUnitOnly && normalizeUnit(item.unit)) return false;
     if (noPhotoOnly && String(item.photo || '').trim()) return false;
     if (staleOnly && !countIsStale(item)) return false;
+    if (sdsOnly && !sdsRequired(item)) return false;
     return ms && (!filterCat || category.trim() === filterCat.trim()) && (!filterLoc || location.trim() === filterLoc.trim());
   });
 }
@@ -4205,6 +4281,14 @@ function renderItems() {
   document.getElementById('statNoPhotoLabel').classList.toggle('stat-active', noPhotoOnly);
   document.getElementById('statStale').textContent = items.filter(countIsStale).length;
   document.getElementById('statStaleLabel').classList.toggle('stat-active', staleOnly);
+  // "On file / needed", so a gap reads as a gap. Hidden until something needs a
+  // sheet at all -- the yard is mostly plants and pavers, which never will.
+  const sdsNeed = items.filter(sdsRequired);
+  const sdsLabel = document.getElementById('statSdsLabel');
+  document.getElementById('statSds').textContent = sdsNeed.filter(i => !sdsMissing(i)).length + '/' + sdsNeed.length;
+  sdsLabel.style.display = (sdsNeed.length || sdsOnly) ? '' : 'none';
+  sdsLabel.classList.toggle('stat-active', sdsOnly);
+  sdsLabel.classList.toggle('stat-warn', sdsNeed.some(sdsMissing));
   const grouped = {};
   filtered.forEach(item => { const cat = item.category || 'UNSORTED'; if (!grouped[cat]) grouped[cat] = []; grouped[cat].push(item); });
   const catJump = document.getElementById('catJump');
@@ -4247,6 +4331,7 @@ function renderItems() {
               <div class="item-meta">
                 <span class="tag ${locClass}">${escapeHtml(item.location || 'Unknown')}</span>
                 ${item.estimated ? `<span class="tag tag-est">${t('est')}</span>` : ''}
+                ${sdsMissing(item) ? `<span class="tag tag-nosds">${t('noSdsTag')}</span>` : ''}
               </div>
             </div>
             ${pullMode ? `
@@ -4272,6 +4357,7 @@ function renderItems() {
               ${item.photo ? `<img class="peek-photo" src="${photoUrl(item.photo, 600)}" loading="lazy" alt=""
                      onclick="event.stopPropagation(); openPhotoViewer('${escapeHtml(item.photo)}')">` : ''}
               ${(item.specs || item.grade) ? `<div class="peek-specs">${gradeChip(item)}${escapeHtml(item.specs||'')}</div>` : ''}
+              ${sdsBlock(item)}
               <div class="peek-facts">
                 <span>${t('labelLoc')}: <strong>${escapeHtml(item.location || 'Unknown')}</strong></span>
                 <span>${t('labelCat')}: <strong>${escapeHtml(catLabel(item.category || ''))}</strong></span>
@@ -4287,6 +4373,7 @@ function renderItems() {
               </div>
             </div>` : `
             ${(item.specs || item.grade) ? `<div style="font-size:12px;color:var(--mid);margin-top:8px">${gradeChip(item)}${escapeHtml(item.specs||'')}</div>` : ''}
+            ${sdsBlock(item)}
             <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
               <button class="zone-where-btn" onclick="event.stopPropagation(); whereIsItem(${item.id})">${t('whereBtn')}</button>
               <button class="return-btn" onclick="event.stopPropagation(); requireName(()=>openReturnModal(${item.id}))">${t('returnBtn')}</button>
@@ -4367,6 +4454,7 @@ function countIsStale(item) {
   return days === null || days >= 60;
 }
 function toggleStaleFilter() { staleOnly = !staleOnly; collapsedCats.clear(); renderItems(); }
+function toggleSdsFilter() { sdsOnly = !sdsOnly; collapsedCats.clear(); renderItems(); }
 
 // ---- PHOTO SPRINT ----
 // Every one of 205 items had no photo a month after the feature shipped, because
