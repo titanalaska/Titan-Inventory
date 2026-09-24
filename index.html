@@ -496,7 +496,7 @@
     <div class="header-btns">
       <button class="admin-btn" id="adminBtn" onclick="openAdminPanel()" style="display:none">🔑 Approvals</button>
       <button class="user-btn" id="userBtn" onclick="promptName()">👤 Sign In</button>
-      <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none">⬇ INSTALL</button>
+      <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none" data-i18n="installBtn">⬇ INSTALL</button>
       <button class="lang-btn" id="langBtn" onclick="toggleLang()">ES</button>
       <button class="sync-btn" id="syncBtn" onclick="loadItems()">↻ SYNC</button>
     </div>
@@ -513,10 +513,10 @@
     <div id="statItemsLabel">Items: <span id="statItems">—</span></div>
     <div id="statShowingLabel">Showing: <span id="statShowing">—</span></div>
     <div id="statEstLabel">Est. flags: <span id="statEst">—</span></div>
-    <div id="statNoUnitLabel" class="stat-clickable" onclick="toggleNoUnitFilter()" title="Show only items missing a unit">Needs unit: <span id="statNoUnit">—</span></div>
-    <div id="statNoPhotoLabel" class="stat-clickable" onclick="toggleNoPhotoFilter()" title="Show only items missing a photo">Needs photo: <span id="statNoPhoto">—</span></div>
-    <div id="statStaleLabel" class="stat-clickable" onclick="toggleStaleFilter()" title="Show only items not verified in 60 days">Unverified: <span id="statStale">—</span></div>
-    <div id="statSdsLabel" class="stat-clickable" onclick="toggleSdsFilter()" title="Show only items that need a safety data sheet" style="display:none">SDS: <span id="statSds">—</span></div>
+    <div id="statNoUnitLabel" class="stat-clickable" onclick="toggleNoUnitFilter()" data-i18n-title="tipNoUnit" title="Show only items missing a unit">Needs unit: <span id="statNoUnit">—</span></div>
+    <div id="statNoPhotoLabel" class="stat-clickable" onclick="toggleNoPhotoFilter()" data-i18n-title="tipNoPhoto" title="Show only items missing a photo">Needs photo: <span id="statNoPhoto">—</span></div>
+    <div id="statStaleLabel" class="stat-clickable" onclick="toggleStaleFilter()" data-i18n-title="tipStale" title="Show only items not verified in 60 days">Unverified: <span id="statStale">—</span></div>
+    <div id="statSdsLabel" class="stat-clickable" onclick="toggleSdsFilter()" data-i18n-title="tipSds" title="Show only items that need a safety data sheet" style="display:none">SDS: <span id="statSds">—</span></div>
   </div>
   <div class="cat-jump" id="catJump" style="margin:0 -16px"></div>
 </header>
@@ -525,21 +525,21 @@
 <div class="config-banner" id="configBanner"></div>
 
 <div class="add-bar">
-  <button class="add-btn" id="addBtn" onclick="requireName(openAddModal)">+ Add<span class="btn-long"> Item</span></button>
-  <button class="log-btn" style="border-color:#217346;color:#3ba55d" onclick="openHistory('changes')">📋 History</button>
-  <button class="job-btn" onclick="openJobChecker()">🔍 Check<span class="btn-long"> Job</span></button>
-  <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)">🧺 Pull<span class="btn-long"> Material</span></button>
-  <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)">📋 <span class="btn-long">Pull From </span>List</button>
-  <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()">📍 Where<span class="btn-long"> Is It</span></button>
-  <button class="job-btn" style="border-color:#2a6a4a;color:#5ac48a" onclick="requireName(openCount)">☑ Count<span class="btn-long"> The Yard</span></button>
-  <button class="job-btn" style="border-color:#2a6a4a;color:#5ac48a" onclick="requireName(openPhotoSprint)">📸 <span class="btn-long">Photo </span>Sprint</button>
+  <button class="add-btn" id="addBtn" onclick="requireName(openAddModal)" data-i18n-html="barAdd">+ Add<span class="btn-long"> Item</span></button>
+  <button class="log-btn" style="border-color:#217346;color:#3ba55d" onclick="openHistory('changes')" data-i18n="barHistory">📋 History</button>
+  <button class="job-btn" onclick="openJobChecker()" data-i18n-html="barCheck">🔍 Check<span class="btn-long"> Job</span></button>
+  <button class="job-btn" id="pullModeBtn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(togglePullMode)" data-i18n-html="barPull">🧺 Pull<span class="btn-long"> Material</span></button>
+  <button class="job-btn" style="border-color:#7a5a00;color:var(--gold)" onclick="requireName(openPullPaste)" data-i18n-html="barPullList">📋 <span class="btn-long">Pull From </span>List</button>
+  <button class="job-btn" style="border-color:#2a5a8a;color:#5a9fd4" onclick="openZones()" data-i18n-html="barWhere">📍 Where<span class="btn-long"> Is It</span></button>
+  <button class="job-btn" style="border-color:#2a6a4a;color:#5ac48a" onclick="requireName(openCount)" data-i18n-html="barCount">☑ Count<span class="btn-long"> The Yard</span></button>
+  <button class="job-btn" style="border-color:#2a6a4a;color:#5ac48a" onclick="requireName(openPhotoSprint)" data-i18n-html="barSprint">📸 <span class="btn-long">Photo </span>Sprint</button>
 </div>
 
 <div class="stale-banner" id="staleBanner" style="display:none"></div>
 <div class="pull-banner" id="pullBanner" style="display:none"></div>
 
 <div class="items-list" id="itemsList">
-  <div class="loading-state"><div class="spinner"></div>Loading inventory…</div>
+  <div class="loading-state"><div class="spinner"></div><span data-i18n="loadingInv">Loading inventory…</span></div>
 </div>
 
 <!-- NAME PROMPT MODAL -->
@@ -547,7 +547,7 @@
   <div class="modal name-modal">
     <div id="profileGateBody"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeNameModal()">Close</button>
+      <button class="btn-cancel" onclick="closeNameModal()" data-i18n="close">Close</button>
     </div>
   </div>
 </div>
@@ -555,10 +555,10 @@
 <!-- ADMIN APPROVALS MODAL -->
 <div class="modal-overlay" id="adminModal">
   <div class="modal name-modal">
-    <h2>🔑 Pending Approvals</h2>
+    <h2 data-i18n="pendingApprovals">🔑 Pending Approvals</h2>
     <div id="adminPanelBody"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeAdminPanel()">Close</button>
+      <button class="btn-cancel" onclick="closeAdminPanel()" data-i18n="close">Close</button>
     </div>
   </div>
 </div>
@@ -573,13 +573,13 @@
   <div class="modal name-modal">
     <h2 id="listModalTitle">Add New</h2>
     <div class="modal-field full">
-      <input type="text" id="listModalInput" placeholder="Name…" onkeydown="if(event.key==='Enter')submitListValue()">
+      <input type="text" id="listModalInput" data-i18n-ph="namePh" placeholder="Name…" onkeydown="if(event.key==='Enter')submitListValue()">
     </div>
     <div class="list-existing-label" id="listModalExistingLabel">Already in the list:</div>
     <div class="list-existing" id="listModalExisting"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeListModal()">Cancel</button>
-      <button class="btn-save" id="listModalSave" onclick="submitListValue()">ADD</button>
+      <button class="btn-cancel" onclick="closeListModal()" data-i18n="cancel">Cancel</button>
+      <button class="btn-save" id="listModalSave" onclick="submitListValue()" data-i18n="addUpper">ADD</button>
     </div>
   </div>
 </div>
@@ -590,15 +590,15 @@
     <h2 id="modalTitle">Add New Item</h2>
     <div class="modal-grid">
       <div class="modal-field full">
-        <label>📷 Scan Item (Optional)</label>
+        <label data-i18n="scanItem">📷 Scan Item (Optional)</label>
         <div style="display:flex;gap:8px">
-          <label class="photo-btn" style="flex:1;margin-bottom:0" for="photoUpload">📷 TAKE PHOTO</label>
-          <label class="photo-btn" style="flex:1;margin-bottom:0" for="galleryUpload">🖼 FROM GALLERY</label>
+          <label class="photo-btn" style="flex:1;margin-bottom:0" for="photoUpload" data-i18n="takePhoto">📷 TAKE PHOTO</label>
+          <label class="photo-btn" style="flex:1;margin-bottom:0" for="galleryUpload" data-i18n="fromGallery">🖼 FROM GALLERY</label>
         </div>
         <input type="file" id="photoUpload" accept="image/*" capture="environment" style="display:none" onchange="analyzePhoto(this)">
         <input type="file" id="galleryUpload" accept="image/*" style="display:none" onchange="analyzePhoto(this)">
         <img id="photoPreview" class="photo-preview" style="margin-top:10px">
-        <div class="ai-analyzing" id="aiAnalyzing">🤖 Identifying item...</div>
+        <div class="ai-analyzing" id="aiAnalyzing" data-i18n="identifying">🤖 Identifying item...</div>
       </div>
       <div class="modal-field full">
         <label id="labelName">Item Name</label>
@@ -617,7 +617,7 @@
         <input type="number" id="newQty" placeholder="0" min="0">
       </div>
       <div class="modal-field">
-        <label id="labelUnit">Unit</label>
+        <label id="labelUnit" data-i18n="labelUnit">Unit</label>
         <select id="newUnit" onchange="this.dataset.touched='1'"></select>
       </div>
       <div class="modal-field full">
@@ -625,9 +625,9 @@
         <input type="text" id="newSpecs">
       </div>
       <div class="modal-field" id="nurseryFields" style="display:none">
-        <label>Container Size</label>
+        <label data-i18n="containerSize">Container Size</label>
         <select id="newContainer">
-          <option value="">Select…</option>
+          <option value="" data-i18n="selectPh">Select…</option>
           <option>1 gal</option>
           <option>2 gal</option>
           <option>5 gal</option>
@@ -639,17 +639,17 @@
           <option>B&B 2" cal</option>
           <option>B&B 2.5" cal</option>
           <option>B&B 3" cal</option>
-          <option>Bare Root</option>
+          <option value="Bare Root" data-i18n="bareRoot">Bare Root</option>
         </select>
       </div>
       <div class="modal-field" id="nurseryCondition" style="display:none">
-        <label>Condition</label>
+        <label data-i18n="condition">Condition</label>
         <select id="newCondition">
-          <option value="">Select…</option>
-          <option>Good</option>
-          <option>Fair</option>
-          <option>Damaged</option>
-          <option>Dormant</option>
+          <option value="" data-i18n="selectPh">Select…</option>
+          <option value="Good" data-i18n="condGood">Good</option>
+          <option value="Fair" data-i18n="condFair">Fair</option>
+          <option value="Damaged" data-i18n="condDamaged">Damaged</option>
+          <option value="Dormant" data-i18n="condDormant">Dormant</option>
         </select>
       </div>
       <div class="modal-field full">
@@ -669,12 +669,12 @@
 <!-- JOB CHECKER MODAL -->
 <div class="modal-overlay" id="jobModal">
   <div class="modal" style="max-width:560px">
-    <h2>🔍 Check Job Materials</h2>
-    <p style="font-size:12px;color:var(--mid);margin-bottom:8px">Paste the materials list from BuilderTrend Notes below.</p>
-    <textarea class="job-textarea" id="jobInput" placeholder="X11 4x4 pt posts&#10;X18 2x4x8 rails&#10;26 bags of concrete"></textarea>
+    <h2 data-i18n="jobCheckTitle">🔍 Check Job Materials</h2>
+    <p style="font-size:12px;color:var(--mid);margin-bottom:8px" data-i18n="jobCheckHint">Paste the materials list from BuilderTrend Notes below.</p>
+    <textarea class="job-textarea" id="jobInput" data-i18n-ph="jobCheckPh" placeholder="X11 4x4 pt posts&#10;X18 2x4x8 rails&#10;26 bags of concrete"></textarea>
     <div class="modal-actions" style="margin-top:10px">
-      <button class="btn-cancel" onclick="closeJobChecker()">Cancel</button>
-      <button class="btn-save" onclick="runJobCheck()">CHECK INVENTORY</button>
+      <button class="btn-cancel" onclick="closeJobChecker()" data-i18n="cancel">Cancel</button>
+      <button class="btn-save" onclick="runJobCheck()" data-i18n="checkInvBtn">CHECK INVENTORY</button>
     </div>
     <div class="job-result" id="jobResult"></div>
   </div>
@@ -684,28 +684,28 @@
 <!-- DISPOSAL LOG MODAL - INPUT -->
 <div class="modal-overlay" id="disposalModal">
   <div class="modal" style="max-width:480px">
-    <h2 style="color:#e07030">🗑 Log Material Disposal</h2>
+    <h2 style="color:#e07030" data-i18n="disposalTitle">🗑 Log Material Disposal</h2>
     <div id="disposalItemName" style="font-size:14px;color:var(--snow);margin-bottom:12px;font-weight:600"></div>
-    <div style="font-size:12px;color:var(--mid);margin-bottom:4px">Quantity being disposed</div>
+    <div style="font-size:12px;color:var(--mid);margin-bottom:4px" data-i18n="disposalQtyLabel">Quantity being disposed</div>
     <input type="number" id="disposalQty" min="1" value="1" style="width:100%;background:#1a1a1a;border:1px solid #333;color:var(--snow);font-size:18px;padding:8px 10px;border-radius:var(--radius);font-family:var(--font);outline:none;">
-    <div style="font-size:12px;color:var(--mid);margin-top:10px;margin-bottom:4px">Cause of disposal</div>
+    <div style="font-size:12px;color:var(--mid);margin-top:10px;margin-bottom:4px" data-i18n="disposalCauseLabel">Cause of disposal</div>
     <select class="disposal-cause" id="disposalCause">
-      <option value="">Select cause…</option>
-      <option>Damaged in storage</option>
-      <option>Dropped / handling damage</option>
-      <option>Loading / unloading damage</option>
-      <option>Weather damage</option>
-      <option>Plant mortality</option>
-      <option>Cleanup / yard consolidation</option>
-      <option>Missing / theft</option>
-      <option>Wrong material / returned</option>
-      <option>Other</option>
+      <option value="" data-i18n="selectCause">Select cause…</option>
+      <option value="Damaged in storage" data-cause>Damaged in storage</option>
+      <option value="Dropped / handling damage" data-cause>Dropped / handling damage</option>
+      <option value="Loading / unloading damage" data-cause>Loading / unloading damage</option>
+      <option value="Weather damage" data-cause>Weather damage</option>
+      <option value="Plant mortality" data-cause>Plant mortality</option>
+      <option value="Cleanup / yard consolidation" data-cause>Cleanup / yard consolidation</option>
+      <option value="Missing / theft" data-cause>Missing / theft</option>
+      <option value="Wrong material / returned" data-cause>Wrong material / returned</option>
+      <option value="Other" data-cause>Other</option>
     </select>
-    <div style="font-size:12px;color:var(--mid);margin-top:10px;margin-bottom:4px">Notes (optional)</div>
-    <textarea class="disposal-note" id="disposalNote" placeholder="Describe what happened…"></textarea>
+    <div style="font-size:12px;color:var(--mid);margin-top:10px;margin-bottom:4px" data-i18n="notesOpt">Notes (optional)</div>
+    <textarea class="disposal-note" id="disposalNote" data-i18n-ph="disposalNotePh" placeholder="Describe what happened…"></textarea>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeDisposalModal()">Cancel</button>
-      <button class="btn-save" style="background:#e07030" onclick="confirmDisposal()">LOG DISPOSAL</button>
+      <button class="btn-cancel" onclick="closeDisposalModal()" data-i18n="cancel">Cancel</button>
+      <button class="btn-save" style="background:#e07030" onclick="confirmDisposal()" data-i18n="logDisposalBtn">LOG DISPOSAL</button>
     </div>
   </div>
 </div>
@@ -713,18 +713,18 @@
 <!-- DISPOSAL LOG VIEWER -->
 <div class="modal-overlay" id="historyModal">
   <div class="modal" style="max-width:560px">
-    <h2 style="color:#3ba55d">📋 History</h2>
+    <h2 style="color:#3ba55d" data-i18n="historyTitle">📋 History</h2>
     <div class="hist-tabs">
-      <button class="hist-tab" id="histTabJobs" onclick="setHistoryTab('jobs')">By Job</button>
-      <button class="hist-tab" id="histTabEquip" onclick="setHistoryTab('equipment')">By Equipment</button>
-      <button class="hist-tab" id="histTabChanges" onclick="setHistoryTab('changes')">Changes</button>
-      <button class="hist-tab" id="histTabDisposals" onclick="setHistoryTab('disposals')">Disposals</button>
+      <button class="hist-tab" id="histTabJobs" onclick="setHistoryTab('jobs')" data-i18n="tabByJob">By Job</button>
+      <button class="hist-tab" id="histTabEquip" onclick="setHistoryTab('equipment')" data-i18n="tabByEquip">By Equipment</button>
+      <button class="hist-tab" id="histTabChanges" onclick="setHistoryTab('changes')" data-i18n="tabChanges">Changes</button>
+      <button class="hist-tab" id="histTabDisposals" onclick="setHistoryTab('disposals')" data-i18n="tabDisposals">Disposals</button>
     </div>
     <div id="historyList" style="margin-top:10px;max-height:58vh;overflow-y:auto"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeHistory()">Close</button>
-      <button class="zone-mini-btn" id="histExportBtn" onclick="exportJobs()" style="display:none">⬇ Export</button>
-      <button class="zone-mini-btn" onclick="openSheetView()">📊 Open Sheet</button>
+      <button class="btn-cancel" onclick="closeHistory()" data-i18n="close">Close</button>
+      <button class="zone-mini-btn" id="histExportBtn" onclick="exportJobs()" style="display:none" data-i18n="exportBtn">⬇ Export</button>
+      <button class="zone-mini-btn" onclick="openSheetView()" data-i18n="openSheet">📊 Open Sheet</button>
     </div>
   </div>
 </div>
@@ -732,10 +732,10 @@
 <!-- PHOTO SPRINT MODAL -->
 <div class="modal-overlay" id="sprintModal">
   <div class="modal name-modal">
-    <h2 style="color:#5ac48a">📸 Photo Sprint</h2>
+    <h2 style="color:#5ac48a" data-i18n="sprintTitle">📸 Photo Sprint</h2>
     <div id="sprintBody"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closePhotoSprint()">Done</button>
+      <button class="btn-cancel" onclick="closePhotoSprint()" data-i18n="done">Done</button>
     </div>
   </div>
 </div>
@@ -744,10 +744,10 @@
 <!-- COUNT MODE -->
 <div class="modal-overlay" id="countModal">
   <div class="modal name-modal count-modal">
-    <h2 style="color:#5ac48a" id="countTitle">☑ Count the yard</h2>
+    <h2 style="color:#5ac48a" id="countTitle" data-i18n="countTitleH">☑ Count the yard</h2>
     <div id="countBody"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeCount()">Done</button>
+      <button class="btn-cancel" onclick="closeCount()" data-i18n="done">Done</button>
     </div>
   </div>
 </div>
@@ -758,10 +758,10 @@
     <h2 style="color:#5ac48a" id="returnTitle">↩ Return To Yard</h2>
     <div class="return-item" id="returnItemName"></div>
     <div class="modal-field full">
-      <label>What happened?</label>
+      <label data-i18n="whatHappened">What happened?</label>
       <select id="returnDirection" onchange="onReturnDirectionPick()">
-        <option value="back">Came back from a job</option>
-        <option value="out">Went out to a job</option>
+        <option value="back" data-i18n="dirBack">Came back from a job</option>
+        <option value="out" data-i18n="dirOut">Went out to a job</option>
       </select>
     </div>
     <div class="modal-field full">
@@ -775,50 +775,50 @@
     <div class="modal-field full">
       <label class="est-toggle">
         <input type="checkbox" id="returnRecordOnly" onchange="onReturnJobPick()">
-        The count is already right — just fix the job record
+        <span data-i18n="recordOnly">The count is already right — just fix the job record</span>
       </label>
     </div>
     <div class="modal-field full" id="returnJobOtherWrap" style="display:none">
-      <label>Job name</label>
-      <input type="text" id="returnJobOther" placeholder="e.g. Wolf — Phase 2">
+      <label data-i18n="jobName">Job name</label>
+      <input type="text" id="returnJobOther" data-i18n-ph="jobPh" placeholder="e.g. Wolf — Phase 2">
     </div>
     <div class="return-hint" id="returnHint"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeReturnModal()">Cancel</button>
-      <button class="btn-save" onclick="confirmReturn()">Return To Yard</button>
+      <button class="btn-cancel" onclick="closeReturnModal()" data-i18n="cancel">Cancel</button>
+      <button class="btn-save" id="returnConfirmBtn" onclick="confirmReturn()">Return To Yard</button>
     </div>
   </div>
 </div>
 
-<button class="fab" onclick="requireName(openAddModal)" title="Add Item">+</button>
-<button class="pull-badge" id="pullBadge" style="display:none" onclick="openPullModal()" title="Pull list"></button>
+<button class="fab" onclick="requireName(openAddModal)" data-i18n-title="fabTitle" title="Add Item">+</button>
+<button class="pull-badge" id="pullBadge" style="display:none" onclick="openPullModal()" data-i18n-title="pullListTip" title="Pull list"></button>
 
 <!-- PULL LIST MODAL -->
 <div class="modal-overlay" id="pullModal">
   <div class="modal name-modal">
-    <h2 id="pullModalTitle">🧺 Pull List</h2>
+    <h2 id="pullModalTitle" data-i18n="pullListTitle">🧺 Pull List</h2>
     <div id="pullModalBody" class="pull-body"></div>
     <div id="pullCommitRow" style="display:none">
       <div class="pull-summary" id="pullSummary"></div>
       <div class="dest-toggle">
-        <button class="dest-tab active" id="destTabJob" onclick="setPullDest('job')">For a job</button>
-        <button class="dest-tab" id="destTabEquip" onclick="setPullDest('equipment')">For equipment</button>
+        <button class="dest-tab active" id="destTabJob" onclick="setPullDest('job')" data-i18n="forJob">For a job</button>
+        <button class="dest-tab" id="destTabEquip" onclick="setPullDest('equipment')" data-i18n="forEquip">For equipment</button>
       </div>
       <div class="modal-field full" id="pullJobWrap">
-        <label id="pullJobLabel">Job / reason</label>
-        <input type="text" id="pullJobInput" placeholder="e.g. Wolf — Phase 2">
+        <label id="pullJobLabel" data-i18n="jobReason">Job / reason</label>
+        <input type="text" id="pullJobInput" data-i18n-ph="jobPh" placeholder="e.g. Wolf — Phase 2">
       </div>
       <div class="modal-field full" id="pullEquipWrap" style="display:none">
         <label id="pullEquipLabel">Which machine?</label>
         <input type="text" id="pullEquipFilter" style="display:none;margin-bottom:6px"
-               oninput="populateEquipSelect()" placeholder="Unit # — T-14, M3, BCT7">
+               oninput="populateEquipSelect()" data-i18n-ph="equipFilterPh" placeholder="Unit # — T-14, M3, BCT7">
         <select id="pullEquipSelect" onchange="handleListSelect(this,'equipment')"></select>
       </div>
-      <button class="btn-save" id="pullCommitBtn" style="width:100%;margin-top:8px" onclick="requireName(commitPull)">PULL ALL</button>
+      <button class="btn-save" id="pullCommitBtn" style="width:100%;margin-top:8px" onclick="requireName(commitPull)" data-i18n="pullAll">PULL ALL</button>
     </div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closePullModal()">Close</button>
-      <button class="btn-delete" onclick="clearPull()">Clear</button>
+      <button class="btn-cancel" onclick="closePullModal()" data-i18n="close">Close</button>
+      <button class="btn-delete" onclick="clearPull()" data-i18n="clear">Clear</button>
     </div>
   </div>
 </div>
@@ -832,7 +832,7 @@
     <div id="zoneStageWrap"></div>
     <div id="zoneBody"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeZones()">Close</button>
+      <button class="btn-cancel" onclick="closeZones()" data-i18n="close">Close</button>
     </div>
   </div>
 </div>
@@ -840,24 +840,24 @@
 <!-- NAME A NEW ZONE (admin draw mode) -->
 <div class="modal-overlay" id="zoneNameModal">
   <div class="modal name-modal">
-    <h2>What Is At That Spot?</h2>
+    <h2 data-i18n="zoneSpotTitle">What Is At That Spot?</h2>
     <div class="modal-field full">
-      <label>Pick an area that already exists here</label>
+      <label data-i18n="zonePickExisting">Pick an area that already exists here</label>
       <select id="zoneExistingSelect" onchange="onZoneExistingPick()"></select>
     </div>
     <div id="zoneNewFields">
       <div class="modal-field full">
-        <label>…or name a new one</label>
-        <input type="text" id="zoneNameInput" placeholder="e.g. Conex 3">
+        <label data-i18n="zoneOrNew">…or name a new one</label>
+        <input type="text" id="zoneNameInput" data-i18n-ph="zoneNamePh" placeholder="e.g. Conex 3">
       </div>
       <div class="modal-field full">
-        <label>Which inventory location does it hold? (optional)</label>
+        <label data-i18n="zoneWhichLoc">Which inventory location does it hold? (optional)</label>
         <select id="zoneLocSelect"></select>
       </div>
     </div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="cancelZoneDraft()">Cancel</button>
-      <button class="btn-save" onclick="saveZoneDraft()">Save Marker</button>
+      <button class="btn-cancel" onclick="cancelZoneDraft()" data-i18n="cancel">Cancel</button>
+      <button class="btn-save" onclick="saveZoneDraft()" data-i18n="saveMarker">Save Marker</button>
     </div>
   </div>
 </div>
@@ -865,17 +865,17 @@
 <!-- PULL FROM PASTED LIST MODAL -->
 <div class="modal-overlay" id="pullPasteModal">
   <div class="modal name-modal">
-    <h2 id="pullPasteTitle">📋 Pull From List</h2>
+    <h2 id="pullPasteTitle" data-i18n="pullPasteTitle">📋 Pull From List</h2>
     <div class="modal-field full">
-      <textarea id="pullPasteInput" rows="5" placeholder="12 goldflame spirea&#10;8 annabelle hydrangea&#10;20 dwarf birch"></textarea>
+      <textarea id="pullPasteInput" rows="5" data-i18n-ph="pastePh" placeholder="12 goldflame spirea&#10;8 annabelle hydrangea&#10;20 dwarf birch"></textarea>
     </div>
-    <button class="btn-save" style="width:100%" onclick="matchPastedList()">MATCH TO INVENTORY</button>
+    <button class="btn-save" style="width:100%" onclick="matchPastedList()" data-i18n="matchBtn">MATCH TO INVENTORY</button>
     <div id="pullPasteResult"></div>
     <div id="pasteAddRow" style="display:none;margin-top:10px">
-      <button class="btn-save" style="width:100%" onclick="addMatchesToPull()">ADD CHECKED TO PULL LIST</button>
+      <button class="btn-save" style="width:100%" onclick="addMatchesToPull()" data-i18n="addChecked">ADD CHECKED TO PULL LIST</button>
     </div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closePullPaste()">Close</button>
+      <button class="btn-cancel" onclick="closePullPaste()" data-i18n="close">Close</button>
     </div>
   </div>
 </div>
@@ -907,7 +907,7 @@ const T = {
     inventory:'INVENTORY', sync:'↻ SYNC', syncing:'↻ SYNCING…', search:'Search items…',
     allCats:'All Categories', allLocs:'All Locations', items:'Items:', showing:'Showing:', estFlags:'Est. flags:',
     addBtn:'+ Add Item', modalTitle:'Add New Item', labelName:'Item Name', labelCat:'Category',
-    labelLoc:'Location', labelQty:'Quantity', labelSpecs:'Specs', labelEst:'Estimated quantity',
+    labelLoc:'Location', labelQty:'Quantity', labelSpecs:'Specs / Notes', labelEst:'Estimated quantity',
     labelGrade:'Grade', gradeNone:'— not graded —', gradeNursery:'Nursery — retail quality',
     gradePark:'Park — good enough for a job', gradeField:'Field — rough',
     labelUnit:'Unit', pickUnit:'Set unit…', needsUnit:'no unit', noUnitStat:'Needs unit:',
@@ -1015,23 +1015,75 @@ const T = {
     countAddNeedCat:'Pick a category — the yard map files by it',
     countAdded:'Q added', countUndoneMsg:'Undone',
     countBtn:'☑ Count',
+    // Header, button bar and modals. These carry the static HTML through
+    // data-i18n, so the markup and the Spanish can't drift apart.
+    approvalsBtn:'🔑 Approvals', installBtn:'⬇ INSTALL', statStale:'Unverified:',
+    tipNoUnit:'Show only items missing a unit', tipNoPhoto:'Show only items missing a photo',
+    tipStale:'Show only items not verified in 60 days', tipSds:'Show only items that need a safety data sheet',
+    barAdd:'+ Add<span class="btn-long"> Item</span>', barHistory:'📋 History',
+    barCheck:'🔍 Check<span class="btn-long"> Job</span>', barPull:'🧺 Pull<span class="btn-long"> Material</span>',
+    barPullList:'📋 <span class="btn-long">Pull From </span>List', barWhere:'📍 Where<span class="btn-long"> Is It</span>',
+    barCount:'☑ Count<span class="btn-long"> The Yard</span>', barSprint:'📸 <span class="btn-long">Photo </span>Sprint',
+    loadingInv:'Loading inventory…', close:'Close', pendingApprovals:'🔑 Pending Approvals',
+    namePh:'Name…', addUpper:'ADD', scanItem:'📷 Scan Item (Optional)', takePhoto:'📷 TAKE PHOTO',
+    fromGallery:'🖼 FROM GALLERY', identifying:'🤖 Identifying item...', containerSize:'Container Size',
+    selectPh:'Select…', bareRoot:'Bare Root', condition:'Condition', condGood:'Good', condFair:'Fair',
+    condDamaged:'Damaged', condDormant:'Dormant',
+    jobCheckTitle:'🔍 Check Job Materials', jobCheckHint:'Paste the materials list from BuilderTrend Notes below.',
+    jobCheckPh:'X11 4x4 pt posts\nX18 2x4x8 rails\n26 bags of concrete', checkInvBtn:'CHECK INVENTORY',
+    disposalTitle:'🗑 Log Material Disposal', disposalQtyLabel:'Quantity being disposed',
+    disposalCauseLabel:'Cause of disposal', selectCause:'Select cause…', notesOpt:'Notes (optional)',
+    disposalNotePh:'Describe what happened…', logDisposalBtn:'LOG DISPOSAL', logDisposalTip:'Log disposal',
+    historyTitle:'📋 History', tabByJob:'By Job', tabByEquip:'By Equipment', tabChanges:'Changes', tabDisposals:'Disposals',
+    exportBtn:'⬇ Export', openSheet:'📊 Open Sheet', sprintTitle:'📸 Photo Sprint', countTitleH:'☑ Count the yard',
+    whatHappened:'What happened?', dirBack:'Came back from a job', dirOut:'Went out to a job',
+    recordOnly:'The count is already right — just fix the job record',
+    jobName:'Job name', jobPh:'e.g. Wolf — Phase 2', returnConfirm:'Return To Yard', outConfirm:'Log It Out',
+    fabTitle:'Add Item', pullListTip:'Pull list', pullListTitle:'🧺 Pull List',
+    forJob:'For a job', forEquip:'For equipment', jobReason:'Job / reason',
+    whichMachine:'Which machine?', whichMachineOf:'Which machine? (N of M)', equipFilterPh:'Unit # — T-14, M3, BCT7',
+    clear:'Clear', zoneSpotTitle:'What Is At That Spot?', zonePickExisting:'Pick an area that already exists here',
+    zoneOrNew:'…or name a new one', zoneNamePh:'e.g. Conex 3',
+    zoneWhichLoc:'Which inventory location does it hold? (optional)', saveMarker:'Save Marker',
+    pullPasteTitle:'📋 Pull From List', pastePh:'12 goldflame spirea\n8 annabelle hydrangea\n20 dwarf birch',
+    matchBtn:'MATCH TO INVENTORY', addChecked:'ADD CHECKED TO PULL LIST',
+    // Messages built in the script
+    signedInAs:'Signed in as ', profilesNeedSheet:'Profiles need the sheet configured',
+    approve:'Approve', reject:'Reject', noPending:'No pending requests.', approved:'Approved',
+    approveFail:'Could not approve — check connection', rejected:'Rejected', rejectFail:'Could not reject — check connection',
+    noSheet:'No sheet configured',
+    aiNeedsSheet:'AI photo ID needs the sheet configured — fill in manually',
+    itemIdentified:'Item identified ✓', identifyFail:'Could not identify — fill in manually',
+    pasteMaterialsReq:'Paste a materials list first', jobCheckNeedsSheet:'AI job check needs the sheet configured',
+    checkingInv:'🤖 Checking inventory...', need:'Need', haveCap:'Have',
+    statusOK:'OK', statusLOW:'LOW', statusMISSING:'MISSING', statusUNKNOWN:'UNKNOWN',
+    checkFail:'Could not complete check — try again',
+    currentQty:' (Current qty: N)', disposeQtyReq:'Enter a valid quantity to dispose',
+    selectCauseReq:'Please select a cause', disposeTooMany:'Cannot dispose more than current qty',
+    disposalLogged:'Disposal logged — qty updated', disposedWord:' disposed ', before:'Before', after:'After',
+    noPhotoHere:'No photo here yet.', zoneAdminShoot:'Shoot one on your phone and drop it in <code>zones/</code>, then tell Claude.',
+    askMatt:'Ask Matt to add one.',
+    syncTimeout:'Sync timed out after 20s', usingLocal:' — using local data', sheetUnreachShort:'Sheet unreachable',
+    exportByJob:'TITAN ALASKA — MATERIAL BY JOB', exportByEquip:'TITAN ALASKA — MATERIAL BY EQUIPMENT',
+    exportGenerated:'Generated ', exportStillOut:'  still out: U units across S species',
+    exportPulled:'   (pulled O, returned B)', exportActivity:'  activity: ', exportLineSwap:'   (O out, B returned)',
   },
   es: {
-    countTitle:'Contar el vivero', countSearch:'Escribe una planta…', countNoMatch:'Nada coincide',
+    countTitle:'Contar el patio', countSearch:'Escribe una planta…', countNoMatch:'Nada coincide',
     countOnSheet:'La hoja dice', countedToday:'Contado hoy', countAdd:'Sumar a N', countReplace:'Reemplazar con N',
     countHowMany:'¿Cuántas contaste?', countUndo:'Deshacer', countUndone:'Deshecho',
-    countSaved:'N guardado', countFailed:'No se guardó — toca para reintentar', countRecent:'Esta sesión',
+    countSaved:'Guardado: N', countFailed:'No se guardó — toca para reintentar', countRecent:'Esta sesión',
     countNothingYet:'Nada contado todavía. Busca una planta para empezar.',
     countStale:'Sin verificar en 60 días', countNeverAudited:'nunca contado',
-    countAddPlant:'+ Añadir "Q" como nueva', countAddTitle:'Encontrado en el vivero', countAddSave:'Añadir',
-    countAddCat:'Categoría', countAddQty:'Cuántas', countAddUnit:'Unidad (ea, roll…)', countAddCancel:'Cancelar',
+    countAddPlant:'+ Agregar "Q" como nuevo', countAddTitle:'Encontrado en el patio', countAddSave:'Agregar',
+    countAddCat:'Categoría', countAddQty:'Cuántos', countAddUnit:'Unidad (ea, bolsas, rollo…)', countAddCancel:'Cancelar',
     countAddNeedCat:'Elige una categoría — el mapa del patio la usa',
-    countAdded:'Q añadido', countUndoneMsg:'Deshecho',
+    countAdded:'Agregado: Q', countUndoneMsg:'Deshecho',
     countBtn:'☑ Contar',
     inventory:'INVENTARIO', sync:'↻ SINCRONIZAR', syncing:'↻ SINCRONIZANDO…', search:'Buscar artículos…',
     allCats:'Todas las Categorías', allLocs:'Todas las Ubicaciones', items:'Artículos:', showing:'Mostrando:', estFlags:'Estimados:',
     addBtn:'+ Agregar Artículo', modalTitle:'Agregar Nuevo Artículo', labelName:'Nombre del Artículo', labelCat:'Categoría',
-    labelLoc:'Ubicación', labelQty:'Cantidad', labelSpecs:'Especificaciones', labelEst:'Cantidad estimada',
+    labelLoc:'Ubicación', labelQty:'Cantidad', labelSpecs:'Especificaciones / notas', labelEst:'Cantidad estimada',
     labelGrade:'Grado', gradeNone:'— sin grado —', gradeNursery:'Vivero — calidad de venta',
     gradePark:'Parque — sirve para obra', gradeField:'Campo — rústico',
     labelUnit:'Unidad', pickUnit:'Elegir unidad…', needsUnit:'sin unidad', noUnitStat:'Falta unidad:',
@@ -1078,8 +1130,8 @@ const T = {
     confirmSignOut:'¿Cerrar sesión en este dispositivo?', signedOut:'Sesión cerrada',
     noPhotoStat:'Falta foto:', sprintBtn:'📸 Sesión de Fotos',
     sdsStat:'HDS:', noSdsTag:'Sin HDS', sdsOpen:'Hoja de Datos de Seguridad (HDS)', sdsRevised:'rev.',
-    sdsNone:'Todavía no hay hoja de seguridad. Use la carpeta de papel y avise.',
-    sdsUnchecked:'La hoja de seguridad aún no está revisada. Use la carpeta de papel por ahora.',
+    sdsNone:'Todavía no hay hoja de seguridad. Usa la carpeta de papel y avisa.',
+    sdsUnchecked:'La hoja de seguridad aún no está revisada. Usa la carpeta de papel por ahora.',
     sprintShoot:'Tomar Esta', sprintSkipBtn:'Saltar', sprintBack:'Atrás',
     sprintShot:'tomadas', sprintNothing:'Todo lo visible ya tiene foto ✓',
     sprintDone:'N fotos agregadas ✓', sprintComplete:'Listo — N fotos agregadas. Cambia el filtro y repite.',
@@ -1099,7 +1151,7 @@ const T = {
     returnHint:'N aún en J. Devolverlos aquí se los acredita a ese trabajo.',
     returnHintOther:'Se registrará la devolución, pero ningún trabajo recibe crédito.',
     returnQtyReq:'Escribe cuántos regresan',
-    returnDone:'N devueltos al patio de J ✓',
+    returnDone:'N devueltos al patio desde J ✓',
     jobsLoading:'Sumando cada trabajo…', jobsEmpty:'Aún no se ha retirado material para un trabajo.',
     jobsTotal:'J trabajos · U unidades afuera', jobsUnitsOut:'unidades afuera', jobsSwaps:'cambiados',
     jobsOut:'salieron', jobsBack:'volvieron', jobsExported:'Reporte de trabajos descargado ✓',
@@ -1108,7 +1160,7 @@ const T = {
     returnJobLabel:'¿De cuál trabajo regresan?',
     outTitle:'📤 Salida A Un Trabajo', outQtyLabel:'¿Cuántos salieron?',
     outJobLabel:'¿A cuál trabajo salieron?', outHint:'Los saca del patio y los pone en el trabajo.',
-    outDone:'N registrados para J ✓', outTooMany:'Es más de lo que hay en el patio',
+    outDone:'N salieron para J ✓', outTooMany:'Es más de lo que hay en el patio',
     returnHintRecordOnly:'La cantidad se queda en Q. Solo cambia el registro del trabajo.',
     countUnchanged:'(cantidad sin cambio)',
     nothingAdded:'Nada seleccionado', addToPull:'+ Retirar',
@@ -1118,17 +1170,71 @@ const T = {
     noItems:'No hay artículos que coincidan.', namereq:'Se requiere nombre del artículo',
     savedLocal:'Guardado localmente', savedSheet:'Guardado en Google Sheets ✓', sheetUnreach:'Hoja no disponible — guardado localmente',
     deleted:'Artículo eliminado', deletedLocal:'Artículo eliminado localmente — hoja no disponible', synced:'Sincronizado desde Google Sheets', syncFail:'Hoja no disponible — usando datos locales',
-    configMsg:'⚠ Hoja no configurada. Conéctese a Google Sheets para guardar cambios.',
+    configMsg:'⚠ Hoja no configurada. Conecta Google Sheets para guardar cambios.',
     confirmDelete:'¿Eliminar artículo #ID? Esta acción no se puede deshacer.', est:'Est.', langBtn:'EN',
-    signIn:'Registrarse',
+    signIn:'Iniciar sesión',
     whoAreYou:'¿Quién eres?', enterName:'Ingresa tu nombre completo para registrar cambios.',
+    // Header, button bar and modals
+    approvalsBtn:'🔑 Aprobaciones', installBtn:'⬇ INSTALAR', statStale:'Sin verificar:',
+    tipNoUnit:'Mostrar solo artículos sin unidad', tipNoPhoto:'Mostrar solo artículos sin foto',
+    tipStale:'Mostrar solo artículos sin verificar en 60 días', tipSds:'Mostrar solo artículos que necesitan hoja de seguridad',
+    barAdd:'+ Agregar<span class="btn-long"> artículo</span>', barHistory:'📋 Historial',
+    barCheck:'🔍 Revisar<span class="btn-long"> trabajo</span>', barPull:'🧺 Retirar<span class="btn-long"> material</span>',
+    barPullList:'📋 <span class="btn-long">Retirar de </span>lista', barWhere:'📍 <span class="btn-long">¿</span>Dónde<span class="btn-long"> está?</span>',
+    barCount:'☑ Contar<span class="btn-long"> el patio</span>', barSprint:'📸 <span class="btn-long">Sesión de </span>fotos',
+    loadingInv:'Cargando inventario…', close:'Cerrar', pendingApprovals:'🔑 Aprobaciones pendientes',
+    namePh:'Nombre…', addUpper:'AGREGAR', scanItem:'📷 Escanear artículo (opcional)', takePhoto:'📷 TOMAR FOTO',
+    fromGallery:'🖼 DE LA GALERÍA', identifying:'🤖 Identificando artículo…', containerSize:'Tamaño de maceta',
+    selectPh:'Elegir…', bareRoot:'Raíz desnuda', condition:'Estado', condGood:'Bueno', condFair:'Regular',
+    condDamaged:'Dañado', condDormant:'En reposo',
+    jobCheckTitle:'🔍 Revisar materiales del trabajo', jobCheckHint:'Pega abajo la lista de materiales de las notas de BuilderTrend.',
+    jobCheckPh:'X11 postes 4x4 tratados\nX18 rieles 2x4x8\n26 bolsas de concreto', checkInvBtn:'REVISAR INVENTARIO',
+    disposalTitle:'🗑 Registrar desecho de material', disposalQtyLabel:'Cantidad que se desecha',
+    disposalCauseLabel:'Causa del desecho', selectCause:'Elige la causa…', notesOpt:'Notas (opcional)',
+    disposalNotePh:'Describe qué pasó…', logDisposalBtn:'REGISTRAR DESECHO', logDisposalTip:'Registrar desecho',
+    historyTitle:'📋 Historial', tabByJob:'Por trabajo', tabByEquip:'Por equipo', tabChanges:'Cambios', tabDisposals:'Desechos',
+    exportBtn:'⬇ Exportar', openSheet:'📊 Abrir hoja', sprintTitle:'📸 Sesión de fotos', countTitleH:'☑ Contar el patio',
+    whatHappened:'¿Qué pasó?', dirBack:'Regresó de un trabajo', dirOut:'Salió a un trabajo',
+    recordOnly:'La cantidad ya está bien — solo corrige el registro del trabajo',
+    jobName:'Nombre del trabajo', jobPh:'ej. Wolf — Fase 2', returnConfirm:'Devolver al patio', outConfirm:'Registrar salida',
+    fabTitle:'Agregar artículo', pullListTip:'Lista de retiro', pullListTitle:'🧺 Lista de retiro',
+    forJob:'Para un trabajo', forEquip:'Para equipo', jobReason:'Trabajo / motivo',
+    whichMachine:'¿Qué máquina?', whichMachineOf:'¿Qué máquina? (N de M)', equipFilterPh:'Unidad # — T-14, M3, BCT7',
+    clear:'Borrar', zoneSpotTitle:'¿Qué hay en ese punto?', zonePickExisting:'Elige un área que ya existe aquí',
+    zoneOrNew:'…o ponle nombre a una nueva', zoneNamePh:'ej. Conex 3',
+    zoneWhichLoc:'¿Qué ubicación del inventario tiene? (opcional)', saveMarker:'Guardar marcador',
+    pullPasteTitle:'📋 Retirar de una lista', pastePh:'12 spirea goldflame\n8 hortensia annabelle\n20 abedul enano',
+    matchBtn:'BUSCAR EN INVENTARIO', addChecked:'AGREGAR LOS MARCADOS A LA LISTA',
+    // Messages built in the script
+    signedInAs:'Sesión iniciada: ', profilesNeedSheet:'Los perfiles necesitan la hoja configurada',
+    approve:'Aprobar', reject:'Rechazar', noPending:'No hay solicitudes pendientes.', approved:'Aprobado',
+    approveFail:'No se pudo aprobar — revisa la conexión', rejected:'Rechazado', rejectFail:'No se pudo rechazar — revisa la conexión',
+    noSheet:'No hay hoja configurada',
+    aiNeedsSheet:'Identificar por foto necesita la hoja configurada — llénalo a mano',
+    itemIdentified:'Artículo identificado ✓', identifyFail:'No se pudo identificar — llénalo a mano',
+    pasteMaterialsReq:'Pega primero una lista de materiales', jobCheckNeedsSheet:'Revisar el trabajo necesita la hoja configurada',
+    checkingInv:'🤖 Revisando inventario…', need:'Necesita', haveCap:'Hay',
+    statusOK:'BIEN', statusLOW:'POCO', statusMISSING:'FALTA', statusUNKNOWN:'¿?',
+    checkFail:'No se pudo revisar — intenta de nuevo',
+    currentQty:' (Cantidad actual: N)', disposeQtyReq:'Escribe una cantidad válida para desechar',
+    selectCauseReq:'Elige una causa', disposeTooMany:'No puedes desechar más de lo que hay',
+    disposalLogged:'Desecho registrado — cantidad actualizada', disposedWord:' desechó ', before:'Antes', after:'Después',
+    noPhotoHere:'Aún no hay foto aquí.', zoneAdminShoot:'Toma una con tu teléfono y ponla en <code>zones/</code>, luego avísale a Claude.',
+    askMatt:'Pídele a Matt que agregue una.',
+    syncTimeout:'La sincronización tardó más de 20 s', usingLocal:' — usando datos locales', sheetUnreachShort:'Hoja no disponible',
+    translating:'Traduciendo artículos…', translateDone:'¡Traducción completa!',
+    translatePartial:'Traducción parcial: X listos, F fallaron', translateNone:'Traducción no disponible',
+    translateNoSheet:'Traducción no disponible — hoja no configurada',
+    exportByJob:'TITAN ALASKA — MATERIAL POR TRABAJO', exportByEquip:'TITAN ALASKA — MATERIAL POR EQUIPO',
+    exportGenerated:'Generado ', exportStillOut:'  sigue afuera: U unidades en S especies',
+    exportPulled:'   (retirados O, devueltos B)', exportActivity:'  actividad: ', exportLineSwap:'   (O salieron, B devueltos)',
     categories:{
       'LUMBER & POSTS':'MADERA Y POSTES','FENCE HARDWARE':'HERRAJES DE CERCAS',
       'DRAINAGE':'DRENAJE',
       'LANDSCAPE HARDWARE':'HERRAJES DE PAISAJISMO',
       'HYDROSEEDING MATERIALS':'MATERIALES DE HIDROSIEMBRA',
       'MASONRY & RETAINING WALL':'MAMPOSTERÍA Y MUROS DE CONTENCIÓN',
-      'ELECTRICAL/CONDUIT':'ELÉCTRICO/CONDUCTO','NURSERY STOCK':'PLANTAS Y VIVERO','PIT & AGGREGATE MATERIALS':'MATERIALES DE CANTERA Y AGREGADOS','MISC/EQUIPMENT':'VARIOS/EQUIPO','CHEMICALS':'QUÍMICOS',
+      'ELECTRICAL/CONDUIT':'ELÉCTRICO/CONDUCTO','NURSERY STOCK':'PLANTAS Y VIVERO','PIT & AGGREGATE MATERIALS':'MATERIALES DE CANTERA Y AGREGADOS','MISC/EQUIPMENT':'VARIOS/EQUIPO','CHEMICALS':'QUÍMICOS','UNSORTED':'SIN CATEGORÍA',
     }
   }
 };
@@ -1227,19 +1333,23 @@ const LOCATION_ALIASES = {
 };
 // Trade abbreviations, per Gage's 7/24 review — a bare number doesn't say whether
 // 1453 cedar boards means 1453 pieces or 1453 linear feet.
+// The trade abbreviations (EA, LF, CY…) stay as printed on the supplier's paperwork
+// in both languages. Only the three written as words get a Spanish word on screen;
+// `abbr` itself is what goes into the Change Log, so it never changes.
 const UNITS = [
-  {value:'ea',   label:'Each (EA)',        abbr:'EA'},
-  {value:'lf',   label:'Linear Feet (LF)', abbr:'LF'},
-  {value:'sf',   label:'Square Feet (SF)', abbr:'SF'},
-  {value:'bf',   label:'Board Feet (BF)',  abbr:'BF'},
-  {value:'cy',   label:'Cubic Yards (CY)', abbr:'CY'},
-  {value:'tons', label:'Tons (TON)',       abbr:'TON'},
-  {value:'plt',  label:'Pallets (PLT)',    abbr:'PLT'},
-  {value:'bags', label:'Bags',             abbr:'bags'},
-  {value:'gal',  label:'Gallons (GAL)',    abbr:'GAL'},
-  {value:'box',  label:'Box',              abbr:'box'},
-  {value:'roll', label:'Roll',             abbr:'roll'},
+  {value:'ea',   label:'Each (EA)',        es:'Pieza (EA)',            abbr:'EA'},
+  {value:'lf',   label:'Linear Feet (LF)', es:'Pies lineales (LF)',    abbr:'LF'},
+  {value:'sf',   label:'Square Feet (SF)', es:'Pies cuadrados (SF)',   abbr:'SF'},
+  {value:'bf',   label:'Board Feet (BF)',  es:'Pies tabla (BF)',       abbr:'BF'},
+  {value:'cy',   label:'Cubic Yards (CY)', es:'Yardas cúbicas (CY)',   abbr:'CY'},
+  {value:'tons', label:'Tons (TON)',       es:'Toneladas (TON)',       abbr:'TON'},
+  {value:'plt',  label:'Pallets (PLT)',    es:'Tarimas (PLT)',         abbr:'PLT'},
+  {value:'bags', label:'Bags',             es:'Bolsas',                abbr:'bags', abbrEs:'bolsas'},
+  {value:'gal',  label:'Gallons (GAL)',    es:'Galones (GAL)',         abbr:'GAL'},
+  {value:'box',  label:'Box',              es:'Caja',                  abbr:'box',  abbrEs:'caja'},
+  {value:'roll', label:'Roll',             es:'Rollo',                 abbr:'roll', abbrEs:'rollo'},
 ];
+function unitLabel(u) { return lang === 'es' && u.es ? u.es : u.label; }
 // Units written before the switch to trade abbreviations get remapped on load.
 const UNIT_ALIASES = {
   'ft':'lf', 'feet':'lf', 'linear ft':'lf',
@@ -1265,7 +1375,13 @@ const BAG_NAME_HINTS = /\b(mortar|cement|grout|thin ?set|stucco|mix)\b/i;
 // Geogrid, fabric and wire come off a roll regardless of what category they sit in.
 const ROLL_NAME_HINTS = /\b(roll|geogrid|mesh|fabric|netting|burlap)\b/i;
 
+// The language is remembered under Groundwork's key on purpose. Both apps live on
+// titanalaska.github.io, and localStorage belongs to the origin, not the page, so
+// one key means a crew member picks Spanish once and both apps open in it.
+// The key name is Groundwork's and must not be renamed -- see its rename guards.
+const LANG_KEY = 'wolf-lang';
 let lang = 'en';
+try { if (localStorage.getItem(LANG_KEY) === 'es') lang = 'es'; } catch(e) {}
 let items = [];
 let expandedId = null;
 let collapsedCats = new Set();
@@ -1275,16 +1391,117 @@ let staleOnly = false;     // items not verified in 60 days, or never
 let sdsOnly = false;       // the chemical list: everything that needs a safety data sheet
 let currentUser = '';
 let pendingAction = null;
-let translationCache = JSON.parse(localStorage.getItem('titanTranslationCache') || '{}');
+// v2 on purpose: the v1 names came from a prompt with no rule for plant names, so
+// cultivars were translated or dropped at random. This is only a cache of AI output
+// -- nobody typed it -- so starting it over costs a few seconds of retranslation.
+const TRANSLATION_KEY = 'titanTranslationCacheV2';
+let translationCache = {};
+try {
+  translationCache = JSON.parse(localStorage.getItem(TRANSLATION_KEY) || '{}');
+  localStorage.removeItem('titanTranslationCache');
+} catch(e) {}
 function saveTranslationCache() {
-  try { localStorage.setItem('titanTranslationCache', JSON.stringify(translationCache)); } catch(e) {}
+  try { localStorage.setItem(TRANSLATION_KEY, JSON.stringify(translationCache)); } catch(e) {}
 }
 
 function t(key) { return T[lang][key] || T.en[key] || key; }
 function catLabel(cat) { return T[lang].categories[cat] || cat; }
+
+// ---- STORED IN ENGLISH, SHOWN IN SPANISH ----
+// Some of what the app shows is data, not labels. Disposal causes, grades,
+// locations and Change Log lines are written to the Sheet in English, and code
+// reads them back: parseJobMoves finds the job by the words "for" and "back from".
+// Writing them in Spanish would drop every Spanish-entered pull out of the job
+// totals without any error. So they stay English on the way in and are translated
+// only on the way to the screen. The <option> values stay English for the same
+// reason; only their text changes.
+const DATA_ES = {
+  causes: {
+    'Damaged in storage':'Dañado en almacén',
+    'Dropped / handling damage':'Se cayó / daño al manejarlo',
+    'Loading / unloading damage':'Daño al cargar / descargar',
+    'Weather damage':'Daño por el clima',
+    'Plant mortality':'Planta muerta',
+    'Cleanup / yard consolidation':'Limpieza / reorganización del patio',
+    'Missing / theft':'Faltante / robo',
+    'Wrong material / returned':'Material equivocado / devuelto',
+    'Other':'Otro',
+  },
+  grades: { Nursery:'Vivero', Park:'Parque', Field:'Campo' },
+  logTypes: {
+    PULL:'RETIRO', USE:'USO', RETURN:'DEVOLUCIÓN', EDIT:'EDICIÓN', ADD:'NUEVO',
+    DELETE:'ELIMINADO', PHOTO:'FOTO', AUDIT:'CONTEO', '🗑 DISPOSAL':'🗑 DESECHO',
+  },
+  // Only the names that describe a place. "104", "Conex 3" and "Civil A" are
+  // names, and a crew member needs to hear them the same way in both languages.
+  locations: {
+    'Unknown':'Sin ubicación', 'Gray Building':'Edificio Gris', 'Red Building':'Edificio Rojo',
+    'Yard':'Patio', 'Material Bins':'Cajones de material', 'Maui Lot':'Lote Maui',
+    'North C Street':'C Street norte', 'South C Street':'C Street sur',
+  },
+};
+function esData(table, v) { return (lang === 'es' && DATA_ES[table][v]) || v; }
+function causeLabel(c) { return esData('causes', c); }
+function gradeLabel(g) { return esData('grades', g); }
+function logTypeLabel(v) { return esData('logTypes', v); }
+function locLabel(l) { return esData('locations', l || 'Unknown'); }
+
+// Change Log details, as the app and the backend write them. Anything that
+// matches none of these shows as written: a gap stays English, it never blanks.
+const LOG_DETAIL_ES = [
+  [/^(\d+)((?:\s+\S+)?)\s+for\s+(.+)(\s+—\s*\d+\s*→\s*\d+\s*)$/, '$1$2 para $3$4'],
+  [/^(\d+)((?:\s+\S+)?)\s+back from\s+(.+)(\s+—\s*\d+\s*→\s*\d+\s*)$/, '$1$2 de regreso de $3$4'],
+  [/^counted \+/, 'contado +'],
+  [/^counted /, 'contado '],
+  [/^undo\b/, 'deshacer'],
+  [/^found in the yard — added at /, 'encontrado en el patio — agregado con '],
+  [/^Photo added$/, 'Foto agregada'],
+  [/^Photo removed$/, 'Foto quitada'],
+  [/^Updated$/, 'Actualizado'],
+  [/^Removed from inventory$/, 'Quitado del inventario'],
+  [/^New category added$/, 'Nueva categoría agregada'],
+  [/^New location added$/, 'Nueva ubicación agregada'],
+  [/^New equipment added$/, 'Nueva máquina agregada'],
+  [/\bCategory changed\b/g, 'Categoría cambiada'],
+  [/\bLocation: /g, 'Ubicación: '],
+  [/\bUnit: /g, 'Unidad: '],
+  [/\(none\)/g, '(ninguna)'],
+  [/^Qty: /, 'Cantidad: '],
+  [/ disposed — /, ' desechados — '],
+];
+function logDetailLabel(d) {
+  let s = String(d || '');
+  if (lang !== 'es') return s;
+  LOG_DETAIL_ES.forEach(([re, to]) => { s = s.replace(re, to); });
+  Object.keys(DATA_ES.causes).forEach(c => { s = s.split('— ' + c).join('— ' + DATA_ES.causes[c]); });
+  return s;
+}
+
+// ---- STATIC HTML ----
+// data-i18n sets the text, data-i18n-html the markup (for the buttons whose
+// long form hides on a narrow phone), -ph the placeholder and -title the tooltip.
+function applyStaticTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+}
+
+// Dates on screen follow the language. Dates written to the Sheet do not.
+function uiLocale() { return lang === 'es' ? 'es-MX' : 'en-US'; }
 function itemName(item) {
   if (lang === 'es' && translationCache[item.name]) return translationCache[item.name];
   return item.name || '';
+}
+// Search matches the name in either language. Someone reading the Spanish list
+// may still type the word on the pot tag, and the reverse.
+// Accents are dropped on both sides: a phone keyboard in a cold yard types
+// "arbol", and that has to find "Árbol".
+function foldText(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+function nameMatches(item, needle) {
+  const n = foldText(needle);
+  const es = translationCache[item.name];
+  return foldText(item.name).includes(n) || (!!es && foldText(es).includes(n));
 }
 function escapeHtml(str) {
   return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1302,9 +1519,17 @@ function normalizeUnit(u) {
   const v = String(u == null ? '' : u).trim().toLowerCase();
   return UNIT_ALIASES[v] || v;
 }
+// For the Change Log. English always -- see UNITS.
 function unitAbbr(u) {
   const v = normalizeUnit(u);
   const found = UNITS.find(x => x.value === v);
+  return found ? found.abbr : v;
+}
+// For the screen.
+function unitShow(u) {
+  const v = normalizeUnit(u);
+  const found = UNITS.find(x => x.value === v);
+  if (found && lang === 'es' && found.abbrEs) return found.abbrEs;
   return found ? found.abbr : v;
 }
 function defaultUnitFor(cat, name) {
@@ -1315,53 +1540,73 @@ function defaultUnitFor(cat, name) {
   return CATEGORY_DEFAULT_UNIT[cat] || 'ea';
 }
 
-async function toggleLang() {
+function toggleLang() {
   lang = lang === 'en' ? 'es' : 'en';
-  document.getElementById('langBtn').textContent = t('langBtn');
-  document.getElementById('langBtn').classList.toggle('es', lang === 'es');
+  try { localStorage.setItem(LANG_KEY, lang); } catch(e) {}
   applyTranslations();
+  renderItems();
+  translateItemNames();
+}
 
-  if (lang === 'es') {
-    const untranslated = items.filter(i => !translationCache[i.name]).map(i => i.name);
-    if (untranslated.length > 0) {
-      if (!APPS_SCRIPT_URL) {
-        showToast('Traduccion no disponible — sheet no configurada', 'error');
-      } else {
-        showToast('Traduciendo articulos...', '');
-        // Chunked so a large inventory can't blow past the AI response's max_tokens
-        // and silently break the whole batch (as it did at 185 items in one shot).
-        const CHUNK_SIZE = 40;
-        let translatedCount = 0, failedCount = 0;
-        for (let i = 0; i < untranslated.length; i += CHUNK_SIZE) {
-          const chunk = untranslated.slice(i, i + CHUNK_SIZE);
-          try {
-            const prompt = 'Translate these construction/landscaping supply item names from English to Spanish. Return ONLY a valid JSON object where keys are the original English names and values are Spanish translations. Keep part numbers, brand names, sizes like 2x4 or 3/8 and model numbers exactly as-is. Items:\n' + chunk.map(n => '"' + n + '"').join('\n');
-            const text = await callClaude({
-              model: 'claude-haiku-4-5-20251001',
-              max_tokens: 4000,
-              messages: [{ role: 'user', content: prompt }]
-            });
-            const cleaned = text.replace(/```json|```/g, '').trim();
-            const translations = JSON.parse(cleaned);
-            Object.assign(translationCache, translations);
-            translatedCount += Object.keys(translations).length;
-            saveTranslationCache();
-            renderItems();
-          } catch(e) {
-            failedCount += chunk.length;
-          }
-        }
-        if (failedCount === 0) showToast('Traduccion completa!', 'success');
-        else if (translatedCount > 0) showToast(`Traduccion parcial: ${translatedCount} listos, ${failedCount} fallaron`, 'error');
-        else showToast('Traduccion no disponible', 'error');
-      }
+// Item names come from the Sheet, so they cannot sit in T. They go to the AI in
+// batches and the answers are kept on the phone, so each name is translated once.
+// Plant names are translated too -- Matt's call, 9/23. The cultivar stays in quotes
+// the way a Spanish nursery tag prints it, so "Goldflame Spirea" becomes
+// "Espirea 'Goldflame'" and the word on the pot is still in the name.
+let translatingNames = false;
+async function translateItemNames() {
+  if (lang !== 'es' || translatingNames) return;
+  const untranslated = items.filter(i => i.name && !translationCache[i.name]).map(i => i.name);
+  if (!untranslated.length) return;
+  if (!APPS_SCRIPT_URL) { showToast(t('translateNoSheet'), 'error'); return; }
+  translatingNames = true;
+  showToast(t('translating'), '');
+  // Chunked so a large inventory can't blow past the AI response's max_tokens
+  // and silently break the whole batch (as it did at 185 items in one shot).
+  const CHUNK_SIZE = 40;
+  let translatedCount = 0, failedCount = 0;
+  for (let i = 0; i < untranslated.length; i += CHUNK_SIZE) {
+    const chunk = untranslated.slice(i, i + CHUNK_SIZE);
+    try {
+      const prompt =
+`Translate these inventory item names from a landscaping, fencing and nursery yard in Alaska into the Spanish a Mexican or Central American landscaping crew uses on the job.
+
+Rules:
+- Plants: translate the common name (Spirea -> Espirea, Dogwood -> Cornejo, Lilac -> Lila, Birch -> Abedul, Maple -> Arce, Spruce -> Picea, Potentilla -> Potentila, Crabapple -> Manzano silvestre). Keep the cultivar name untranslated, in single quotes after the common name: "Goldflame Spirea" -> "Espirea 'Goldflame'", "Miss Kim Lilac" -> "Lila 'Miss Kim'". Keep botanical Latin names as they are.
+- Keep brand names, part numbers, model numbers and sizes (2x4, 3/8", 5 gal, B&B) exactly as written.
+- Use everyday jobsite words: "poste" for post, "tarima" for pallet, "bolsa" for bag, "tela de jardinería" for landscape fabric.
+- Do not add anything that is not in the English name.
+
+Return ONLY a valid JSON object whose keys are the original English names and whose values are the Spanish. Items:
+` + chunk.map(n => JSON.stringify(n)).join('\n');
+      const text = await callClaude({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      const cleaned = text.replace(/```json|```/g, '').trim();
+      const translations = JSON.parse(cleaned);
+      Object.assign(translationCache, translations);
+      translatedCount += Object.keys(translations).length;
+      saveTranslationCache();
+      renderItems();
+    } catch(e) {
+      failedCount += chunk.length;
     }
   }
-
-  renderItems();
+  translatingNames = false;
+  if (failedCount === 0) showToast(t('translateDone'), 'success');
+  else if (translatedCount > 0) showToast(t('translatePartial').replace('X', translatedCount).replace('F', failedCount), 'error');
+  else showToast(t('translateNone'), 'error');
 }
 
 function applyTranslations() {
+  document.getElementById('langBtn').textContent = t('langBtn');
+  document.getElementById('langBtn').classList.toggle('es', lang === 'es');
+  document.documentElement.lang = lang;
+  applyStaticTranslations();
+  document.querySelectorAll('option[data-cause]').forEach(o => { o.textContent = causeLabel(o.value); });
+  document.getElementById('statStaleLabel').innerHTML = t('statStale') + ' <span id="statStale">' + (document.getElementById('statStale')||{}).textContent + '</span>';
   document.getElementById('logoLabel').textContent = t('inventory');
   document.getElementById('syncBtn').textContent = t('sync');
   document.getElementById('searchInput').placeholder = t('search');
@@ -1371,7 +1616,6 @@ function applyTranslations() {
   document.getElementById('statNoUnitLabel').innerHTML = t('noUnitStat') + ' <span id="statNoUnit">' + (document.getElementById('statNoUnit')||{}).textContent + '</span>';
   document.getElementById('statNoPhotoLabel').innerHTML = t('noPhotoStat') + ' <span id="statNoPhoto">' + (document.getElementById('statNoPhoto')||{}).textContent + '</span>';
   document.getElementById('statSdsLabel').innerHTML = t('sdsStat') + ' <span id="statSds">' + (document.getElementById('statSds')||{}).textContent + '</span>';
-  document.getElementById('addBtn').textContent = t('addBtn');
   document.getElementById('modalTitle').textContent = t('modalTitle');
   document.getElementById('labelName').textContent = t('labelName');
   document.getElementById('labelCat').textContent = t('labelCat');
@@ -1383,8 +1627,11 @@ function applyTranslations() {
   document.getElementById('saveNewBtn').textContent = t('addItem');
   if (!currentUser) document.getElementById('userBtn').textContent = '👤 ' + t('signIn');
   renderProfileGate();
+  renderAdminPanel();
   populateSelects();
+  populateEquipSelect();
   updateStaleBanner();
+  updatePullUI();
 }
 
 // ---- PROFILES ----
@@ -1484,10 +1731,10 @@ function renderProfileGate() {
 
   if (myProfile && myProfile.status === 'pending') {
     body.innerHTML = `
-      <h2>⏳ ${es ? 'Esperando aprobacion' : 'Waiting for Approval'}</h2>
+      <h2>⏳ ${es ? 'Esperando aprobación' : 'Waiting for Approval'}</h2>
       <p style="font-size:13px;color:var(--mid);margin-bottom:16px">
         ${es ? 'Tu perfil' : 'Your profile'} <b class="profile-pending-name">${escapeHtml(myProfile.name)}</b> (${escapeHtml(myProfile.position)})
-        ${es ? 'esta esperando que un administrador lo apruebe.' : "is waiting for an admin to approve it. You'll get full access as soon as that happens."}
+        ${es ? 'está esperando que un administrador lo apruebe. Tendrás acceso completo en cuanto lo aprueben.' : "is waiting for an admin to approve it. You'll get full access as soon as that happens."}
       </p>
       <button class="btn-save" style="width:100%" onclick="fetchProfiles()">${es ? 'Verificar de nuevo' : 'Check Again'}</button>
     `;
@@ -1529,12 +1776,12 @@ function renderProfileGate() {
 
   if (myProfile && myProfile.status === 'approved') {
     body.innerHTML = `
-      <h2>${es ? 'Sesion iniciada' : "You're Signed In"}</h2>
+      <h2>${es ? 'Sesión iniciada' : "You're Signed In"}</h2>
       <p style="font-size:13px;color:var(--mid);margin-bottom:14px">
-        ${es ? 'Sesion iniciada como' : 'Signed in as'} <b class="profile-pending-name">${escapeHtml(myProfile.name)}</b> (${escapeHtml(myProfile.position)})
+        ${es ? 'Sesión iniciada como' : 'Signed in as'} <b class="profile-pending-name">${escapeHtml(myProfile.name)}</b> (${escapeHtml(myProfile.position)})
       </p>
       <button class="btn-cancel" style="width:100%" onclick="signOutNow()">
-        ${es ? 'Cerrar sesion' : 'Sign Out'}</button>
+        ${es ? 'Cerrar sesión' : 'Sign Out'}</button>
     `;
     return;
   }
@@ -1542,15 +1789,15 @@ function renderProfileGate() {
   const approved = profiles.filter(p => p.status === 'approved');
   body.innerHTML = `
     <h2>${t('whoAreYou')}</h2>
-    <p style="font-size:12px;color:var(--mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">${es ? 'Ya aprobado? Toca tu nombre:' : "Already approved? Tap your name:"}</p>
+    <p style="font-size:12px;color:var(--mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">${es ? '¿Ya te aprobaron? Toca tu nombre:' : "Already approved? Tap your name:"}</p>
     <div class="profile-list">
-      ${approved.map(p => `<button class="profile-pick" onclick="selectProfile(${p.id})"><span>${escapeHtml(p.name)}</span><span class="profile-pos">${escapeHtml(p.position)}</span></button>`).join('') || `<div style="font-size:12px;color:#8a9aaa">${es ? 'Aun no hay perfiles aprobados.' : 'No approved profiles yet.'}</div>`}
+      ${approved.map(p => `<button class="profile-pick" onclick="selectProfile(${p.id})"><span>${escapeHtml(p.name)}</span><span class="profile-pos">${escapeHtml(p.position)}</span></button>`).join('') || `<div style="font-size:12px;color:#8a9aaa">${es ? 'Aún no hay perfiles aprobados.' : 'No approved profiles yet.'}</div>`}
     </div>
     <div style="margin-top:14px;border-top:1px solid #333;padding-top:14px">
-      <p style="font-size:12px;color:var(--mid);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">${es ? 'Nuevo aqui? Llena esto:' : 'New here? Fill this out:'}</p>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">${es ? '¿Eres nuevo? Llena esto:' : 'New here? Fill this out:'}</p>
       <input type="text" class="name-input-large" id="newProfileName" placeholder="${es ? 'Tu nombre completo' : 'Your full name'}" style="margin-bottom:8px;font-size:14px;padding:10px">
       <input type="text" class="name-input-large" id="newProfilePosition" placeholder="${es ? 'Puesto (ej. Capataz, Obrero)' : 'Position (e.g. Foreman, Laborer)'}" style="margin-bottom:8px;font-size:14px;padding:10px">
-      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="name-input-large" id="newProfilePin" placeholder="${es ? 'Crea un PIN de 4 digitos' : 'Create a 4-digit PIN'}" style="font-size:14px;padding:10px;letter-spacing:4px">
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="name-input-large" id="newProfilePin" placeholder="${es ? 'Crea un PIN de 4 dígitos' : 'Create a 4-digit PIN'}" style="font-size:14px;padding:10px;letter-spacing:4px">
       <button class="btn-save" style="margin-top:10px;width:100%" onclick="submitNewProfile()">${es ? 'Solicitar nuevo perfil' : 'Request New Profile'}</button>
     </div>
   `;
@@ -1571,12 +1818,12 @@ function selectProfile(id) {
   body.innerHTML = `
     <h2>${escapeHtml(p.name)}</h2>
     <p style="font-size:13px;color:var(--mid);margin-bottom:12px">${claiming
-      ? (es ? 'Este perfil no tiene PIN todavia. Crea uno para reclamarlo.' : "This profile doesn't have a PIN yet — create one to claim it.")
-      : (es ? 'Ingresa tu PIN de 4 digitos' : 'Enter your 4-digit PIN')}</p>
+      ? (es ? 'Este perfil todavía no tiene PIN. Crea uno para que sea tuyo.' : "This profile doesn't have a PIN yet — create one to claim it.")
+      : (es ? 'Ingresa tu PIN de 4 dígitos' : 'Enter your 4-digit PIN')}</p>
     <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="name-input-large" id="profilePinInput" style="text-align:center;letter-spacing:10px;font-size:22px" placeholder="${claiming ? (es ? 'Nuevo PIN' : 'New PIN') : ''}">
     <div id="profilePinError" style="color:#e07070;font-size:12px;min-height:18px;margin-top:6px"></div>
     <button class="btn-save" style="width:100%;margin-top:6px" onclick="${claiming ? `claimProfilePin(${p.id})` : `confirmProfilePin(${p.id})`}">${claiming ? (es ? 'Crear PIN' : 'Create PIN') : (es ? 'Confirmar' : 'Confirm')}</button>
-    <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="renderProfileGate()">${es ? 'Atras' : 'Back'}</button>
+    <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="renderProfileGate()">${es ? 'Atrás' : 'Back'}</button>
   `;
   const input = document.getElementById('profilePinInput');
   input.focus();
@@ -1587,7 +1834,7 @@ async function confirmProfilePin(id) {
   const es = lang === 'es';
   const pin = document.getElementById('profilePinInput').value.trim();
   const errEl = document.getElementById('profilePinError');
-  if (!/^\d{4}$/.test(pin)) { errEl.textContent = es ? 'Ingresa 4 digitos' : 'Enter 4 digits'; return; }
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = es ? 'Ingresa 4 dígitos' : 'Enter 4 digits'; return; }
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: 'verifyPin', id, pin })}`);
     const data = await res.json();
@@ -1604,11 +1851,11 @@ async function confirmProfilePin(id) {
     saveProfileLocally();
     document.getElementById('nameModal').classList.remove('open');
     document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
-    showToast('Signed in as ' + p.name, 'success');
+    showToast(t('signedInAs') + p.name, 'success');
     renderAdminPanel();
     if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
   } catch(e) {
-    errEl.textContent = es ? 'Error de conexion' : 'Connection error';
+    errEl.textContent = es ? 'Error de conexión' : 'Connection error';
   }
 }
 
@@ -1616,7 +1863,7 @@ async function claimProfilePin(id) {
   const es = lang === 'es';
   const pin = document.getElementById('profilePinInput').value.trim();
   const errEl = document.getElementById('profilePinError');
-  if (!/^\d{4}$/.test(pin)) { errEl.textContent = es ? 'Ingresa 4 digitos' : 'Enter 4 digits'; return; }
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = es ? 'Ingresa 4 dígitos' : 'Enter 4 digits'; return; }
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: 'claimPin', id, pin })}`);
     const data = await res.json();
@@ -1630,11 +1877,11 @@ async function claimProfilePin(id) {
     saveProfileLocally();
     document.getElementById('nameModal').classList.remove('open');
     document.getElementById('userBtn').textContent = '👤 ' + p.name.split(' ')[0];
-    showToast(es ? 'PIN creado — sesion iniciada' : 'PIN created — signed in', 'success');
+    showToast(es ? 'PIN creado — sesión iniciada' : 'PIN created — signed in', 'success');
     renderAdminPanel();
     if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
   } catch(e) {
-    errEl.textContent = es ? 'Error de conexion' : 'Connection error';
+    errEl.textContent = es ? 'Error de conexión' : 'Connection error';
   }
 }
 
@@ -1644,8 +1891,8 @@ async function submitNewProfile() {
   const position = document.getElementById('newProfilePosition').value.trim();
   const pin = document.getElementById('newProfilePin').value.trim();
   if (!name || !position) { showToast(es ? 'Ingresa tu nombre y puesto' : 'Enter your name and position', 'error'); return; }
-  if (!/^\d{4}$/.test(pin)) { showToast(es ? 'Crea un PIN de 4 digitos' : 'Create a 4-digit PIN', 'error'); return; }
-  if (!APPS_SCRIPT_URL) { showToast('Profiles need the sheet configured', 'error'); return; }
+  if (!/^\d{4}$/.test(pin)) { showToast(es ? 'Crea un PIN de 4 dígitos' : 'Create a 4-digit PIN', 'error'); return; }
+  if (!APPS_SCRIPT_URL) { showToast(t('profilesNeedSheet'), 'error'); return; }
   try {
     const params = new URLSearchParams({ action: 'requestProfile', name, position, pin });
     const res = await fetch(`${APPS_SCRIPT_URL}?${params}`);
@@ -1658,7 +1905,7 @@ async function submitNewProfile() {
       const existing = { id: data.id, name: data.name, position: data.position, status: data.status, hasPin: data.hasPin };
       const already = profiles.find(x => String(x.id) === String(existing.id));
       if (already) Object.assign(already, existing); else profiles.push(existing);
-      showToast(es ? `Ya existe un perfil de "${data.name}" — inicia sesion con su PIN` : `A profile named "${data.name}" already exists — sign in with its PIN`, '');
+      showToast(es ? `Ya existe un perfil de "${data.name}" — inicia sesión con su PIN` : `A profile named "${data.name}" already exists — sign in with its PIN`, '');
       selectProfile(existing.id);
       return;
     }
@@ -1667,10 +1914,10 @@ async function submitNewProfile() {
     currentUser = myProfile.name;
     saveProfileLocally();
     document.getElementById('userBtn').textContent = '👤 ' + name.split(' ')[0];
-    showToast(es ? 'Perfil enviado - esperando aprobacion' : 'Profile submitted — waiting for approval', '');
+    showToast(es ? 'Perfil enviado — esperando aprobación' : 'Profile submitted — waiting for approval', '');
     renderProfileGate();
   } catch(e) {
-    showToast(es ? 'No se pudo enviar el perfil' : 'Could not submit profile — check connection', 'error');
+    showToast(es ? 'No se pudo enviar el perfil — revisa la conexión' : 'Could not submit profile — check connection', 'error');
   }
 }
 
@@ -1699,7 +1946,7 @@ function renderAdminPanel() {
   if (!myProfile || !myProfile.isAdmin || myProfile.status !== 'approved') { btn.style.display = 'none'; return; }
   const pending = profiles.filter(p => p.status === 'pending');
   btn.style.display = 'inline-block';
-  btn.textContent = pending.length > 0 ? `🔑 Approvals (${pending.length})` : '🔑 Approvals';
+  btn.textContent = pending.length > 0 ? `${t('approvalsBtn')} (${pending.length})` : t('approvalsBtn');
 }
 
 function openAdminPanel() {
@@ -1709,11 +1956,11 @@ function openAdminPanel() {
     <div class="profile-request">
       <div><b>${escapeHtml(p.name)}</b><br><span style="font-size:12px;color:var(--mid)">${escapeHtml(p.position)}</span></div>
       <div style="display:flex;gap:8px">
-        <button class="btn-save" onclick="approveProfile(${p.id})">Approve</button>
-        <button class="btn-delete" onclick="rejectProfile(${p.id})">Reject</button>
+        <button class="btn-save" onclick="approveProfile(${p.id})">${t('approve')}</button>
+        <button class="btn-delete" onclick="rejectProfile(${p.id})">${t('reject')}</button>
       </div>
     </div>
-  `).join('') : '<div style="font-size:13px;color:var(--mid)">No pending requests.</div>';
+  `).join('') : `<div style="font-size:13px;color:var(--mid)">${t('noPending')}</div>`;
   document.getElementById('adminModal').classList.add('open');
 }
 
@@ -1724,10 +1971,10 @@ async function approveProfile(id) {
     const res = await fetch(`${APPS_SCRIPT_URL}?${authedParams({action:'approveProfile', id})}`);
     const data = await res.json();
     if (data.error || !data.success) throw new Error(data.error || 'Unexpected response');
-    showToast('Approved', 'success');
+    showToast(t('approved'), 'success');
     await fetchProfiles();
     openAdminPanel();
-  } catch(e) { showToast('Could not approve — check connection', 'error'); }
+  } catch(e) { showToast(t('approveFail'), 'error'); }
 }
 
 async function rejectProfile(id) {
@@ -1735,10 +1982,10 @@ async function rejectProfile(id) {
     const res = await fetch(`${APPS_SCRIPT_URL}?${authedParams({action:'rejectProfile', id})}`);
     const data = await res.json();
     if (data.error || !data.success) throw new Error(data.error || 'Unexpected response');
-    showToast('Rejected', '');
+    showToast(t('rejected'), '');
     await fetchProfiles();
     openAdminPanel();
-  } catch(e) { showToast('Could not reject — check connection', 'error'); }
+  } catch(e) { showToast(t('rejectFail'), 'error'); }
 }
 
 // ---- CHANGE LOG ---- (recorded to the Google Sheet's Change Log tab; view via the "View Sheet" button)
@@ -1759,7 +2006,7 @@ async function logChange(type, itemNameStr, detail) {
 }
 
 function openSheetView() {
-  if (!SHEET_ID) { showToast('No sheet configured', 'error'); return; }
+  if (!SHEET_ID) { showToast(t('noSheet'), 'error'); return; }
   window.open(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`, '_blank', 'noopener');
 }
 
@@ -1842,7 +2089,7 @@ async function submitListValue() {
   } catch(e) {
     showToast(t('sheetUnreach'), 'error');
   }
-  btn.disabled = false; btn.textContent = t('addItem');
+  btn.disabled = false; btn.textContent = t('addUpper');
 }
 
 function applyListValue(type, value, targetSelectId) {
@@ -1864,20 +2111,20 @@ function populateSelects() {
   filterCat.innerHTML = `<option value="">${t('allCats')}</option>`;
   CATEGORIES.forEach(c => { filterCat.innerHTML += `<option value="${c}" ${prevCat===c?'selected':''}>${catLabel(c)}</option>`; });
   filterLoc.innerHTML = `<option value="">${t('allLocs')}</option>`;
-  LOCATIONS.forEach(l => { filterLoc.innerHTML += `<option value="${l}" ${prevLoc===l?'selected':''}>${l}</option>`; });
+  LOCATIONS.forEach(l => { filterLoc.innerHTML += `<option value="${l}" ${prevLoc===l?'selected':''}>${locLabel(l)}</option>`; });
   const prevNewCat = newCat.value, prevNewLoc = newLoc.value;
-  newCat.innerHTML = `<option value="">Select…</option>`;
+  newCat.innerHTML = `<option value="">${t('selectPh')}</option>`;
   CATEGORIES.forEach(c => { newCat.innerHTML += `<option value="${c}">${catLabel(c)}</option>`; });
   newCat.innerHTML += `<option value="__new__">${t('addNewCat')}</option>`;
   newCat.value = prevNewCat;
-  newLoc.innerHTML = `<option value="">Select…</option>`;
-  LOCATIONS.forEach(l => { newLoc.innerHTML += `<option value="${l}">${l}</option>`; });
+  newLoc.innerHTML = `<option value="">${t('selectPh')}</option>`;
+  LOCATIONS.forEach(l => { newLoc.innerHTML += `<option value="${l}">${locLabel(l)}</option>`; });
   newLoc.innerHTML += `<option value="__new__">${t('addNewLoc')}</option>`;
   newLoc.value = prevNewLoc;
   const newUnit = document.getElementById('newUnit');
   if (newUnit) {
     const prevUnit = newUnit.value;
-    newUnit.innerHTML = `<option value="">${t('pickUnit')}</option>` + UNITS.map(u => `<option value="${u.value}">${u.label}</option>`).join('');
+    newUnit.innerHTML = `<option value="">${t('pickUnit')}</option>` + UNITS.map(u => `<option value="${u.value}">${unitLabel(u)}</option>`).join('');
     newUnit.value = prevUnit;
   }
 }
@@ -2198,7 +2445,7 @@ async function analyzePhoto(input) {
   catch(e) { pendingNewPhoto = null; }
 
   if (!APPS_SCRIPT_URL) {
-    showToast('AI photo ID needs the sheet configured — fill in manually', 'error');
+    showToast(t('aiNeedsSheet'), 'error');
     return;
   }
 
@@ -2277,10 +2524,10 @@ No other text.` }
     } else if (String(item.confidence || '').toLowerCase() === 'low') {
       showToast(t('aiLowConfidence'), 'error');
     } else {
-      showToast('Item identified ✓', 'success');
+      showToast(t('itemIdentified'), 'success');
     }
   } catch(e) {
-    showToast('Could not identify — fill in manually', 'error');
+    showToast(t('identifyFail'), 'error');
   }
   analyzing.style.display = 'none';
 }
@@ -2461,7 +2708,7 @@ function populateEquipSelect() {
 
   const label = document.getElementById('pullEquipLabel');
   if (label) label.textContent = q && shown.length !== EQUIPMENT.length
-    ? `Which machine? (${shown.length} of ${EQUIPMENT.length})` : 'Which machine?';
+    ? t('whichMachineOf').replace('N', shown.length).replace('M', EQUIPMENT.length) : t('whichMachine');
 }
 
 // What the pull is being charged to, whichever tab is showing.
@@ -2510,7 +2757,7 @@ function renderPullModal() {
     html += `<div class="pull-row">
       <div style="flex:1;min-width:0">
         <div class="pull-name">${escapeHtml(itemName(item))}</div>
-        <div class="pull-sub">${escapeHtml(item.location || 'Unknown')} · ${item.qty} ${escapeHtml(unitAbbr(item.unit) || '')} → <strong>${after}</strong></div>
+        <div class="pull-sub">${escapeHtml(locLabel(item.location))} · ${item.qty} ${escapeHtml(unitShow(item.unit) || '')} → <strong>${after}</strong></div>
       </div>
       <input class="pull-qty-input" type="number" min="0" max="${item.qty}" value="${qty}"
              onchange="setPullQty(${item.id}, this.value)">
@@ -2554,7 +2801,7 @@ function normKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[
 function gradeChip(item) {
   const g = String(item.grade || '').trim();
   if (!g) return '';
-  return `<span class="grade-chip grade-${g}">${escapeHtml(g)}</span>`;
+  return `<span class="grade-chip grade-${g}">${escapeHtml(gradeLabel(g))}</span>`;
 }
 function poolKey(item) { return [normKey(item.name), normKey(item.category), normKey(item.specs)].join('|'); }
 function speciesKey(item) { return [normKey(item.name), normKey(item.category)].join('|'); }
@@ -2796,7 +3043,7 @@ function renderPasteMatches(rows) {
     let sub;
     if (!ok) sub = t('noMatch');
     else {
-      sub = '→ ' + escapeHtml(item.name) + ' (#' + item.id + ', ' + t('have') + ' ' + have
+      sub = '→ ' + escapeHtml(itemName(item)) + ' (#' + item.id + ', ' + t('have') + ' ' + have
           + (pool.length > 1 ? ' ' + t('acrossRows').replace('N', pool.length) : '') + ')';
       if (shortBy > 0) sub += ' · ' + t('shortBy').replace('N', shortBy);
     }
@@ -2886,11 +3133,11 @@ function closeJobChecker() { document.getElementById('jobModal').classList.remov
 
 async function runJobCheck() {
   const input = document.getElementById('jobInput').value.trim();
-  if (!input) { showToast('Paste a materials list first', 'error'); return; }
-  if (!APPS_SCRIPT_URL) { showToast('AI job check needs the sheet configured', 'error'); return; }
+  if (!input) { showToast(t('pasteMaterialsReq'), 'error'); return; }
+  if (!APPS_SCRIPT_URL) { showToast(t('jobCheckNeedsSheet'), 'error'); return; }
 
   const resultDiv = document.getElementById('jobResult');
-  resultDiv.innerHTML = '<div style="color:var(--gold);font-size:12px;padding:8px">🤖 Checking inventory...</div>';
+  resultDiv.innerHTML = `<div style="color:var(--gold);font-size:12px;padding:8px">${t('checkingInv')}</div>`;
 
   try {
     const inventoryList = items.map(i => `ID${i.id}: ${i.name} (${i.category}) - qty: ${i.qty} ${i.unit && i.unit!=='ea' ? i.unit : ''} - loc: ${i.location}`).join('\n');
@@ -2913,7 +3160,7 @@ For each required item, check if we have enough in inventory. Return ONLY a JSON
  {"item": "concrete bags", "id": null, "matched": "", "needed": 26, "have": 0, "status": "MISSING", "location": "", "note": "Not in inventory"}]
 
 "id" must be the numeric inventory ID you matched, or null if nothing matches. "matched" is that item's name.
-Status must be: OK (have enough), LOW (have some but not enough), MISSING (none in inventory), or UNKNOWN (cant match to inventory). No other text.`
+Status must be: OK (have enough), LOW (have some but not enough), MISSING (none in inventory), or UNKNOWN (cant match to inventory).${lang === 'es' ? ' Write "note" in Spanish, the way a Mexican or Central American landscaping crew talks. Keep "status" in English.' : ''} No other text.`
       }]
     });
     const cleaned = text.replace(/```json|```/g, '').trim();
@@ -2929,22 +3176,22 @@ Status must be: OK (have enough), LOW (have some but not enough), MISSING (none 
       const canPull = !!item && Number(item.qty) > 0;
       if (canPull) anyPullable = true;
       html += `<div class="job-row">
-        <span class="job-status ${statusClass}">${escapeHtml(r.status)}</span>
+        <span class="job-status ${statusClass}">${escapeHtml(T[lang]['status' + r.status] || r.status)}</span>
         <span style="flex:1;color:#ffffff;font-weight:600">${escapeHtml(r.item)}</span>
-        <span style="color:#cccccc;font-size:13px">Need: ${escapeHtml(r.needed)} / Have: ${escapeHtml(r.have)}</span>
+        <span style="color:#cccccc;font-size:13px">${t('need')}: ${escapeHtml(r.needed)} / ${t('haveCap')}: ${escapeHtml(r.have)}</span>
         ${canPull ? `<input class="pull-qty-input" type="number" min="0" max="${item.qty}"
              data-jobqty="${idx}" value="${Math.min(Number(r.needed) || 0, Number(item.qty))}">
           <button class="job-pull-btn" onclick="pullFromJobRow(${idx})">${t('addToPull')}</button>` : ''}
       </div>`;
       // Say what it matched, so a wrong guess is visible before anything moves.
-      if (item) html += `<div style="font-size:11px;color:#8a9aaa;padding:0 0 6px 8px">→ ${escapeHtml(item.name)} (#${item.id}${item.location ? ', ' + escapeHtml(item.location) : ''})</div>`;
+      if (item) html += `<div style="font-size:11px;color:#8a9aaa;padding:0 0 6px 8px">→ ${escapeHtml(itemName(item))} (#${item.id}${item.location ? ', ' + escapeHtml(locLabel(item.location)) : ''})</div>`;
       if (r.note) html += `<div style="font-size:12px;color:#aaaaaa;padding:2px 0 6px 8px">${escapeHtml(r.note)}${r.location ? ' — ' + escapeHtml(r.location) : ''}</div>`;
     });
     html += '</div>';
     if (anyPullable) html += `<button class="btn-save" style="width:100%;margin-top:10px" onclick="pullAllJobRows()">${t('pullAllMatched')}</button>`;
     resultDiv.innerHTML = html;
   } catch(e) {
-    resultDiv.innerHTML = '<div style="color:#e07070;font-size:12px;padding:8px">Could not complete check — try again</div>';
+    resultDiv.innerHTML = `<div style="color:#e07070;font-size:12px;padding:8px">${t('checkFail')}</div>`;
   }
 }
 
@@ -3004,7 +3251,7 @@ function jobReport(wantEquip) {
 
 function fmtJobDate(d) {
   if (!d || isNaN(d)) return '';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(uiLocale(), { month: 'short', day: 'numeric' });
 }
 
 function toggleJob(job) {
@@ -3039,7 +3286,7 @@ function renderJobsView(wantEquip) {
     if (open) {
       html += `<div class="job-lines">` + j.lines.map(l => `
         <div class="job-line ${l.net === 0 ? 'job-line-closed' : ''}">
-          <span class="jl-name">${escapeHtml(l.name)}</span>
+          <span class="jl-name">${escapeHtml(itemName({ name: l.name }))}</span>
           ${l.back > 0
             ? `<span class="jl-swap">${l.out} ${t('jobsOut')}, ${l.back} ${t('jobsBack')}</span>`
             : ''}
@@ -3054,16 +3301,16 @@ function renderJobsView(wantEquip) {
 // Plain text, because it has to paste into an email or a bid without fighting it.
 function exportJobs(wantEquip) {
   const report = jobReport(wantEquip);
-  const lines = [(wantEquip ? 'TITAN ALASKA — MATERIAL BY EQUIPMENT' : 'TITAN ALASKA — MATERIAL BY JOB'), 'Generated ' + new Date().toLocaleString(), ''];
+  const lines = [(wantEquip ? t('exportByEquip') : t('exportByJob')), t('exportGenerated') + new Date().toLocaleString(uiLocale()), ''];
   report.forEach(j => {
     lines.push('=== ' + j.job + ' ===');
-    lines.push('  still out: ' + j.netUnits + ' units across ' + j.species + ' species'
-      + '   (pulled ' + j.outUnits + ', returned ' + j.backUnits + ')');
-    if (j.first) lines.push('  activity: ' + fmtJobDate(j.first) + ' – ' + fmtJobDate(j.last));
+    lines.push(t('exportStillOut').replace('U', j.netUnits).replace('S', j.species)
+      + t('exportPulled').replace('O', j.outUnits).replace('B', j.backUnits));
+    if (j.first) lines.push(t('exportActivity') + fmtJobDate(j.first) + ' – ' + fmtJobDate(j.last));
     lines.push('');
     j.lines.forEach(l => {
-      lines.push('  ' + String(l.net).padStart(5) + '   ' + l.name
-        + (l.back > 0 ? '   (' + l.out + ' out, ' + l.back + ' returned)' : ''));
+      lines.push('  ' + String(l.net).padStart(5) + '   ' + itemName({ name: l.name })
+        + (l.back > 0 ? t('exportLineSwap').replace('O', l.out).replace('B', l.back) : ''));
     });
     lines.push('');
   });
@@ -3183,6 +3430,7 @@ function onReturnDirectionPick() {
   document.getElementById('returnTitle').textContent = out ? t('outTitle') : t('returnTitle');
   document.getElementById('returnQtyLabel').textContent = out ? t('outQtyLabel') : t('returnQtyLabel');
   document.getElementById('returnJobLabel').textContent = out ? t('outJobLabel') : t('returnJobLabel');
+  document.getElementById('returnConfirmBtn').textContent = out ? t('outConfirm') : t('returnConfirm');
 
   const sel = document.getElementById('returnJobSelect');
   if (out) {
@@ -3203,7 +3451,7 @@ async function openReturnModal(id) {
   if (!item) return;
   returnItemId = id;
   document.getElementById('returnItemName').innerHTML =
-    `${escapeHtml(itemName(item))}<span>${t('onHand')}: ${item.qty}${normalizeUnit(item.unit) ? ' ' + escapeHtml(unitAbbr(item.unit)) : ''}</span>`;
+    `${escapeHtml(itemName(item))}<span>${t('onHand')}: ${item.qty}${normalizeUnit(item.unit) ? ' ' + escapeHtml(unitShow(item.unit)) : ''}</span>`;
   document.getElementById('returnQty').value = 1;
   document.getElementById('returnJobOther').value = '';
   document.getElementById('returnDirection').value = 'back';
@@ -3293,7 +3541,7 @@ function openDisposalModal(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   disposalItemId = id;
-  document.getElementById('disposalItemName').textContent = item.name + ' (Current qty: ' + item.qty + ')';
+  document.getElementById('disposalItemName').textContent = itemName(item) + t('currentQty').replace('N', item.qty);
   document.getElementById('disposalQty').value = 1;
   document.getElementById('disposalCause').value = '';
   document.getElementById('disposalNote').value = '';
@@ -3313,9 +3561,9 @@ async function confirmDisposal() {
   const cause = document.getElementById('disposalCause').value;
   const note = document.getElementById('disposalNote').value.trim();
 
-  if (!Number.isInteger(qty) || qty < 1) { showToast('Enter a valid quantity to dispose', 'error'); return; }
-  if (!cause) { showToast('Please select a cause', 'error'); return; }
-  if (qty > item.qty) { showToast('Cannot dispose more than current qty', 'error'); return; }
+  if (!Number.isInteger(qty) || qty < 1) { showToast(t('disposeQtyReq'), 'error'); return; }
+  if (!cause) { showToast(t('selectCauseReq'), 'error'); return; }
+  if (qty > item.qty) { showToast(t('disposeTooMany'), 'error'); return; }
 
   const now = new Date();
   const timeStr = now.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) + ' ' + now.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit'});
@@ -3363,7 +3611,7 @@ async function confirmDisposal() {
   
   closeDisposalModal();
   renderItems();
-  showToast('Disposal logged — qty updated', 'success');
+  showToast(t('disposalLogged'), 'success');
 }
 
 // ---- HISTORY ----
@@ -3427,10 +3675,10 @@ async function renderChangeHistory() {
     const cls = type === 'PULL' ? 'h-pull' : type === 'RETURN' ? 'h-return'
               : type === 'DELETE' ? 'h-delete' : type.indexOf('DISPOSAL') !== -1 ? 'h-disposal' : 'h-edit';
     return `<div class="hist-row">
-      <span class="hist-type ${cls}">${escapeHtml(type)}</span>
+      <span class="hist-type ${cls}">${escapeHtml(logTypeLabel(type))}</span>
       <div class="hist-main">
-        <div class="hist-item">${escapeHtml(e.itemName || '')}</div>
-        <div class="hist-detail">${escapeHtml(e.detail || '')}</div>
+        <div class="hist-item">${escapeHtml(itemName({ name: e.itemName }))}</div>
+        <div class="hist-detail">${escapeHtml(logDetailLabel(e.detail))}</div>
         <div class="hist-meta">${escapeHtml(String(e.who || ''))} · ${escapeHtml(fmtHistTime(e.time))}</div>
       </div>
     </div>`;
@@ -3443,8 +3691,8 @@ function fmtHistTime(v) {
   if (!v) return '';
   const d = new Date(v);
   if (isNaN(d)) return String(v);
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
-         d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleDateString(uiLocale(), { month: 'short', day: 'numeric' }) + ' ' +
+         d.toLocaleTimeString(uiLocale(), { hour: 'numeric', minute: '2-digit' });
 }
 
 async function renderDisposalHistory() {
@@ -3471,12 +3719,12 @@ async function renderDisposalHistory() {
   listEl.innerHTML = combined.map(e => `
     <div class="disposal-entry">
       <span class="d-who">${escapeHtml(e.who)}</span>
-      <span style="color:var(--mid)"> disposed </span>
+      <span style="color:var(--mid)">${t('disposedWord')}</span>
       <span style="color:#e07030;font-weight:700">${escapeHtml(e.qty)}x</span>
-      <span class="d-item"> ${escapeHtml(e.itemName)}</span><br>
-      <span class="d-cause">${escapeHtml(e.cause)}</span>
+      <span class="d-item"> ${escapeHtml(itemName({ name: e.itemName }))}</span><br>
+      <span class="d-cause">${escapeHtml(causeLabel(e.cause))}</span>
       ${e.note ? '<span style="color:var(--mid);font-size:12px"> — ' + escapeHtml(e.note) + '</span>' : ''}
-      <br><span class="d-time">${escapeHtml(e.time)} | Before: ${escapeHtml(e.beforeQty)} → After: ${escapeHtml(e.afterQty)}</span>
+      <br><span class="d-time">${escapeHtml(e.time)} | ${t('before')}: ${escapeHtml(e.beforeQty)} → ${t('after')}: ${escapeHtml(e.afterQty)}</span>
     </div>`).join('');
 }
 
@@ -3584,6 +3832,34 @@ const ZONE_SEED = {
   yardgen: { label: 'Yard (general)', photos: [], locs: ['Yard'], children: [], regions: [] },
   unknown: { label: 'No Location Set', photos: [], locs: ['Unknown'], children: [], regions: [] },
 };
+
+// Spanish for the seed labels and notes, kept apart from ZONE_SEED because a zone
+// saved on an admin's phone overwrites its seed fields -- a label placed here
+// survives that. Place names that are names ("104", "Conex 3", "Red Tool 1",
+// "C Street") stay as they are, so both crews say them the same way.
+const ZONE_ES = {
+  root: 'Patio de Titan', nursery104: '104 — Vivero y almacén', n104nursery: 'Bloque del vivero',
+  nurTree: '🌲 Árboles', nurShrub: '🌳 Arbustos', nurPeren: '🌿 Perennes y pastos',
+  n104lumber: 'Madera y postes', n104masonry: 'Block y muro de contención', n104drain: 'Tubo y alcantarilla',
+  n104fence: 'Herrajes de cerca', n104misc: 'Varios e hidrosiembra', bins: 'Cajones de material',
+  newbldg: 'Edificio nuevo de mantenimiento', gray: 'Edificio Gris', grayIn: 'Edificio Gris — adentro',
+  red: 'Edificio Rojo', redConex: 'Conexes rojos', redt1: 'Red Tool 1 — rojo, derecha',
+  redt2: 'Red Tool 2 — naranja, en medio', redt3: 'Red Tool 3 — rojo, izquierda · papeles de la oficina',
+  conexes: 'Conexes azules', maui: 'Lote Maui', pit: 'Cantera y agregados',
+  cN: 'C Street norte', cS: 'C Street sur', yardgen: 'Patio (general)', unknown: 'Sin ubicación',
+};
+const ZONE_NOTE_ES = {
+  root: 'Toca un área o usa los botones de abajo.',
+  redConex: 'De frente a ellos: el rojo de la derecha es el 1, el naranja del medio es el 2 y el rojo de la izquierda es el 3 (papeles de la oficina). El 1 y el 2 guardan herramientas, partes de camión y almacén general.',
+};
+function zoneLabel(id) {
+  const n = ZONES[id] || {};
+  return (lang === 'es' && ZONE_ES[id]) || n.label || id;
+}
+function zoneNote(id) {
+  const n = ZONES[id] || {};
+  return (lang === 'es' && n.note && ZONE_NOTE_ES[id]) || n.note || '';
+}
 
 let ZONES = JSON.parse(JSON.stringify(ZONE_SEED));
 try {
@@ -3764,12 +4040,12 @@ function renderZones() {
   const node = zoneNode(id);
   if (!node) return;
 
-  document.getElementById('zoneTitle').textContent = '📍 ' + node.label;
+  document.getElementById('zoneTitle').textContent = '📍 ' + zoneLabel(id);
 
   // Breadcrumbs
   document.getElementById('zoneCrumbs').innerHTML = zonePath.map((pid, i) => {
     const last = i === zonePath.length - 1;
-    const lbl = escapeHtml((zoneNode(pid) || {}).label || pid);
+    const lbl = escapeHtml(zoneLabel(pid));
     return (i ? '<span class="zone-crumb-sep">›</span>' : '') +
       `<button class="zone-crumb ${last ? 'current' : ''}" ${last ? 'disabled' : `onclick="zoneCrumbTo(${i})"`}>${lbl}</button>`;
   }).join('');
@@ -3783,8 +4059,8 @@ function renderZoneStage(node) {
   const wrap = document.getElementById('zoneStageWrap');
   const photos = node.photos || [];
   if (!photos.length) {
-    wrap.innerHTML = `<div class="zone-nophoto">No photo here yet.<br>
-      ${zoneIsAdmin() ? 'Shoot one on your phone and drop it in <code>zones/</code>, then tell Claude.' : 'Ask Matt to add one.'}</div>`;
+    wrap.innerHTML = `<div class="zone-nophoto">${t('noPhotoHere')}<br>
+      ${zoneIsAdmin() ? t('zoneAdminShoot') : t('askMatt')}</div>`;
     return;
   }
   if (zonePhotoIdx >= photos.length) zonePhotoIdx = 0;
@@ -3802,7 +4078,7 @@ function renderZoneStage(node) {
   const labels = regions.map((r, i) => {
     const c = polyCentroid(r.points || []);
     return `<div class="zone-hotspot-label" style="left:${(c[0]*100).toFixed(2)}%;top:${(c[1]*100).toFixed(2)}%"
-                 onclick="onZoneRegionTap(${i})">${escapeHtml(r.label || '')}</div>`;
+                 onclick="onZoneRegionTap(${i})">${escapeHtml(r.child && zoneNode(r.child) ? zoneLabel(r.child) : (r.label || ''))}</div>`;
   }).join('');
 
   // A marker belongs to the photo it was placed on. Without this filter, a pin put on
@@ -3813,7 +4089,7 @@ function renderZoneStage(node) {
 
   const pins = markers.map(({ m, i }, n) =>
     `<button class="zone-marker" style="left:${(m.x*100).toFixed(2)}%;top:${(m.y*100).toFixed(2)}%"
-             onclick="event.stopPropagation(); onZoneMarkerTap(${i})" title="${escapeHtml(m.label || '')}">
+             onclick="event.stopPropagation(); onZoneMarkerTap(${i})" title="${escapeHtml(m.child && zoneNode(m.child) ? zoneLabel(m.child) : (m.label || ''))}">
        <span class="zone-marker-dot">${n + 1}</span>
      </button>`).join('');
 
@@ -3821,7 +4097,7 @@ function renderZoneStage(node) {
     const s = m.child && zoneNode(m.child) ? zoneStats(m.child) : null;
     return `<button class="zone-legend-row" onclick="onZoneMarkerTap(${i})">
         <span class="zone-legend-num">${n + 1}</span>
-        <span class="zone-legend-name">${escapeHtml(m.label || '')}</span>
+        <span class="zone-legend-name">${escapeHtml(m.child && zoneNode(m.child) ? zoneLabel(m.child) : (m.label || ''))}</span>
         <span class="zone-legend-count">${s && s.count ? s.count + ' ' + t('zoneItemsWord') : ''}</span>
       </button>`;
   }).join('') + `</div>` : '';
@@ -3829,7 +4105,7 @@ function renderZoneStage(node) {
   wrap.innerHTML = `
     <div class="zone-stage ${zoneMarking ? 'marking' : ''}" id="zoneStage"
          ${zoneMarking ? 'onclick="onZoneStageTap(event)"' : ''}>
-      <img src="${escapeHtml(src)}" alt="${escapeHtml(node.label)}"
+      <img src="${escapeHtml(src)}" alt="${escapeHtml(zoneLabel(zoneCurrentId()))}"
            ondblclick="openFullPhoto('${escapeHtml(src)}')">
       <svg viewBox="0 0 1 1" preserveAspectRatio="none" id="zoneSvg" style="pointer-events:none">
         ${polys}
@@ -3851,7 +4127,7 @@ function renderZoneBody(node, id) {
   const body = document.getElementById('zoneBody');
   let html = '';
 
-  if (node.note) html += `<div class="zone-empty">${escapeHtml(node.note)}</div>`;
+  if (node.note) html += `<div class="zone-empty">${escapeHtml(zoneNote(id))}</div>`;
 
   const kids = (node.children || []).filter(c => zoneNode(c));
   if (kids.length) {
@@ -3860,7 +4136,7 @@ function renderZoneBody(node, id) {
       const s = zoneStats(c);
       const kn = zoneNode(c);
       html += `<button class="zone-child-btn ${s.count ? '' : 'zc-empty'}" onclick="goZone('${c}')">
-        ${escapeHtml(kn.label)}
+        ${escapeHtml(zoneLabel(c))}
         <span class="zc-count">${s.count ? s.count + ' ' + t('zoneItemsWord') + ' · ' + s.qty.toLocaleString() : t('zoneNothingHere')}</span>
       </button>`;
     });
@@ -3890,7 +4166,7 @@ function renderZoneBody(node, id) {
       .sort((a, b) => String(itemName(a)).localeCompare(String(itemName(b)), undefined, { numeric: true, sensitivity: 'base' }))
       .map(i => `<div class="zone-item-row">
         <span class="zi-name">${escapeHtml(itemName(i))}${i.specs ? ' <span style="color:var(--mid);font-size:11px">' + escapeHtml(i.specs) + '</span>' : ''}</span>
-        <span class="zi-qty">${i.qty}${normalizeUnit(i.unit) ? ' ' + escapeHtml(unitAbbr(i.unit)) : ''}</span>
+        <span class="zi-qty">${i.qty}${normalizeUnit(i.unit) ? ' ' + escapeHtml(unitShow(i.unit)) : ''}</span>
       </div>`).join('') + `</div>`;
   }
   body.innerHTML = html;
@@ -3944,7 +4220,7 @@ function openZoneNamePanel() {
     .filter(c => zoneNode(c) && !claimed.has(c))
     .map(c => {
       const s = zoneStats(c);
-      return `<option value="${c}">${escapeHtml(zoneNode(c).label)}${s.count ? ' — ' + s.count + ' ' + t('zoneItemsWord') : ''}</option>`;
+      return `<option value="${c}">${escapeHtml(zoneLabel(c))}${s.count ? ' — ' + s.count + ' ' + t('zoneItemsWord') : ''}</option>`;
     }).join('');
   document.getElementById('zoneExistingSelect').innerHTML =
     options + `<option value="__new__">${t('zoneNewArea')}</option>`;
@@ -3952,7 +4228,7 @@ function openZoneNamePanel() {
 
   const sel = document.getElementById('zoneLocSelect');
   sel.innerHTML = `<option value="">${t('zoneNoLoc')}</option>` +
-    LOCATIONS.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+    LOCATIONS.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(locLabel(l))}</option>`).join('');
   document.getElementById('zoneNameInput').value = '';
   onZoneExistingPick();
   document.getElementById('zoneNameModal').classList.add('open');
@@ -4180,11 +4456,11 @@ function writeItemsCache(list) {
 function describeSeedAge(ms) {
   if (!ms) return EMBEDDED_DATE;
   const d = new Date(ms), now = new Date();
-  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const time = d.toLocaleTimeString(uiLocale(), { hour: 'numeric', minute: '2-digit' });
   if (d.toDateString() === now.toDateString()) return t('seedToday') + ' ' + time;
   const y = new Date(now); y.setDate(y.getDate() - 1);
   if (d.toDateString() === y.toDateString()) return t('seedYesterday') + ' ' + time;
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + time;
+  return d.toLocaleDateString(uiLocale(), { month: 'short', day: 'numeric' }) + ' ' + time;
 }
 
 let seedLabel = EMBEDDED_DATE;
@@ -4221,6 +4497,8 @@ function applyItemsFromSheet(list) {
   // data and doesn't re-do the work.
   writeItemsCache(list);
   updateStaleBanner();
+  // A row someone added since the last sync has no Spanish name yet.
+  translateItemNames();
 }
 
 async function loadItems() {
@@ -4245,8 +4523,8 @@ async function loadItems() {
         throw new Error(data && data.error ? data.error : 'No items in response');
       }
     } catch(e) {
-      const msg = e.name === 'AbortError' ? 'Sync timed out after 20s' : (e.message || 'Sheet unreachable');
-      showToast(msg + ' — using local data', 'error');
+      const msg = e.name === 'AbortError' ? t('syncTimeout') : (e.message || t('sheetUnreachShort'));
+      showToast(msg + t('usingLocal'), 'error');
     }
   }
   btn.classList.remove('syncing'); btn.textContent = t('sync');
@@ -4261,7 +4539,8 @@ function currentFilteredItems() {
   const filterLoc = document.getElementById('filterLoc').value;
   return items.filter(item => {
     const name = String(item.name || ''), category = String(item.category || ''), location = String(item.location || ''), specs = String(item.specs || '');
-    const ms = !search || name.toLowerCase().includes(search) || specs.toLowerCase().includes(search) || category.toLowerCase().includes(search) || String(item.id).includes(search);
+    const fs = foldText(search);
+    const ms = !search || nameMatches(item, search) || foldText(specs).includes(fs) || foldText(category).includes(fs) || foldText(catLabel(category)).includes(fs) || String(item.id).includes(search);
     if (noUnitOnly && normalizeUnit(item.unit)) return false;
     if (noPhotoOnly && String(item.photo || '').trim()) return false;
     if (staleOnly && !countIsStale(item)) return false;
@@ -4329,7 +4608,7 @@ function renderItems() {
             <div class="item-main">
               <div class="item-name">${escapeHtml(itemName(item))}</div>
               <div class="item-meta">
-                <span class="tag ${locClass}">${escapeHtml(item.location || 'Unknown')}</span>
+                <span class="tag ${locClass}">${escapeHtml(locLabel(item.location))}</span>
                 ${item.estimated ? `<span class="tag tag-est">${t('est')}</span>` : ''}
                 ${sdsMissing(item) ? `<span class="tag tag-nosds">${t('noSdsTag')}</span>` : ''}
               </div>
@@ -4345,10 +4624,10 @@ function renderItems() {
             <div class="item-qty" onclick="event.stopPropagation()">
               <button class="qty-btn qty-minus" onclick="requireName(()=>changeQty(${item.id},-1))">−</button>
               <span class="qty-num ${qtyClass(item)}">${item.qty}${unit
-                ? ' <span class="qty-unit">'+escapeHtml(unitAbbr(unit))+'</span>'
+                ? ' <span class="qty-unit">'+escapeHtml(unitShow(unit))+'</span>'
                 : ` <span class="qty-nounit" title="${t('needsUnit')}">?</span>`}</span>
               <button class="qty-btn qty-plus" onclick="requireName(()=>changeQty(${item.id},1))">+</button>
-              <button class="dispose-btn" onclick="requireName(()=>openDisposalModal(${item.id}))" title="Log disposal">🗑</button>
+              <button class="dispose-btn" onclick="requireName(()=>openDisposalModal(${item.id}))" title="${t('logDisposalTip')}">🗑</button>
             </div>`}
           </div>
           <div class="item-detail ${isExpanded ? 'open' : ''}" id="detail-${item.id}">
@@ -4359,9 +4638,9 @@ function renderItems() {
               ${(item.specs || item.grade) ? `<div class="peek-specs">${gradeChip(item)}${escapeHtml(item.specs||'')}</div>` : ''}
               ${sdsBlock(item)}
               <div class="peek-facts">
-                <span>${t('labelLoc')}: <strong>${escapeHtml(item.location || 'Unknown')}</strong></span>
+                <span>${t('labelLoc')}: <strong>${escapeHtml(locLabel(item.location))}</strong></span>
                 <span>${t('labelCat')}: <strong>${escapeHtml(catLabel(item.category || ''))}</strong></span>
-                <span>${t('onHand')}: <strong>${item.qty}${unit ? ' ' + escapeHtml(unitAbbr(unit)) : ''}</strong></span>
+                <span>${t('onHand')}: <strong>${item.qty}${unit ? ' ' + escapeHtml(unitShow(unit)) : ''}</strong></span>
               </div>
               <div class="peek-stage" onclick="event.stopPropagation()">
                 <label>${t('staging')}</label>
@@ -4382,7 +4661,7 @@ function renderItems() {
               <div class="detail-field">
                 <label>${t('labelLoc')}</label>
                 <select id="loc-${item.id}" onfocus="this.dataset.prev=this.value" onchange="handleListSelect(this,'location'); markDirty(${item.id})">
-                  ${LOCATIONS.map(l => `<option value="${l}" ${String(item.location||'').trim()===l?'selected':''}>${l}</option>`).join('')}
+                  ${LOCATIONS.map(l => `<option value="${l}" ${String(item.location||'').trim()===l?'selected':''}>${locLabel(l)}</option>`).join('')}
                   <option value="__new__">${t('addNewLoc')}</option>
                 </select>
               </div>
@@ -4397,7 +4676,7 @@ function renderItems() {
                 <label>${t('labelUnit')}</label>
                 <select id="unit-${item.id}" class="${unit ? '' : 'needs-unit'}" onchange="markDirty(${item.id})">
                   ${unit ? '' : `<option value="" selected>${t('pickUnit')}</option>`}
-                  ${UNITS.map(u => `<option value="${u.value}" ${unit===u.value?'selected':''}>${u.label}${!unit && u.value===defaultUnitFor(item.category, item.name) ? ' ·' : ''}</option>`).join('')}
+                  ${UNITS.map(u => `<option value="${u.value}" ${unit===u.value?'selected':''}>${unitLabel(u)}${!unit && u.value===defaultUnitFor(item.category, item.name) ? ' ·' : ''}</option>`).join('')}
                 </select>
               </div>
               <div class="detail-field full">
@@ -4509,8 +4788,8 @@ function renderPhotoSprint() {
     <div class="sprint-name">${escapeHtml(itemName(item))}</div>
     ${item.specs ? `<div class="sprint-specs">${escapeHtml(item.specs)}</div>` : ''}
     <div class="sprint-facts">
-      <span>${escapeHtml(item.location || 'Unknown')}</span>
-      <span>${item.qty}${unit ? ' ' + escapeHtml(unitAbbr(unit)) : ''}</span>
+      <span>${escapeHtml(locLabel(item.location))}</span>
+      <span>${item.qty}${unit ? ' ' + escapeHtml(unitShow(unit)) : ''}</span>
       <span>${escapeHtml(catLabel(item.category || ''))}</span>
     </div>
     <div class="sprint-status" id="sprintStatus"></div>
@@ -4582,7 +4861,7 @@ async function changeQty(id, delta) {
   const paint = () => {
     const qtyEl = document.querySelector(`#card-${id} .qty-num`);
     if (qtyEl) {
-      qtyEl.textContent = item.qty + (item.unit && item.unit!=='ea' ? ' '+item.unit : '');
+      qtyEl.textContent = item.qty + (item.unit && item.unit!=='ea' ? ' '+unitShow(item.unit) : '');
       qtyEl.className = `qty-num ${qtyClass(item)}`;
     }
   };
@@ -4775,9 +5054,7 @@ var COUNT_MIN_CHARS = 3;
 function countSearchResults(q) {
   var needle = String(q || '').trim().toLowerCase();
   if (needle.length < COUNT_MIN_CHARS) return [];
-  return items.filter(function (it) {
-    return itemName(it).toLowerCase().indexOf(needle) !== -1;
-  }).slice(0, 12);
+  return items.filter(function (it) { return nameMatches(it, needle); }).slice(0, 12);
 }
 
 
@@ -4806,7 +5083,7 @@ function renderCountResults() {
     html += '<button class="count-hit" onclick="countPick(&quot;' + countEsc(item2.id) + '&quot;)">' +
       '<span>' + countEsc(itemName(item2)) + '</span>' +
       '<span class="count-hit-qty ' + (stale ? 'stale' : '') + '">' +
-      (Number(item2.qty) || 0) + (u ? ' ' + u : '') + ' &middot; ' + countEsc(when) + '</span></button>';
+      (Number(item2.qty) || 0) + (u ? ' ' + countEsc(unitShow(u)) : '') + ' &middot; ' + countEsc(when) + '</span></button>';
   });
   box.innerHTML = html;
 }
@@ -4844,8 +5121,8 @@ function renderCount(keepSearch) {
     var onSheet = Number(it.qty) || 0;
     var session = countedThisSession(it.id);
     var sub = session > 0
-      ? t('countedToday') + ': <b>' + onSheet + '</b>' + (unit ? ' ' + unit : '')
-      : t('countOnSheet') + ' <b>' + onSheet + '</b>' + (unit ? ' ' + unit : '');
+      ? t('countedToday') + ': <b>' + onSheet + '</b>' + (unit ? ' ' + countEsc(unitShow(unit)) : '')
+      : t('countOnSheet') + ' <b>' + onSheet + '</b>' + (unit ? ' ' + countEsc(unitShow(unit)) : '');
 
     html += '<div class="count-picked">' +
       '<div class="count-picked-name">' + countEsc(itemName(it)) + '</div>' +
@@ -5058,6 +5335,11 @@ function showToast(msg, type='') {
   el.textContent = msg; el.className = `toast ${type}`; el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 2800);
 }
+
+// Here, not in window.onload: onload waits for every thumbnail, and a crew member
+// who picked Spanish would watch the whole screen sit in English until they land.
+// Last line of the script so every `let` above is initialised before it runs.
+if (lang === 'es') applyTranslations();
 </script>
 </body>
 </html>

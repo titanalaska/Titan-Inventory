@@ -135,6 +135,74 @@ const MUTATIONS = [
     replace: "const SDS_SHEETS = {\n  7: { file:'not-in-repo.pdf', product:'X', maker:'Y', revised:'', checkedBy:'Matt' },\n};",
     caughtBy: 'actually ships in sds/',
   },
+
+  // --- Spanish ---
+  {
+    name: 'drop one Spanish label, so that button falls back to English',
+    find: "    jobName:'Nombre del trabajo', ",
+    replace: '    ',
+    caughtBy: 'every English label has a Spanish one',
+  },
+  {
+    name: 'mistype a data-i18n key, which prints the key on the button',
+    find: 'data-i18n="barHistory"',
+    replace: 'data-i18n="barHistroy"',
+    caughtBy: 'every key the page asks for',
+  },
+  {
+    name: 'put "Registrarse" (sign UP) back on the sign-in button',
+    find: "    signIn:'Iniciar sesión',",
+    replace: "    signIn:'Registrarse',",
+    caughtBy: 'Spanish picked in Groundwork',
+  },
+  {
+    name: 'remember the language under a key of its own, so the two apps disagree',
+    find: "const LANG_KEY = 'wolf-lang';",
+    replace: "const LANG_KEY = 'titan-lang';",
+    caughtBy: 'Spanish picked in Groundwork',
+  },
+  {
+    name: 'swap the button bar with textContent, losing the short phone form',
+    find: "  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });",
+    replace: "  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.textContent = t(el.dataset.i18nHtml).replace(/<[^>]+>/g, ''); });",
+    caughtBy: 'button bar translates',
+  },
+  {
+    name: 'write the return into the Change Log in Spanish',
+    find: "    : `${qty}${u ? ' ' + u : ''} back from ${job} — ${before} → ${after}`;",
+    replace: "    : `${qty}${u ? ' ' + u : ''} ${lang === 'es' ? 'de regreso de' : 'back from'} ${job} — ${before} → ${after}`;",
+    caughtBy: 'return logged in Spanish',
+  },
+  {
+    name: 'log the unit the screen shows instead of the trade abbreviation',
+    find: "  const u = unitAbbr(item.unit);\n  const detail = outbound",
+    replace: "  const u = unitLabel(UNITS.find(x => x.value === normalizeUnit(item.unit)) || {label:''});\n  const detail = outbound",
+    caughtBy: 'return logged in Spanish',
+  },
+  {
+    name: 'store the disposal cause as the words on screen',
+    find: "  const cause = document.getElementById('disposalCause').value;",
+    replace: "  const dc = document.getElementById('disposalCause'); const cause = dc.options[dc.selectedIndex].text;",
+    caughtBy: 'disposal cause picked in Spanish',
+  },
+  {
+    name: 'stop translating the Change Log on screen',
+    find: "  if (lang !== 'es') return s;\n  LOG_DETAIL_ES.forEach",
+    replace: "  return s;\n  LOG_DETAIL_ES.forEach",
+    caughtBy: 'Change Log reads in Spanish',
+  },
+  {
+    name: 'search only the Spanish name, so the word on the pot tag finds nothing',
+    find: '  return foldText(item.name).includes(n) || (!!es && foldText(es).includes(n));',
+    replace: '  return foldText(itemName(item)).includes(n);',
+    caughtBy: 'search finds a plant by the tag name',
+  },
+  {
+    name: 'stop folding accents, so "papirifera" misses "papirífera"',
+    find: "function foldText(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); }",
+    replace: "function foldText(s) { return String(s || '').toLowerCase(); }",
+    caughtBy: 'search finds a plant by the tag name',
+  },
 ];
 
 // Normalised to LF: git checks this repo out with CRLF on Windows, so a find
